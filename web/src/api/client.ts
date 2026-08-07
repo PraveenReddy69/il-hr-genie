@@ -117,6 +117,17 @@ class ApiError extends Error {
   }
 }
 
+/**
+ * Whether the server rejected the token.
+ *
+ * Exposed as a check rather than by exporting the error class, so callers ask a
+ * question instead of matching on message text — a body that merely contains "401"
+ * would otherwise be mistaken for one.
+ */
+export function isUnauthorized(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 401
+}
+
 async function get<T>(path: string): Promise<T> {
   return request<T>(path, { method: 'GET' })
 }
@@ -200,6 +211,18 @@ function toEmployee(raw: RawEmployee): Employee {
 }
 
 // ----------------------------------------------------------------- directory
+
+/**
+ * The signed-in employee, re-read from the server.
+ *
+ * Sign-in stores a snapshot of the record, which then never changes for as long as
+ * the tab lives — so a rename or a role change on the server stayed invisible until
+ * the next sign-out. This re-reads it.
+ */
+export function fetchMe(): Promise<Employee> {
+  if (!isLive) return mocked(EMPLOYEES[0])
+  return get<RawEmployee>('/api/employees/me').then(toEmployee)
+}
 
 /**
  * The whole workforce.

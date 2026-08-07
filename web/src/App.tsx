@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
 import { Analytics } from './pages/Analytics'
 import { Attendance } from './pages/Attendance'
@@ -16,7 +16,7 @@ import {
   PeopleIcon,
   TicketsIcon,
 } from './components/Icons'
-import { clearToken, isLive, signIn } from './api/client'
+import { clearToken, fetchMe, isLive, isUnauthorized, signIn } from './api/client'
 import type { Employee } from './api/types'
 
 const SESSION_KEY = 'hr-genie-console'
@@ -41,6 +41,34 @@ export default function App() {
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(employee))
     setHr(employee)
   }
+
+  /**
+   * Re-reads the signed-in record on load.
+   *
+   * The stored copy is whatever the server said at sign-in, and a tab can outlive a
+   * change to it — a rename showed the old name until someone signed out. A failed
+   * read keeps the cached record, except for a 401, which means the token is no
+   * longer good and the session should end rather than half-work.
+   */
+  useEffect(() => {
+    if (!hr) return
+    let cancelled = false
+    fetchMe()
+      .then((fresh) => {
+        if (cancelled) return
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify(fresh))
+        setHr(fresh)
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return
+        if (isUnauthorized(error)) signOut()
+      })
+    return () => {
+      cancelled = true
+    }
+    // Runs once per session: re-reading on every hr change would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function signOut() {
     sessionStorage.removeItem(SESSION_KEY)
