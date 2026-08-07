@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Each figure in a "at a glance" row sits on its own tile so the row reads as
+     three measurements rather than three loose numbers. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="@dimen/radius_tile" />
+    <solid android:color="@color/bg_cell" />
+    <stroke
+        android:width="@dimen/stroke_hairline"
+        android:color="@color/ink_06" />
+</shape>

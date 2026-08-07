@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One tile of an "at a glance" row. Tinted per measurement so the row scans as
+     three distinct figures rather than three loose numbers, and tappable: the tile
+     opens the people behind it. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/statTile"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_stat_tile_blue"
+    android:minHeight="104dp"
+    android:orientation="vertical"
+    android:paddingStart="13dp"
+    android:paddingTop="13dp"
+    android:paddingEnd="10dp"
+    android:paddingBottom="13dp">
+
+    <TextView
+        android:id="@+id/statValue"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fontFamily="sans-serif-black"
+        android:includeFontPadding="false"
+        android:letterSpacing="-0.03"
+        android:textColor="@color/blue_deep"
+        android:textSize="27sp"
+        tools:text="2" />
+
+    <TextView
+        android:id="@+id/statLabel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:ellipsize="end"
+        android:fontFamily="sans-serif-medium"
+        android:maxLines="1"
+        android:textColor="@color/ink"
+        android:textSize="@dimen/text_eyebrow"
+        tools:text="Checked in" />
+
+    <TextView
+        android:id="@+id/statOutOf"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="3dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="@color/text_secondary"
+        android:textSize="@dimen/text_eyebrow_sm"
+        tools:text="of 4" />
+</LinearLayout>

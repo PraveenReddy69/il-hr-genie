@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Disc behind a ticket's status glyph. Tinted per status with backgroundTint, so
+     the shape stays white here. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/white" />
+    <corners android:radius="13dp" />
+</shape>

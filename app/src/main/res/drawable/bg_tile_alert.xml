@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Soft warning halo behind the alert glyph. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <gradient android:angle="270" android:startColor="@color/red_tint_14" android:endColor="@color/orange_tint_14" />
+    <stroke android:width="@dimen/stroke_hairline" android:color="@color/red_tint_28" />
+</shape>

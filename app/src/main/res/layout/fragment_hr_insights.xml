@@ -1,0 +1,702 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/scroller"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_app"
+    android:clipToPadding="false"
+    android:scrollbars="none">
+
+    <LinearLayout
+        android:id="@+id/content"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- ================================ Header ================================ -->
+        <FrameLayout
+            android:id="@+id/header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_header_home">
+
+            <View
+                android:layout_width="300dp"
+                android:layout_height="300dp"
+                android:layout_gravity="top|end"
+                android:layout_marginTop="-120dp"
+                android:layout_marginEnd="-90dp"
+                android:background="@drawable/bg_header_glow"
+                android:importantForAccessibility="no" />
+
+            <View
+                android:layout_width="240dp"
+                android:layout_height="240dp"
+                android:layout_gravity="bottom|start"
+                android:layout_marginStart="-110dp"
+                android:layout_marginBottom="-130dp"
+                android:alpha="0.55"
+                android:background="@drawable/bg_header_glow_purple"
+                android:importantForAccessibility="no" />
+
+            <LinearLayout
+                android:id="@+id/headerContent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="@dimen/space_screen"
+                android:paddingTop="@dimen/space_l"
+                android:paddingEnd="@dimen/space_screen"
+                android:paddingBottom="@dimen/space_xl">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/space_l"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:id="@+id/backButton"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/cd_back"
+                        android:src="@drawable/ic_back"
+                        app:tint="@color/white_85" />
+
+                    <!-- Live badge: a soft dot plus the label, so the eyebrow reads as
+                         a status rather than a heading. -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/space_m"
+                        android:background="@drawable/bg_band_count"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="10dp"
+                        android:paddingTop="5dp"
+                        android:paddingEnd="11dp"
+                        android:paddingBottom="5dp">
+
+                        <View
+                            android:layout_width="6dp"
+                            android:layout_height="6dp"
+                            android:layout_marginEnd="7dp"
+                            android:background="@drawable/bg_dot_live"
+                            android:importantForAccessibility="no" />
+
+                        <TextView
+                            style="@style/HG.Eyebrow"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:letterSpacing="0.073"
+                            android:text="@string/hrbp_view"
+                            android:textColor="@color/white_78" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="1dp"
+                        android:layout_weight="1" />
+
+                    <TextView
+                        android:id="@+id/hrAvatar"
+                        android:layout_width="38dp"
+                        android:layout_height="38dp"
+                        android:background="@drawable/bg_avatar_hrbp"
+                        android:clickable="true"
+                        android:contentDescription="@string/cd_profile_menu"
+                        android:focusable="true"
+                        android:gravity="center"
+                        android:includeFontPadding="false"
+                        android:textColor="@color/white"
+                        android:textSize="@dimen/text_caption"
+                        android:textStyle="bold"
+                        tools:text="MK" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/insightsTitle"
+                    style="@style/HG.H2"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/white"
+                    tools:text="Sentiment, August" />
+
+                <TextView
+                    android:id="@+id/insightsSub"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textColor="@color/white_55"
+                    android:textSize="@dimen/text_body_sm"
+                    tools:text="Friday, 7 August · 4 on the roll" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_screen"
+                    android:baselineAligned="false"
+                    android:orientation="horizontal">
+
+                    <LinearLayout
+                        android:id="@+id/kpiEngagementTile"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_kpi_tile_glass"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:orientation="vertical"
+                        android:padding="14dp">
+
+                        <TextView
+                            android:id="@+id/kpiEngagement"
+                            style="@style/HG.H1"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:includeFontPadding="false"
+                            android:textColor="@color/white"
+                            tools:text="7.5/10" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="5dp"
+                            android:text="@string/kpi_engagement"
+                            android:textColor="@color/white_55"
+                            android:textSize="@dimen/text_eyebrow" />
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:layout_marginTop="10dp"
+                            android:layout_marginBottom="8dp"
+                            android:background="@color/white_14"
+                            android:importantForAccessibility="no" />
+
+                        <TextView
+                            android:id="@+id/kpiEngagementSub"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/green_delta"
+                            android:textSize="@dimen/text_eyebrow_sm"
+                            android:textStyle="bold"
+                            tools:text="from 2 check-ins today" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/kpiPulseTile"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_kpi_tile_glass"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:orientation="vertical"
+                        android:padding="14dp">
+
+                        <TextView
+                            android:id="@+id/kpiPulse"
+                            style="@style/HG.H1"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:includeFontPadding="false"
+                            android:textColor="@color/white"
+                            tools:text="50%" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="5dp"
+                            android:text="@string/kpi_pulse"
+                            android:textColor="@color/white_55"
+                            android:textSize="@dimen/text_eyebrow" />
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:layout_marginTop="10dp"
+                            android:layout_marginBottom="8dp"
+                            android:background="@color/white_14"
+                            android:importantForAccessibility="no" />
+
+                        <TextView
+                            android:id="@+id/kpiPulseSub"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/white_62"
+                            android:textSize="@dimen/text_eyebrow_sm"
+                            android:textStyle="bold"
+                            tools:text="2 of 4 answered" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- ================================= Body ================================= -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="@dimen/space_screen"
+            android:paddingTop="@dimen/space_screen"
+            android:paddingEnd="@dimen/space_screen"
+            android:paddingBottom="@dimen/space_xl">
+
+            <!-- ======== Tickets ======== -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_card"
+                android:elevation="3dp"
+                android:orientation="vertical"
+                android:padding="@dimen/space_screen">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:background="@drawable/bg_icon_chip"
+                        android:backgroundTint="@color/orange_tint_14"
+                        android:gravity="center"
+                        android:importantForAccessibility="no"
+                        android:includeFontPadding="false"
+                        android:text="@string/emoji_ticket"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        style="@style/HG.CardTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="11dp"
+                        android:text="@string/hr_tickets_title" />
+
+                    <!-- Total raised, as a count badge on the title. -->
+                    <TextView
+                        android:id="@+id/ticketCount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/bg_count_badge"
+                        android:gravity="center"
+                        android:includeFontPadding="false"
+                        android:minWidth="21dp"
+                        android:paddingStart="6dp"
+                        android:paddingTop="3dp"
+                        android:paddingEnd="6dp"
+                        android:paddingBottom="3dp"
+                        android:textColor="@color/white"
+                        android:textSize="@dimen/text_eyebrow_sm"
+                        android:textStyle="bold"
+                        tools:text="4" />
+
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="1dp"
+                        android:layout_weight="1" />
+
+                    <TextView
+                        android:id="@+id/ticketBadge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_pill_status"
+                        android:backgroundTint="@color/orange_tint_14"
+                        android:includeFontPadding="false"
+                        android:paddingStart="10dp"
+                        android:paddingTop="5dp"
+                        android:paddingEnd="10dp"
+                        android:paddingBottom="5dp"
+                        android:textColor="@color/orange_warn"
+                        android:textSize="@dimen/text_eyebrow_sm"
+                        android:textStyle="bold"
+                        tools:text="2 open" />
+                </LinearLayout>
+
+                <!-- Just the newest couple. The queue lives on its own screen. -->
+                <LinearLayout
+                    android:id="@+id/ticketList"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:orientation="vertical" />
+
+                <TextView
+                    android:id="@+id/viewAllTickets"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/bg_button_ghost"
+                    android:gravity="center"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="12dp"
+                    android:textColor="@color/blue_deep"
+                    android:textSize="@dimen/text_eyebrow"
+                    android:textStyle="bold"
+                    android:visibility="gone"
+                    tools:text="View all 5 tickets  ›"
+                    tools:visibility="visible" />
+
+                <!-- Empty state: the honest answer when nothing has been raised. -->
+                <LinearLayout
+                    android:id="@+id/ticketEmpty"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/bg_empty_state"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:paddingStart="@dimen/space_l"
+                    android:paddingTop="@dimen/space_xl"
+                    android:paddingEnd="@dimen/space_l"
+                    android:paddingBottom="@dimen/space_xl">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:importantForAccessibility="no"
+                        android:includeFontPadding="false"
+                        android:text="@string/emoji_tray"
+                        android:textSize="26sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:text="@string/hr_tickets_none"
+                        android:textColor="@color/ink"
+                        android:textSize="@dimen/text_title"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="5dp"
+                        android:gravity="center"
+                        android:lineSpacingMultiplier="1.4"
+                        android:text="@string/hr_tickets_none_sub"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="@dimen/text_caption" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ======== Today at a glance ======== -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_l"
+                android:background="@drawable/bg_card"
+                android:elevation="2dp"
+                android:orientation="vertical"
+                android:padding="@dimen/space_screen">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="14dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:background="@drawable/bg_icon_chip"
+                        android:backgroundTint="@color/blue_tint_10"
+                        android:gravity="center"
+                        android:importantForAccessibility="no"
+                        android:includeFontPadding="false"
+                        android:text="@string/emoji_calendar"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        style="@style/HG.CardTitle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="11dp"
+                        android:layout_weight="1"
+                        android:text="@string/hr_today_title" />
+
+                    <TextView
+                        style="@style/HG.Eyebrow"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/hr_tap_hint"
+                        android:textColor="@color/text_muted" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/todayStats"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:baselineAligned="false"
+                    android:orientation="horizontal" />
+            </LinearLayout>
+
+            <!-- ======== Mood today ======== -->
+            <LinearLayout
+                android:id="@+id/moodCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_l"
+                android:background="@drawable/bg_card"
+                android:clickable="true"
+                android:elevation="2dp"
+                android:focusable="true"
+                android:orientation="vertical"
+                android:padding="@dimen/space_screen">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:background="@drawable/bg_icon_chip"
+                        android:backgroundTint="@color/purple_tint_12"
+                        android:gravity="center"
+                        android:importantForAccessibility="no"
+                        android:includeFontPadding="false"
+                        android:text="@string/emoji_pulse"
+                        android:textSize="14sp" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="11dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/HG.CardTitle"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/hr_mood_title" />
+
+                        <TextView
+                            android:id="@+id/moodSubtitle"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="@dimen/text_caption"
+                            tools:text="2 of 4 shared how they feel" />
+                    </LinearLayout>
+
+                    <TextView
+                        style="@style/HG.Eyebrow"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/hr_tap_hint"
+                        android:textColor="@color/text_muted" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/moodBreakdown"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="15dp"
+                    android:orientation="vertical" />
+
+                <!-- Today is the card; the past is a screen of its own. -->
+                <TextView
+                    android:id="@+id/viewHistory"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_l"
+                    android:background="@drawable/bg_button_ghost"
+                    android:gravity="center"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="12dp"
+                    android:text="@string/hr_view_history"
+                    android:textColor="@color/blue_deep"
+                    android:textSize="@dimen/text_eyebrow"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- ======== Department sentiment ======== -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_l"
+                android:background="@drawable/bg_card"
+                android:elevation="2dp"
+                android:orientation="vertical"
+                android:padding="@dimen/space_screen">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="15dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:background="@drawable/bg_icon_chip"
+                        android:backgroundTint="@color/blue_tint_10"
+                        android:gravity="center"
+                        android:importantForAccessibility="no"
+                        android:includeFontPadding="false"
+                        android:text="@string/emoji_chart"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        style="@style/HG.CardTitle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="11dp"
+                        android:layout_weight="1"
+                        android:text="@string/dept_sentiment" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/deptList"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+            </LinearLayout>
+
+            <!-- ======== Attendance this week ======== -->
+            <LinearLayout
+                android:id="@+id/attendanceCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_l"
+                android:background="@drawable/bg_card"
+                android:clickable="true"
+                android:elevation="2dp"
+                android:focusable="true"
+                android:orientation="vertical"
+                android:padding="@dimen/space_screen">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:background="@drawable/bg_icon_chip"
+                        android:backgroundTint="@color/green_tint_14"
+                        android:gravity="center"
+                        android:importantForAccessibility="no"
+                        android:includeFontPadding="false"
+                        android:text="@string/emoji_clock"
+                        android:textSize="14sp" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="11dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/HG.CardTitle"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/hr_attendance_title" />
+
+                        <TextView
+                            android:id="@+id/attendanceSubtitle"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="@dimen/text_caption"
+                            tools:text="18h 20m logged across the team so far" />
+                    </LinearLayout>
+
+                    <TextView
+                        style="@style/HG.Eyebrow"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/hr_tap_hint"
+                        android:textColor="@color/text_muted" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/attendanceStats"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="15dp"
+                    android:orientation="vertical" />
+            </LinearLayout>
+
+            <!-- ======== Attention signals ======== -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_l"
+                android:background="@drawable/bg_card_risk"
+                android:elevation="2dp"
+                android:orientation="vertical"
+                android:padding="@dimen/space_screen">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="10dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:background="@drawable/bg_icon_chip"
+                        android:backgroundTint="@color/red_tint_14"
+                        android:gravity="center"
+                        android:importantForAccessibility="no"
+                        android:includeFontPadding="false"
+                        android:text="@string/emoji_warning"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        style="@style/HG.CardTitle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="11dp"
+                        android:layout_weight="1"
+                        android:text="@string/attention_signals" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/attentionBody"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:lineSpacingMultiplier="1.55"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="@dimen/text_caption"
+                    tools:text="Cohorts report at 5 or more." />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_l"
+                android:gravity="center"
+                android:lineSpacingMultiplier="1.6"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:text="@string/insights_legal"
+                android:textColor="@color/text_muted"
+                android:textSize="@dimen/text_eyebrow" />
+        </LinearLayout>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

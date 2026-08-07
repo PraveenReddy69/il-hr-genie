@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ringed so the avatar separates from the header gradient. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <gradient android:angle="315" android:startColor="@color/blue_sky" android:endColor="@color/purple" />
+    <stroke android:width="1.5dp" android:color="@color/white_22" />
+</shape>

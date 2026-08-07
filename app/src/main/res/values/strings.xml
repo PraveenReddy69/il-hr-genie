@@ -1,0 +1,431 @@
+<resources>
+    <string name="app_name">IL HR Genie</string>
+    <string name="brand">Infinity Learn</string>
+    <string name="checkmark">✓</string>
+    <string name="avatar_initials_hrbp">MK</string>
+    <string name="week_label">W%1$d</string>
+    <!-- Decorative emoji kept as the design reference specifies. -->
+    <string name="emoji_person">👤</string>
+    <string name="emoji_lock">🔒</string>
+    <string name="emoji_chat">💬</string>
+    <string name="emoji_calendar">🗓️</string>
+    <string name="emoji_bulb">💡</string>
+    <string name="emoji_warning">⚠️</string>
+    <string name="emoji_celebrate">🎉</string>
+    <string name="emoji_party">🎊</string>
+    <string name="emoji_palm">🌴</string>
+    <string name="emoji_ticket">🎫</string>
+    <string name="emoji_check">✅</string>
+    <string name="emoji_tray">📭</string>
+    <string name="emoji_pulse">💜</string>
+    <string name="emoji_chart">📊</string>
+    <string name="emoji_clock">⏱️</string>
+
+    <!-- Sign in -->
+    <string name="signin_title">HR Genie</string>
+    <string name="signin_subtitle">Sign in with your Infinity Learn employee ID.</string>
+    <string name="label_employee_id">Employee ID</string>
+    <string name="label_password">Password</string>
+    <string name="hint_employee_id">Enter employee ID</string>
+    <string name="hint_password">Enter your password</string>
+    <string name="action_show">Show</string>
+    <string name="action_hide">Hide</string>
+    <string name="keep_signed_in">Keep me signed in</string>
+    <string name="forgot_password">Forgot password?</string>
+    <string name="action_sign_in">Sign in</string>
+    <string name="signin_legal">Your chats are private. Mood data is shared with HR only as anonymised trends.</string>
+    <string name="error_employee_id_required">Enter your employee ID.</string>
+    <string name="error_invalid_employee_id">Invalid employee ID</string>
+    <string name="action_signing_in">Signing in…</string>
+    <string name="signin_contact_hr">Can\'t sign in? Contact HR</string>
+    <!-- Covers a wrong password and an unknown id together: the server answers both
+         with the same 401 so that the form cannot be used to discover who exists. -->
+    <string name="error_bad_credentials">Invalid employee ID or password.</string>
+    <string name="error_signin_unreachable">Can\'t reach HR Genie. Check your connection and try again.</string>
+    <string name="error_signin_timeout">HR Genie took too long to answer. Try again.</string>
+    <string name="error_signin_server">Sign-in failed (error %1$d). Try again in a moment.</string>
+    <string name="error_signin_unusable">Sign-in failed unexpectedly. Try again in a moment.</string>
+    <string name="error_password_required">Enter your password.</string>
+    <string name="hr_help_title">We can\'t find that ID</string>
+    <string name="hr_help_body">That employee ID isn\'t in the Infinity Learn directory yet, so we can\'t sign you in.</string>
+    <string name="hr_help_contact_label">HR team</string>
+    <string name="hr_help_detail">They can confirm your employee ID or get you added to the directory.</string>
+    <string name="action_try_again">Try again</string>
+    <string name="action_email_hr">Email HR team</string>
+    <string name="hr_help_email_subject">Employee ID not found — %1$s</string>
+    <string name="hr_help_email_body">Hi HR team,\n\nI tried to sign in to HR Genie with employee ID %1$s and it wasn\'t recognised. Could you check my record?\n\nThanks.</string>
+    <string name="no_email_app">No email app is set up on this device.</string>
+
+    <!-- Home -->
+    <string name="home_greeting">Good morning, %1$s</string>
+    <string name="home_subline">%1$s · Day %2$d at Infinity Learn</string>
+    <string name="mood_card_title">How are you today?</string>
+    <string name="mood_card_pill">10 sec</string>
+    <string name="mood_card_sub">Tap a face. Your HRBP sees your check-in — your note stays with you.</string>
+    <!-- Attendance -->
+    <string name="attendance_title">Attendance</string>
+    <string name="attendance_idle_title">Ready when you are</string>
+    <string name="attendance_idle_projection">Check in now and your 8 hours finish at %1$s.</string>
+    <string name="attendance_note">Forget to check out and the day closes itself at 11:59:59 PM.</string>
+    <string name="action_check_in">Check in</string>
+    <string name="action_check_out">Check out</string>
+    <string name="attendance_week_title">This week</string>
+    <string name="attendance_week_link">View week</string>
+
+    <!-- Attendance history -->
+    <string name="history_eyebrow">Attendance history</string>
+    <string name="history_title">This week</string>
+    <string name="history_hours_label">Hours worked</string>
+    <string name="history_present_label">Days present</string>
+    <string name="history_of_target">of %1$s target</string>
+    <string name="history_present_ratio">%1$d/%2$d</string>
+    <string name="history_day_by_day">Day by day</string>
+    <string name="history_tip">Saturday and Sunday are weekly offs. Tick a missed punch or an absence and send it to HR for regularisation.</string>
+    <string name="action_regularize">Regularise</string>
+
+    <string name="status_present">Present</string>
+    <string name="status_half_day">Half day</string>
+    <string name="status_mis_punch">Miss punch out</string>
+    <string name="status_absent">Absent</string>
+    <string name="status_week_off">Weekly off</string>
+    <string name="status_holiday">Holiday</string>
+    <string name="status_in_progress">On the clock</string>
+    <string name="status_pending">Not started</string>
+
+    <string name="history_detail_week_off">Weekly off</string>
+    <string name="history_detail_holiday">Company holiday</string>
+    <string name="history_detail_absent">No check-in recorded</string>
+    <string name="history_detail_requested">No check-in · sent for regularisation</string>
+    <string name="history_detail_pending">Not checked in yet</string>
+    <string name="history_detail_mis_punch">In %1$s · no check-out · %2$s counted to midnight</string>
+    <string name="history_detail_in_progress">In %1$s · %2$s so far</string>
+    <string name="history_detail_worked">In %1$s · Out %2$s · %3$s</string>
+    <string name="history_requested_suffix">sent for regularisation</string>
+
+    <string name="attendance_week_total">%1$s of %2$s · %3$d days present</string>
+    <string name="attendance_status_idle">Not checked in</string>
+    <string name="attendance_status_active">Checked in</string>
+    <string name="attendance_status_overtime">In overtime</string>
+    <string name="attendance_status_done">Done for today</string>
+    <string name="attendance_caption_remaining">left of your 8-hour day</string>
+    <string name="attendance_caption_overtime">overtime — 8 hours completed at %1$s</string>
+    <string name="attendance_in_at">In %1$s</string>
+    <string name="attendance_target">8h at %1$s</string>
+    <string name="attendance_checked_in_toast">Checked in at %1$s. Your 8 hours end at %2$s.</string>
+    <string name="attendance_full_day_toast">That\'s 8 hours. Anything from here counts as overtime.</string>
+    <string name="attendance_summary_overtime">Checked out %1$s · %2$s worked · %3$s overtime</string>
+    <string name="attendance_summary_exact">Checked out %1$s · %2$s worked · full 8h done</string>
+    <string name="attendance_summary_short">Checked out %1$s · %2$s worked · %3$s short of 8h</string>
+    <string name="attendance_summary_auto">Auto-closed 11:59 PM · %1$s worked · %2$s short of 8h</string>
+    <string name="attendance_summary_auto_full">Auto-closed 11:59 PM · %1$s worked · %2$s overtime</string>
+
+    <string name="wishes">Wishes</string>
+    <string name="action_view">View</string>
+    <string name="action_view_all">View all</string>
+    <string name="wishes_today">Today · %1$s</string>
+    <string name="tab_birthdays">Birthdays</string>
+    <string name="tab_anniversary">Work Anniversary</string>
+    <string name="tab_new_joiners">New Joiners</string>
+    <string name="wishes_more">+%1$d more  ›</string>
+    <string name="wishes_less">Show less  ‹</string>
+    <string name="wishes_empty_birthdays">No birthdays today.</string>
+    <string name="wishes_empty_anniversaries">No work anniversaries today.</string>
+    <string name="wishes_empty_joiners">Nobody new this week.</string>
+    <string name="upcoming_holidays">Upcoming holidays</string>
+    <string name="next_four_holidays">Next 4 holidays</string>
+    <string name="holidays_remaining_short">%1$d left in %2$d</string>
+    <string name="holiday_today">Today</string>
+    <string name="holiday_tomorrow">Tomorrow</string>
+    <string name="holiday_in_days">in %1$d days</string>
+    <string name="pulse_nudge_title">%1$s pulse is open</string>
+    <string name="pulse_nudge_sub">4 conversational questions · ~2 min · shared with your HRBP</string>
+    <string name="action_start">Start</string>
+    <string name="home_privacy">Your HRBP can see your check-in and your pulse answers. Your written check-in note stays with you.</string>
+    <string name="wish_sent">Wish sent to %1$s 🎈</string>
+    <string name="menu_my_profile">My Profile</string>
+
+    <!-- Profile -->
+    <string name="profile_title">My Profile</string>
+    <string name="label_reportees">Reportees</string>
+    <string name="label_designation">Designation</string>
+    <string name="label_department">Department</string>
+    <string name="label_gender">Gender</string>
+    <string name="label_team">Team</string>
+    <string name="label_date_of_joining">Date of joining</string>
+    <string name="label_official_email">Official email</string>
+    <string name="label_dob">Date of birth</string>
+    <string name="label_org_unit">Org unit</string>
+    <string name="profile_privacy">Only you and the HR team can see these details. Update them through the HR portal.</string>
+    <string name="cd_change_photo">Change profile photo</string>
+    <string name="photo_add_hint">Tap your avatar to add a profile photo.</string>
+    <string name="photo_change_hint">Tap your avatar to change or remove your photo.</string>
+    <string name="photo_saved">Profile photo updated.</string>
+    <string name="photo_failed">Couldn\'t read that image. Try another one.</string>
+    <string name="photo_removed">Profile photo removed.</string>
+    <string name="action_choose_photo">Choose photo</string>
+    <string name="action_remove_photo">Remove photo</string>
+    <string name="photo_sheet_title">Profile photo</string>
+    <string name="photo_stays_on_device">Your photo stays on this device — it isn\'t uploaded to HR.</string>
+    <string name="menu_logout">Logout</string>
+    <string name="cd_profile_menu">Profile menu</string>
+
+    <!-- Chat -->
+    <string name="chat_title">HR Genie</string>
+    <string name="chat_status">● Always on</string>
+    <string name="action_ask_genie">Ask HR Genie</string>
+    <string name="action_talk_to_hrbp">Talk to HRBP</string>
+    <string name="chat_day_today">Today</string>
+    <string name="chat_hint">Ask about leave, claims, policy…</string>
+    <string name="escalation_eyebrow">Handing over to a human</string>
+    <string name="hrbp_name">Meera Krishnan</string>
+    <string name="hrbp_meta">Your HRBP · usually replies in 2h</string>
+    <string name="action_send_question">Send my question</string>
+    <string name="action_book_15">Book 15 min</string>
+    <string name="escalation_sent">Sent to Meera. She usually replies within 2h.</string>
+    <string name="escalation_booked">Booking link sent to your Infinity Learn mail.</string>
+
+    <!-- Mood -->
+    <string name="checkin_eyebrow">Check-in · %1$s</string>
+    <string name="mood_step0_title">How\'s your\nweek going?</string>
+    <string name="mood_step0_sub">No wrong answer. This takes one tap and helps us spot when a team needs support.</string>
+    <string name="mood_step1_title_positive">Nice — what\'s helping?</string>
+    <string name="mood_step1_title_negative">Got it. What\'s weighing on you?</string>
+    <string name="mood_step1_sub">Pick anything that fits — or skip it.</string>
+    <string name="mood_note_label">Anything you\'d like to add? (optional)</string>
+    <string name="mood_note_hint">Type freely — your note stays with you. Only the face and the reasons above reach HR.</string>
+    <string name="action_save_checkin">Save check-in</string>
+    <string name="mood_logged">Logged. Thank you.</string>
+    <string name="mood_trend_title">Your last 8 weeks</string>
+    <string name="mood_trend_meta">only visible to you</string>
+    <string name="mood_privacy_title">🔒 What HR sees</string>
+    <string name="mood_privacy_body">Your name, the face you picked, and the reasons you tagged. Your written note is not shared.</string>
+    <string name="action_back_to_home">Back to home</string>
+
+    <!-- Pulse -->
+    <string name="pulse_eyebrow">%1$s pulse · shared with your HRBP</string>
+    <string name="pulse_counter">%1$d/%2$d</string>
+    <string name="action_skip_one">Skip this one</string>
+    <string name="pulse_done_title">That\'s the whole\npulse. Thank you.</string>
+    <string name="pulse_done_sub">Your HRBP reads these answers against your name. Nobody else does.</string>
+    <string name="pulse_changed_eyebrow">What changed after July\'s pulse</string>
+    <string name="pulse_month_done_title">%1$s pulse — all done</string>
+    <string name="pulse_done_greeting">Thanks, %1$s. You answered on %2$s — nothing more to do this month.</string>
+    <string name="pulse_done_answers_title">What you told us</string>
+    <string name="pulse_done_skipped">Skipped</string>
+    <string name="pulse_done_privacy">You and your HRBP can see these answers. They are not shared with your manager or your team.</string>
+    <string name="action_done">Done</string>
+
+    <!-- HR insights -->
+    <string name="hrbp_view">HRBP view</string>
+    <string name="insights_title">Sentiment, %1$s</string>
+    <string name="insights_sub">%1$s · %2$d on the roll</string>
+    <string name="kpi_engagement">Engagement score</string>
+    <string name="kpi_engagement_from">from %1$d check-in today</string>
+    <string name="kpi_engagement_from_plural">from %1$d check-ins today</string>
+    <string name="kpi_engagement_none">No check-ins yet today</string>
+    <string name="kpi_pulse">Pulse completion</string>
+    <string name="kpi_pulse_sub">%1$d of %2$d answered</string>
+    <string name="dept_sentiment">Department sentiment</string>
+    <string name="attention_signals">Attention signals</string>
+    <string name="insights_legal">Individual records, under Infinity Learn\'s employee data policy. Written check-in notes are not exposed.</string>
+
+    <string name="chat_answer_source">📄 From %1$s</string>
+    <string name="chat_answer_offline">⚠️ Offline answer — the policy service didn\'t respond</string>
+    <string name="prompt_helpful">Did that answer your question?</string>
+    <string name="prompt_yes">👍 Yes, thanks</string>
+    <string name="prompt_no">Not really</string>
+    <string name="prompt_raise">Want me to raise this with HR?</string>
+    <string name="prompt_raise_yes">🎫 Raise a ticket</string>
+    <string name="prompt_raise_no">No thanks</string>
+    <string name="prompt_recover">Try again, or hand it to HR?</string>
+    <string name="prompt_retry">↻ Try again</string>
+
+    <!-- Chat: ticket raising -->
+    <string name="chip_raise_ticket">🎫 Raise a ticket</string>
+    <string name="chip_my_tickets">My tickets</string>
+    <string name="ticket_draft_title">Ticket preview</string>
+    <string name="ticket_raised_by">Raised by %1$s · %2$s</string>
+    <string name="action_raise_ticket">Raise it</string>
+    <string name="action_cancel">Cancel</string>
+
+    <!-- Push notifications -->
+    <string name="notification_channel_tickets">Ticket updates</string>
+    <string name="notification_channel_tickets_desc">When HR moves a ticket you raised.</string>
+    <string name="notifications_denied">Notifications are off, so ticket updates will only show inside the app.</string>
+
+    <!-- My tickets (employee) -->
+    <string name="my_tickets_eyebrow">Raised with HR</string>
+    <string name="my_tickets_title">My tickets</string>
+    <string name="my_tickets_sub">%1$d raised · %2$d still open</string>
+    <string name="my_tickets_raise">Raise a new ticket</string>
+    <string name="my_tickets_note">HR Genie files it for you and tells you here when the status moves.</string>
+    <string name="my_tickets_empty_title">Nothing raised yet</string>
+    <string name="my_tickets_empty_body">Ask HR Genie to raise a ticket and it will show up here with its status.</string>
+    <string name="my_tickets_filter_empty_title">Nothing %1$s</string>
+    <string name="my_tickets_filter_empty_body">Pick another filter to see the rest.</string>
+
+    <!-- HR insights: tickets -->
+    <string name="hr_tickets_title">Tickets</string>
+    <string name="hr_tickets_none">No tickets</string>
+    <string name="hr_tickets_none_sub">Nothing raised by the team right now. Requests made through HR Genie chat land here.</string>
+    <string name="hr_tickets_all_clear">All clear</string>
+    <string name="hr_tickets_open_badge">%1$d open</string>
+    <string name="hr_ticket_open">Open</string>
+    <string name="hr_ticket_in_progress">In progress</string>
+    <string name="hr_ticket_resolved">Resolved</string>
+    <string name="hr_ticket_meta">%1$s · %2$s · %3$s</string>
+    <!-- Meta line on a card whose reference already has its own chip. -->
+    <string name="hr_meta_pair">%1$s · %2$s</string>
+    <string name="hr_view_all_tickets">View all %1$d tickets  ›</string>
+    <string name="tickets_screen_title">Ticket queue</string>
+    <string name="tickets_screen_sub">%1$d raised · %2$d still open</string>
+    <string name="tickets_mix_title">Status mix</string>
+    <string name="tickets_screen_note">Tap a ticket to move it on. Resolving needs a note saying what was done.</string>
+    <plurals name="hr_tickets_caption">
+        <item quantity="one">ticket</item>
+        <item quantity="other">tickets</item>
+    </plurals>
+    <string name="ticket_update_status">Move to</string>
+    <string name="ticket_status_current">Current</string>
+    <string name="ticket_comment_label">What did you do?</string>
+    <string name="ticket_comment_label_required">What did you do? (required to resolve)</string>
+    <string name="ticket_comment_hint">e.g. Payslip regenerated and emailed. Portal refreshes overnight.</string>
+    <string name="ticket_comment_required">Add a note before resolving — the employee only sees this.</string>
+    <string name="ticket_status_required">Pick the status to move it to.</string>
+    <string name="ticket_apply_update">Update ticket</string>
+    <string name="ticket_move_to">Move to %1$s</string>
+    <string name="ticket_closed">Resolved</string>
+    <string name="ticket_reopen">Reopen ticket</string>
+    <string name="ticket_closed_meta">%1$s · %2$s</string>
+    <string name="ticket_history">Activity</string>
+    <string name="ticket_author_hr">HR</string>
+    <string name="hr_filter_all">All</string>
+    <string name="hr_filter_chip">%1$s %2$d</string>
+    <string name="hr_filter_empty">Nothing %1$s right now.</string>
+    <string name="ticket_raised_meta">%1$s · %2$s · %3$s</string>
+    <string name="ticket_update_note">The employee sees the new status in HR Genie chat.</string>
+    <string name="ticket_status_updated">%1$s moved to %2$s</string>
+
+    <!-- HR insights: history -->
+    <string name="trends_title">Mood &amp; pulse history</string>
+    <string name="trends_sub">Last %1$d days · %2$d pulse cycles</string>
+    <string name="trends_mood_title">Mood, day by day</string>
+    <string name="trends_mood_sub">Averaging %1$s across %2$d days with answers</string>
+    <string name="trends_mood_none">No check-ins recorded in this window yet.</string>
+    <string name="trends_mood_empty">Nothing to chart yet. Days appear here as people check in.</string>
+    <string name="trends_pulse_title">Pulse completion by month</string>
+    <string name="trends_cycle_count">%1$d / %2$d</string>
+    <string name="trends_current_cycle">This month</string>
+    <string name="trends_answers_title">How they answered</string>
+    <string name="trends_answers_sub">%1$s · %2$d of %3$d answered · tap for who</string>
+    <string name="trends_answers_empty">Nobody answered this cycle.</string>
+    <string name="hr_view_history">📈 Mood &amp; pulse history</string>
+
+    <!-- Debug-only demo seeder -->
+    <string name="seed_title">Demo data</string>
+    <string name="seed_body">Debug builds only. Backfills a fortnight of check-ins, attendance, past pulse cycles and a few tickets so these screens have something to show.</string>
+    <string name="seed_action">Backfill a fortnight</string>
+    <string name="seed_confirm">This overwrites the last 14 days of mood and attendance for every employee. Today is left as it is.</string>
+    <string name="seed_done">Seeded %1$d check-ins across the fortnight.</string>
+    <string name="seed_clear">Clear</string>
+    <string name="seed_clear_confirm">Removes all seeded mood, attendance, pulse and ticket records.</string>
+    <string name="seed_cleared">Demo data cleared.</string>
+
+    <!-- HR insights: drill-downs -->
+    <string name="hr_detail_checked_in">Checked in today</string>
+    <string name="hr_detail_on_the_clock">On the clock now</string>
+    <string name="hr_detail_mood">Who shared a mood</string>
+    <string name="hr_detail_pulse">Monthly pulse</string>
+    <string name="hr_detail_attendance">Hours this week</string>
+    <string name="hr_detail_shared">%1$d of %2$d shared today</string>
+    <string name="hr_detail_answered">%1$d of %2$d answered · tap a name for their answers</string>
+    <string name="chevron_down">▾</string>
+    <string name="chevron_up">▴</string>
+    <string name="glyph_plus">+</string>
+    <!-- Stat the HRMS did not send. Keeps the three-across row intact. -->
+    <string name="value_unknown">—</string>
+    <!-- Ticket sync -->
+    <string name="tickets_offline">Couldn\'t reach HR Genie — showing the last known list.</string>
+    <string name="ticket_updating">Updating…</string>
+    <string name="ticket_update_forbidden">Only an HR account can move a ticket.</string>
+    <string name="ticket_update_rejected">HR Genie refused that change. Check the note and try again.</string>
+    <string name="ticket_update_unreachable">Couldn\'t reach HR Genie. Your note is still here — try again.</string>
+    <!-- Status glyphs on a ticket card. Decorative: the status word sits beside them,
+         so a reader never depends on the glyph or its colour. -->
+    <string name="ticket_glyph_open">!</string>
+    <string name="ticket_glyph_progress">⋯</string>
+    <string name="ticket_glyph_resolved">✓</string>
+    <string name="hr_detail_empty_checked_in">Nobody has clocked in yet today.</string>
+    <string name="hr_detail_empty_on_the_clock">Nobody is on the clock right now.</string>
+    <string name="hr_detail_empty_generic">Nothing recorded yet.</string>
+    <string name="hr_detail_note">Individual records. Handle under Infinity Learn\'s employee data policy.</string>
+    <string name="hr_tap_hint">Tap for who</string>
+    <plurals name="hr_detail_people">
+        <item quantity="one">%1$d person</item>
+        <item quantity="other">%1$d people</item>
+    </plurals>
+
+    <!-- HR insights: live figures -->
+    <string name="hr_today_title">Today at a glance</string>
+    <string name="hr_mood_title">How the team feels today</string>
+    <string name="hr_attendance_title">Attendance this week</string>
+    <string name="hr_stat_checked_in">Checked in</string>
+    <string name="hr_stat_on_the_clock">On the clock</string>
+    <string name="hr_stat_mood">Mood shared</string>
+    <string name="hr_mood_sub">%1$d of %2$d shared how they feel</string>
+    <string name="hr_mood_none">Nobody has checked in yet today. Figures appear as people share.</string>
+    <string name="hr_mood_row">%1$s %2$s</string>
+    <string name="hr_dept_no_data">No check-in yet</string>
+    <string name="hr_dept_headcount">%1$d in team</string>
+    <string name="hr_attendance_sub">%1$s logged across the team so far</string>
+    <string name="hr_metric_present">Full days</string>
+    <string name="hr_metric_half">Half days</string>
+    <string name="hr_metric_mis">Missed punches</string>
+    <string name="hr_metric_absent">Absences</string>
+    <string name="hr_attention_below_cohort">Cohorts report at %1$d or more. With %2$d people on the roll, no signal can be shown without identifying someone — so this stays empty by design.</string>
+    <string name="hr_attention_clear">Nothing needs attention. No cohort is trending low and no missed punches are outstanding.</string>
+    <string name="hr_attention_watch">%1$d missed punch or absence this week. Follow up as attendance, not as sentiment.</string>
+    <string name="hr_attention_watch_plural">%1$d missed punches or absences this week. Follow up as attendance, not as sentiment.</string>
+    <string name="hr_sign_out">Sign out</string>
+    <string name="hr_sign_out_message">Sign out of the HRBP dashboard?</string>
+
+    <!-- Holidays -->
+    <string name="holiday_calendar">Holiday calendar</string>
+    <string name="holidays_title">Holidays 2026</string>
+    <string name="holidays_sub">%1$d company holidays · %2$d remaining</string>
+    <string name="all_holidays">All holidays</string>
+    <string name="holidays_tip">Faded entries have already passed. Ask HR Genie “can I swap an optional holiday?” for the floater policy.</string>
+
+    <!-- Bottom nav -->
+    <string name="nav_home">Home</string>
+    <string name="nav_checkin">Check-in</string>
+    <string name="nav_pulse">Pulse</string>
+    <string name="nav_tickets">Tickets</string>
+    <string name="nav_insights">Insights</string>
+
+    <!-- Content descriptions -->
+    <string name="cd_back">Back</string>
+    <string name="cd_notifications">Notifications</string>
+    <string name="cd_voice_input">Voice input</string>
+    <string name="cd_send">Send</string>
+    <string name="voice_slide_to_cancel">‹ Slide to cancel</string>
+    <string name="voice_timer">%1$d:%2$02d</string>
+    <string name="voice_ready">Mic ready — hold it to ask.</string>
+    <string name="voice_cancelled">Discarded.</string>
+    <string name="voice_no_speech">I didn\'t catch that — hold the mic and try again.</string>
+    <string name="voice_permission_denied">HR Genie needs microphone access to listen. You can grant it in Settings.</string>
+    <string name="voice_network">Voice needs a connection. Type it instead?</string>
+    <string name="voice_busy">Still finishing the last one — try again in a moment.</string>
+    <string name="voice_unavailable">No speech recogniser on this device. Type it instead.</string>
+    <string name="voice_failed">Voice input failed. Type it instead?</string>
+    <string name="voice_read_on">Spoken answers on — ask out loud and I\'ll reply out loud.</string>
+    <string name="voice_read_off">Spoken answers off. Tap the speaker on any reply to hear it.</string>
+    <string name="cd_read_aloud">Read this answer aloud</string>
+    <string name="cd_auto_speak">Spoken answers</string>
+    <string name="cd_avatar">Your profile</string>
+    <string name="cd_send_wish">Send a wish</string>
+    <plurals name="wish_years">
+        <item quantity="one">%1$d year</item>
+        <item quantity="other">%1$d years</item>
+    </plurals>
+</resources>

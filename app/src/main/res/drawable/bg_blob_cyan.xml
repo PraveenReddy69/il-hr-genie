@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Decorative sign-in glow: radial rgba(77,201,255,.30) fading out at 68%. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <gradient
+        android:type="radial"
+        android:gradientRadius="210dp"
+        android:startColor="#4D4DC9FF"
+        android:centerColor="#264DC9FF"
+        android:endColor="#004DC9FF" />
+</shape>

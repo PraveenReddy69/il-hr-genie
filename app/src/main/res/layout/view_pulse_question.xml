@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/questionScroller"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipToPadding="false"
+    android:scrollbars="none">
+
+    <LinearLayout
+        android:id="@+id/questionContent"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="@dimen/space_xl"
+        android:paddingTop="34dp"
+        android:paddingEnd="@dimen/space_xl"
+        android:paddingBottom="40dp">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:background="@drawable/bg_tile_white14_sm"
+                android:padding="4dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/learn_logo"
+                android:importantForAccessibility="no" />
+
+            <TextView
+                android:id="@+id/pulseEyebrow"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="9dp"
+                android:fontFamily="sans-serif-medium"
+                android:textColor="@color/white_55"
+                android:textSize="@dimen/text_caption"
+                tools:text="August pulse · answers stay private" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/questionText"
+            style="@style/HG.H1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:letterSpacing="-0.026"
+            android:lineSpacingMultiplier="1.28"
+            android:textColor="@color/white"
+            android:textSize="27sp"
+            tools:text="How has your work experience been this month?" />
+
+        <TextView
+            android:id="@+id/questionHint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_m"
+            android:lineSpacingMultiplier="1.6"
+            android:textColor="@color/white_55"
+            android:textSize="@dimen/text_body"
+            tools:text="Gut feel is fine — no one is scoring you." />
+
+        <LinearLayout
+            android:id="@+id/optionList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_xxl"
+            android:orientation="vertical" />
+
+        <TextView
+            android:id="@+id/skipQuestion"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_xl"
+            android:background="?attr/selectableItemBackground"
+            android:fontFamily="sans-serif-medium"
+            android:gravity="center"
+            android:padding="6dp"
+            android:text="@string/action_skip_one"
+            android:textColor="@color/white_45"
+            android:textSize="@dimen/text_body_sm" />
+    </LinearLayout>
+</ScrollView>

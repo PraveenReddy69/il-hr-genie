@@ -1,0 +1,563 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/scroller"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_app"
+    android:clipToPadding="false"
+    android:scrollbars="none">
+
+    <LinearLayout
+        android:id="@+id/content"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- ================================ Header ================================ -->
+        <FrameLayout
+            android:id="@+id/header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_header_home">
+
+            <!-- Decorative depth; clipped to the header bounds. -->
+            <View
+                android:layout_width="300dp"
+                android:layout_height="300dp"
+                android:layout_gravity="top|end"
+                android:layout_marginTop="-120dp"
+                android:layout_marginEnd="-90dp"
+                android:background="@drawable/bg_header_glow"
+                android:importantForAccessibility="no" />
+
+            <View
+                android:layout_width="220dp"
+                android:layout_height="220dp"
+                android:layout_gravity="bottom|start"
+                android:layout_marginStart="-110dp"
+                android:layout_marginBottom="-120dp"
+                android:background="@drawable/bg_header_glow_purple"
+                android:importantForAccessibility="no" />
+
+            <LinearLayout
+                android:id="@+id/headerContent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="20dp"
+                android:paddingTop="@dimen/space_xl"
+                android:paddingEnd="20dp"
+                android:paddingBottom="32dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/space_xl"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <!-- The lockup already reads "Infinity Learn", so it stands alone. -->
+                    <ImageView
+                        android:layout_width="96dp"
+                        android:layout_height="26dp"
+                        android:layout_weight="1"
+                        android:scaleType="fitStart"
+                        android:src="@drawable/learn_logo"
+                        android:contentDescription="@string/brand" />
+
+                    <FrameLayout
+                        android:id="@+id/bell"
+                        android:layout_width="38dp"
+                        android:layout_height="38dp"
+                        android:background="@drawable/bg_tile_glass">
+
+                        <ImageView
+                            android:layout_width="19dp"
+                            android:layout_height="19dp"
+                            android:layout_gravity="center"
+                            android:contentDescription="@string/cd_notifications"
+                            android:src="@drawable/ic_bell" />
+
+                        <View
+                            android:layout_width="8dp"
+                            android:layout_height="8dp"
+                            android:layout_gravity="top|end"
+                            android:layout_margin="7dp"
+                            android:background="@drawable/bg_badge_dot"
+                            android:importantForAccessibility="no" />
+                    </FrameLayout>
+
+                    <FrameLayout
+                        android:id="@+id/avatar"
+                        android:layout_width="38dp"
+                        android:layout_height="38dp"
+                        android:layout_marginStart="10dp"
+                        android:background="@drawable/bg_avatar_user"
+                        android:clickable="true"
+                        android:contentDescription="@string/cd_avatar"
+                        android:focusable="true">
+
+                        <ImageView
+                            android:id="@+id/avatarIcon"
+                            android:layout_width="21dp"
+                            android:layout_height="21dp"
+                            android:layout_gravity="center"
+                            app:tint="@color/white"
+                            android:importantForAccessibility="no"
+                            tools:src="@drawable/ic_avatar_female" />
+
+                        <com.google.android.material.imageview.ShapeableImageView
+                            android:id="@+id/avatarPhoto"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:scaleType="centerCrop"
+                            android:visibility="gone"
+                            app:shapeAppearanceOverlay="@style/HG.CircleImage"
+                            android:importantForAccessibility="no" />
+                    </FrameLayout>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/greeting"
+                    style="@style/HG.H1"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/white"
+                    tools:text="Good morning, Gunapati" />
+
+                <TextView
+                    android:id="@+id/subline"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:textColor="@color/white_60"
+                    android:textSize="@dimen/text_body"
+                    tools:text="Friday, 7 August · Day 284 at Infinity Learn" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- ================================ Content =============================== -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="-14dp"
+            android:orientation="vertical"
+            android:paddingStart="@dimen/space_screen"
+            android:paddingEnd="@dimen/space_screen"
+            android:paddingBottom="@dimen/space_fab_clearance">
+
+            <!-- 1. Attendance -->
+            <include
+                android:id="@+id/attendance"
+                layout="@layout/view_attendance_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <!-- 2. Mood check-in (optional; hidden once answered for the day) -->
+            <LinearLayout
+                android:id="@+id/moodCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_l"
+                android:background="@drawable/bg_card_mood"
+                android:elevation="3dp"
+                android:orientation="vertical"
+                android:paddingStart="@dimen/space_screen"
+                android:paddingTop="20dp"
+                android:paddingEnd="@dimen/space_screen"
+                android:paddingBottom="@dimen/space_screen">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        style="@style/HG.H3"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/mood_card_title" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_pill_blue_tint"
+                        android:fontFamily="sans-serif-medium"
+                        android:paddingStart="9dp"
+                        android:paddingTop="4dp"
+                        android:paddingEnd="9dp"
+                        android:paddingBottom="4dp"
+                        android:text="@string/mood_card_pill"
+                        android:textColor="@color/blue_deep"
+                        android:textSize="@dimen/text_eyebrow" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="@dimen/space_l"
+                    android:text="@string/mood_card_sub"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="@dimen/text_caption_lg" />
+
+                <LinearLayout
+                    android:id="@+id/moodGrid"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:baselineAligned="false"
+                    android:orientation="horizontal" />
+            </LinearLayout>
+
+            <!-- 3. Wishes -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/wishesCard"
+                android:layout_marginTop="@dimen/space_l"
+                android:background="@drawable/bg_card"
+                android:elevation="2dp"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/space_screen"
+                    android:paddingTop="@dimen/space_l"
+                    android:paddingEnd="@dimen/space_m"
+                    android:paddingBottom="@dimen/space_m">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:letterSpacing="-0.019"
+                        android:text="@string/wishes"
+                        android:textColor="@color/ink"
+                        android:textSize="@dimen/text_title_lg"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/wishesViewAll"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_pill_link"
+                        android:paddingStart="13dp"
+                        android:paddingTop="6dp"
+                        android:paddingEnd="13dp"
+                        android:paddingBottom="6dp"
+                        android:text="@string/action_view"
+                        android:textColor="@color/blue_deep"
+                        android:textSize="@dimen/text_eyebrow"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <!-- Inset gradient strip: the old full-bleed band read as a table
+                     header rather than a designed element. -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_screen"
+                    android:layout_marginEnd="@dimen/space_screen"
+                    android:background="@drawable/bg_band_navy_soft"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="14dp"
+                    android:paddingTop="11dp"
+                    android:paddingEnd="10dp"
+                    android:paddingBottom="11dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="9dp"
+                        android:importantForAccessibility="no"
+                        android:includeFontPadding="false"
+                        android:text="@string/emoji_party"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:id="@+id/wishesDateBand"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:letterSpacing="0.025"
+                        android:textColor="@color/white"
+                        android:textSize="@dimen/text_caption"
+                        android:textStyle="bold"
+                        tools:text="Today · 7 Aug 2026" />
+
+                    <TextView
+                        android:id="@+id/wishesCount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_band_count"
+                        android:includeFontPadding="false"
+                        android:minWidth="26dp"
+                        android:gravity="center"
+                        android:paddingStart="8dp"
+                        android:paddingTop="4dp"
+                        android:paddingEnd="8dp"
+                        android:paddingBottom="4dp"
+                        android:textColor="@color/white"
+                        android:textSize="@dimen/text_eyebrow_sm"
+                        android:textStyle="bold"
+                        tools:text="8" />
+                </LinearLayout>
+
+                <!-- Segmented control: the tab track, with the pill indicator inside. -->
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_screen"
+                    android:layout_marginTop="@dimen/space_m"
+                    android:layout_marginEnd="@dimen/space_screen"
+                    android:background="@drawable/bg_tab_group"
+                    android:padding="4dp">
+
+                    <com.google.android.material.tabs.TabLayout
+                        android:id="@+id/wishTabs"
+                        style="@style/HG.WishTabs"
+                        android:layout_width="match_parent"
+                        android:layout_height="38dp" />
+                </FrameLayout>
+
+                <LinearLayout
+                    android:id="@+id/wishList"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingStart="@dimen/space_screen"
+                    android:paddingTop="6dp"
+                    android:paddingEnd="@dimen/space_screen"
+                    android:paddingBottom="4dp" />
+
+                <!-- Hidden with the row below it: a rule under nothing reads as a
+                     card that failed to load. -->
+                <View
+                    android:id="@+id/wishesDivider"
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginStart="@dimen/space_screen"
+                    android:layout_marginEnd="@dimen/space_screen"
+                    android:background="@color/divider" />
+
+                <TextView
+                    android:id="@+id/wishesMore"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="?attr/selectableItemBackground"
+                    android:gravity="center"
+                    android:letterSpacing="0.02"
+                    android:paddingStart="@dimen/space_screen"
+                    android:paddingTop="13dp"
+                    android:paddingEnd="@dimen/space_screen"
+                    android:paddingBottom="13dp"
+                    android:textColor="@color/blue_deep"
+                    android:textSize="@dimen/text_eyebrow"
+                    android:textStyle="bold"
+                    tools:text="+5 more  ›" />
+            </LinearLayout>
+
+            <!-- 4. Upcoming holidays -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/holidaysCard"
+                android:layout_marginTop="@dimen/space_l"
+                android:background="@drawable/bg_card"
+                android:elevation="2dp"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/space_screen"
+                    android:paddingTop="@dimen/space_l"
+                    android:paddingEnd="@dimen/space_m"
+                    android:paddingBottom="@dimen/space_m">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:letterSpacing="-0.019"
+                        android:text="@string/upcoming_holidays"
+                        android:textColor="@color/ink"
+                        android:textSize="@dimen/text_title_lg"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/holidaysViewAll"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_pill_link"
+                        android:paddingStart="13dp"
+                        android:paddingTop="6dp"
+                        android:paddingEnd="13dp"
+                        android:paddingBottom="6dp"
+                        android:text="@string/action_view_all"
+                        android:textColor="@color/blue_deep"
+                        android:textSize="@dimen/text_eyebrow"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_screen"
+                    android:layout_marginEnd="@dimen/space_screen"
+                    android:background="@drawable/bg_band_blue_soft"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="14dp"
+                    android:paddingTop="11dp"
+                    android:paddingEnd="10dp"
+                    android:paddingBottom="11dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="9dp"
+                        android:importantForAccessibility="no"
+                        android:includeFontPadding="false"
+                        android:text="@string/emoji_palm"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:letterSpacing="0.025"
+                        android:text="@string/next_four_holidays"
+                        android:textColor="@color/white"
+                        android:textSize="@dimen/text_caption"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/holidaysRemaining"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_band_count"
+                        android:includeFontPadding="false"
+                        android:gravity="center"
+                        android:paddingStart="9dp"
+                        android:paddingTop="4dp"
+                        android:paddingEnd="9dp"
+                        android:paddingBottom="4dp"
+                        android:textColor="@color/white"
+                        android:textSize="@dimen/text_eyebrow_sm"
+                        android:textStyle="bold"
+                        tools:text="9 left" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/holidayList"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingStart="@dimen/space_screen"
+                    android:paddingTop="@dimen/space_m"
+                    android:paddingEnd="@dimen/space_screen"
+                    android:paddingBottom="@dimen/space_l" />
+            </LinearLayout>
+
+            <!-- 5. Pulse nudge -->
+            <LinearLayout
+                android:id="@+id/pulseNudge"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_l"
+                android:background="@drawable/bg_card_dashed_purple"
+                android:gravity="center_vertical"
+                android:layerType="software"
+                android:orientation="horizontal"
+                android:paddingStart="@dimen/space_screen"
+                android:paddingTop="@dimen/space_l"
+                android:paddingEnd="@dimen/space_screen"
+                android:paddingBottom="@dimen/space_l">
+
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/bg_tile_purple"
+                    android:gravity="center"
+                    android:includeFontPadding="false"
+                    android:text="@string/emoji_chat"
+                    android:textSize="19sp"
+                    android:importantForAccessibility="no" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/pulseNudgeTitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/ink"
+                        android:textSize="14.5sp"
+                        android:textStyle="bold"
+                        tools:text="August pulse is open" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/pulse_nudge_sub"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="@dimen/text_caption" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_s"
+                    android:text="@string/action_start"
+                    android:textColor="@color/purple"
+                    android:textSize="@dimen/text_caption"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- 6. Privacy footnote -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_l"
+                android:orientation="horizontal"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/emoji_lock"
+                    android:textSize="13sp"
+                    android:importantForAccessibility="no" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="9dp"
+                    android:layout_weight="1"
+                    android:lineSpacingMultiplier="1.5"
+                    android:text="@string/home_privacy"
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="@dimen/text_micro" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

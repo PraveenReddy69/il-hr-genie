@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One day in the week history. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/dayRow"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/selectableItemBackground"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="@dimen/space_screen"
+    android:paddingTop="14dp"
+    android:paddingEnd="@dimen/space_screen"
+    android:paddingBottom="14dp">
+
+    <!-- Always present so every row lines up; disabled where there is nothing to raise. -->
+    <CheckBox
+        android:id="@+id/dayCheck"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_marginEnd="8dp"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        android:paddingStart="0dp"
+        app:buttonTint="@color/selector_checkbox" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/dayDate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/ink"
+            android:textSize="@dimen/text_body"
+            android:textStyle="bold"
+            tools:text="Mon 03 Aug" />
+
+        <TextView
+            android:id="@+id/dayDetail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:textColor="@color/text_secondary"
+            android:textSize="@dimen/text_micro"
+            tools:text="In 10:57 AM · Out 6:34 PM · 7h 37m" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/dayStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/space_m"
+        android:background="@drawable/bg_status_present"
+        android:fontFamily="sans-serif-black"
+        android:letterSpacing="0.04"
+        android:minWidth="38dp"
+        android:paddingStart="9dp"
+        android:paddingTop="5dp"
+        android:paddingEnd="9dp"
+        android:paddingBottom="5dp"
+        android:gravity="center"
+        android:textColor="@color/green_ok"
+        android:textSize="@dimen/text_eyebrow_sm"
+        tools:text="P" />
+</LinearLayout>

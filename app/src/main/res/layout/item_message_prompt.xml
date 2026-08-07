@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A follow-up the bot offers after answering: was that useful, shall I raise it,
+     want to try again. One layout, configured per prompt kind. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="2dp"
+    android:paddingTop="2dp"
+    android:paddingEnd="@dimen/space_l"
+    android:paddingBottom="8dp">
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_prompt_card"
+        android:orientation="vertical"
+        android:paddingStart="@dimen/space_l"
+        android:paddingTop="13dp"
+        android:paddingEnd="@dimen/space_l"
+        android:paddingBottom="13dp">
+
+        <TextView
+            android:id="@+id/promptText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:textColor="@color/ink"
+            android:textSize="@dimen/text_body_sm"
+            tools:text="Did that answer your question?" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="11dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/promptPrimary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_chip_category"
+                android:fontFamily="sans-serif-medium"
+                android:paddingStart="15dp"
+                android:paddingTop="9dp"
+                android:paddingEnd="15dp"
+                android:paddingBottom="9dp"
+                android:textColor="@color/blue_deep"
+                android:textSize="@dimen/text_caption_lg"
+                tools:text="Yes, thanks" />
+
+            <TextView
+                android:id="@+id/promptSecondary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/bg_chip_neutral"
+                android:fontFamily="sans-serif-medium"
+                android:paddingStart="15dp"
+                android:paddingTop="9dp"
+                android:paddingEnd="15dp"
+                android:paddingBottom="9dp"
+                android:textColor="@color/text_slate"
+                android:textSize="@dimen/text_caption_lg"
+                tools:text="Not really" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

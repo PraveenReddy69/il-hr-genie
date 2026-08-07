@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
+
+    <TextView
+        android:id="@+id/questionRank"
+        android:layout_width="16dp"
+        android:layout_height="wrap_content"
+        android:textColor="@color/text_faint"
+        android:textSize="@dimen/text_caption"
+        android:textStyle="bold"
+        tools:text="1" />
+
+    <TextView
+        android:id="@+id/questionText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/space_m"
+        android:layout_weight="1"
+        android:fontFamily="sans-serif-medium"
+        android:textColor="@color/ink"
+        android:textSize="@dimen/text_body_sm"
+        tools:text="How do I claim parents under GMC?" />
+
+    <TextView
+        android:id="@+id/questionTag"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/space_m"
+        android:background="@drawable/bg_tag_gap"
+        android:paddingStart="9dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="9dp"
+        android:paddingBottom="4dp"
+        android:textColor="@color/blue_deep"
+        android:textSize="@dimen/text_eyebrow_sm"
+        android:textStyle="bold"
+        tools:text="Policy gap" />
+</LinearLayout>

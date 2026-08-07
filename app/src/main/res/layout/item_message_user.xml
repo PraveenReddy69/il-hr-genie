@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingTop="6dp"
+    android:paddingBottom="6dp">
+
+    <TextView
+        android:id="@+id/bubble"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end"
+        android:background="@drawable/bg_bubble_user"
+        android:elevation="2dp"
+        android:fontFamily="sans-serif-medium"
+        android:lineSpacingMultiplier="1.55"
+        android:paddingStart="@dimen/space_l"
+        android:paddingTop="13dp"
+        android:paddingEnd="@dimen/space_l"
+        android:paddingBottom="13dp"
+        android:textColor="@color/white"
+        android:textSize="@dimen/text_body"
+        tools:text="How many leaves do I have left?" />
+</FrameLayout>

@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One of the employee's own tickets. Rows with activity expand in place to show
+     what HR has done.
+
+     The status reads twice on purpose: a glyph on the left for scanning down the
+     stack, and the word on the meta line so nothing depends on colour alone. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_ticket_card"
+    android:elevation="2dp"
+    android:orientation="vertical"
+    android:paddingStart="12dp"
+    android:paddingTop="12dp"
+    android:paddingEnd="12dp"
+    android:paddingBottom="12dp">
+
+    <LinearLayout
+        android:id="@+id/myTicketHeader"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:baselineAligned="false"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/myTicketGlyph"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:background="@drawable/bg_ticket_glyph"
+            android:gravity="center"
+            android:importantForAccessibility="no"
+            android:includeFontPadding="false"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            tools:text="✓" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="11dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/myTicketSubject"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:letterSpacing="-0.012"
+                android:lineSpacingMultiplier="1.15"
+                android:maxLines="2"
+                android:textColor="@color/ink"
+                android:textSize="@dimen/text_body"
+                android:textStyle="bold"
+                tools:text="My salary got deducted" />
+
+            <!-- Status, reference and age on one line: three short facts that only
+                 make sense together. -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="7dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/myTicketStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_pill_status"
+                    android:includeFontPadding="false"
+                    android:paddingStart="8dp"
+                    android:paddingTop="4dp"
+                    android:paddingEnd="8dp"
+                    android:paddingBottom="4dp"
+                    android:textSize="@dimen/text_eyebrow_sm"
+                    android:textStyle="bold"
+                    tools:text="Resolved" />
+
+                <TextView
+                    android:id="@+id/myTicketId"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:background="@drawable/bg_pill_ticket_id"
+                    android:fontFamily="monospace"
+                    android:includeFontPadding="false"
+                    android:paddingStart="6dp"
+                    android:paddingTop="4dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="4dp"
+                    android:textColor="@color/text_slate"
+                    android:textSize="@dimen/text_eyebrow_sm"
+                    tools:text="HRG-0001" />
+
+                <TextView
+                    android:id="@+id/myTicketMeta"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="7dp"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="@dimen/text_eyebrow"
+                    tools:text="Payroll · 22m ago" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/myTicketChevron"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/bg_chevron_disc"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:text="@string/chevron_down"
+            android:textColor="@color/blue_deep"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:visibility="gone"
+            tools:visibility="visible" />
+    </LinearLayout>
+
+    <!-- What HR recorded, revealed on tap. -->
+    <LinearLayout
+        android:id="@+id/myTicketActivity"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="11dp"
+        android:background="@drawable/bg_answer_panel"
+        android:orientation="vertical"
+        android:paddingStart="12dp"
+        android:paddingTop="2dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="2dp"
+        android:visibility="gone"
+        tools:visibility="visible" />
+</LinearLayout>

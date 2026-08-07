@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Inactive nav icons sit at 45% opacity per the handoff. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/blue_deep" android:state_checked="true" />
+    <item android:color="@color/text_muted" android:alpha="0.45" />
+</selector>

@@ -1,0 +1,32 @@
+# ---------------------------------------------------------------- Android
+*.iml
+.gradle/
+build/
+# Machine-specific SDK path. (Comments must be on their own line — git treats a
+# trailing comment as part of the pattern, which silently stops it matching.)
+local.properties
+.idea/
+.cxx/
+*.apk
+*.aab
+captures/
+
+# Firebase client config. Not a secret — it ships inside the APK — but it names the
+# project, so it is left out of a public repo and added by whoever builds.
+app/google-services.json
+
+# ------------------------------------------------------------------- web
+node_modules/
+dist/
+.vite/
+
+# Environment. .env.example is committed; anything real is not — the API address is
+# environment-specific, and on Pages it comes from the repository variable instead.
+.env
+.env.local
+.env.*.local
+
+# ------------------------------------------------------------------ misc
+.DS_Store
+Thumbs.db
+*.log

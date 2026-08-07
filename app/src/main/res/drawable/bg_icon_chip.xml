@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Small rounded square behind a card's leading glyph. Tinted per card with
+     android:backgroundTint so one drawable covers every section. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="10dp" />
+    <solid android:color="@color/white" />
+</shape>

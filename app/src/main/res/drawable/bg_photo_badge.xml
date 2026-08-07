@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Camera badge on the profile avatar; the white ring lifts it off the header. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <solid android:color="@color/blue_primary" />
+    <stroke android:width="2dp" android:color="@color/ink" />
+</shape>

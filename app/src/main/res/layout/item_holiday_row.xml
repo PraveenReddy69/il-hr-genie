@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Compact holiday row used in the Home "Upcoming holidays" card. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingTop="9dp"
+    android:paddingBottom="9dp">
+
+    <!-- Calendar chip: the date is the thing people scan for, so it leads. -->
+    <LinearLayout
+        android:layout_width="46dp"
+        android:layout_height="46dp"
+        android:background="@drawable/bg_date_badge"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/holidayDay"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:includeFontPadding="false"
+            android:letterSpacing="-0.02"
+            android:textColor="@color/ink"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            tools:text="15" />
+
+        <TextView
+            android:id="@+id/holidayMonth"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="1dp"
+            android:includeFontPadding="false"
+            android:letterSpacing="0.09"
+            android:textColor="@color/blue_deep"
+            android:textSize="9sp"
+            android:textStyle="bold"
+            tools:text="AUG" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="13dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/holidayName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:letterSpacing="-0.01"
+            android:textColor="@color/ink"
+            android:textSize="@dimen/text_body"
+            android:textStyle="bold"
+            tools:text="Independence Day" />
+
+        <TextView
+            android:id="@+id/holidayDate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="@color/text_tertiary"
+            android:textSize="@dimen/text_micro"
+            tools:text="Saturday" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/holidayCountdown"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/space_s"
+        android:fontFamily="sans-serif-medium"
+        android:textColor="@color/text_muted"
+        android:textSize="@dimen/text_eyebrow"
+        tools:text="in 8 days" />
+</LinearLayout>

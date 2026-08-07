@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/homeFragment"
+        android:icon="@drawable/ic_nav_home"
+        android:title="@string/nav_home" />
+    <item
+        android:id="@+id/moodFragment"
+        android:icon="@drawable/ic_nav_checkin"
+        android:title="@string/nav_checkin" />
+    <item
+        android:id="@+id/pulseFragment"
+        android:icon="@drawable/ic_nav_pulse"
+        android:title="@string/nav_pulse" />
+    <item
+        android:id="@+id/myTicketsFragment"
+        android:icon="@drawable/ic_nav_tickets"
+        android:title="@string/nav_tickets" />
+    <!-- Insights is HR-only: it is not a tab, it is the whole screen after an HR
+         sign-in. Employees never see it. -->
+</menu>

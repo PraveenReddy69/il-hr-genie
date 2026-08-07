@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One HR ticket on the dashboard: what was raised, by whom, and how old it is. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingTop="10dp"
+    android:paddingBottom="10dp">
+
+    <View
+        android:id="@+id/ticketAccent"
+        android:layout_width="3dp"
+        android:layout_height="34dp"
+        android:background="@drawable/bg_track_fill_orange"
+        android:importantForAccessibility="no" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/ticketSubject"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:letterSpacing="-0.01"
+            android:maxLines="1"
+            android:textColor="@color/ink"
+            android:textSize="@dimen/text_body_sm"
+            android:textStyle="bold"
+            tools:text="Payslip for July is missing" />
+
+        <TextView
+            android:id="@+id/ticketMeta"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/text_tertiary"
+            android:textSize="@dimen/text_eyebrow"
+            tools:text="HRG-0001 · Payroll · 3h ago" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/ticketStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/space_s"
+        android:background="@drawable/bg_pill_status"
+        android:includeFontPadding="false"
+        android:paddingStart="9dp"
+        android:paddingTop="5dp"
+        android:paddingEnd="9dp"
+        android:paddingBottom="5dp"
+        android:textSize="@dimen/text_eyebrow_sm"
+        android:textStyle="bold"
+        tools:text="Open" />
+</LinearLayout>

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/selectableItemBackground"
+    android:orientation="vertical"
+    android:paddingTop="4dp"
+    android:paddingBottom="4dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="6dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/deptName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:fontFamily="sans-serif-medium"
+            android:textColor="@color/ink"
+            android:textSize="@dimen/text_body_sm"
+            tools:text="Academics" />
+
+        <TextView
+            android:id="@+id/deptScore"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/text_slate"
+            android:textSize="@dimen/text_caption_lg"
+            android:textStyle="bold"
+            tools:text="8.1" />
+    </LinearLayout>
+
+    <!-- Track holds the fill; fill width is set to score x 10% at bind time. -->
+    <FrameLayout
+        android:id="@+id/track"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/track_height"
+        android:background="@drawable/bg_track">
+
+        <View
+            android:id="@+id/trackFill"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_track_fill_blue" />
+    </FrameLayout>
+</LinearLayout>

@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One person behind a dashboard figure. Rows that carry a breakdown (pulse answers)
+     expand in place when tapped. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:id="@+id/personHeader"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingTop="11dp"
+        android:paddingBottom="11dp">
+
+        <TextView
+            android:id="@+id/personAvatar"
+            android:layout_width="@dimen/avatar_md"
+            android:layout_height="@dimen/avatar_md"
+            android:background="@drawable/bg_avatar_circle"
+            android:fontFamily="sans-serif-black"
+            android:gravity="center"
+            android:importantForAccessibility="no"
+            android:includeFontPadding="false"
+            android:textColor="@color/white"
+            android:textSize="13sp"
+            tools:text="GP" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="13dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/personName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:letterSpacing="-0.01"
+                android:maxLines="1"
+                android:textColor="@color/ink"
+                android:textSize="@dimen/text_body_sm"
+                android:textStyle="bold"
+                tools:text="Gunapati Praveen Reddy" />
+
+            <TextView
+                android:id="@+id/personSubtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:textColor="@color/text_tertiary"
+                android:textSize="@dimen/text_eyebrow"
+                tools:text="4 of 4 answered" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/personValue"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/space_s"
+            android:background="@drawable/bg_pill_status"
+            android:includeFontPadding="false"
+            android:paddingStart="10dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="10dp"
+            android:paddingBottom="6dp"
+            android:textSize="@dimen/text_eyebrow"
+            android:textStyle="bold"
+            tools:text="Done" />
+
+        <!-- Sits hard right, after the status pill: a tinted disc reads as a control
+             at a glance, where a bare glyph did not. -->
+        <TextView
+            android:id="@+id/personChevron"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:layout_marginStart="10dp"
+            android:background="@drawable/bg_chevron_disc"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:text="@string/chevron_down"
+            android:textColor="@color/blue_deep"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:visibility="gone"
+            tools:visibility="visible" />
+    </LinearLayout>
+
+    <!-- Answers, revealed on tap. -->
+    <LinearLayout
+        android:id="@+id/personBreakdown"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="55dp"
+        android:layout_marginBottom="12dp"
+        android:background="@drawable/bg_answer_panel"
+        android:orientation="vertical"
+        android:paddingStart="14dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="14dp"
+        android:paddingBottom="4dp"
+        android:visibility="gone"
+        tools:visibility="visible" />
+</LinearLayout>

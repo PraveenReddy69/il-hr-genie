@@ -1,0 +1,10 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <!--
+        Status-bar icons are drawn as a silhouette: only the alpha channel survives,
+        so this is one solid shape rather than the ticket outline used in-app.
+    -->
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M12,2a7,7 0 0,1 7,7v4l2,3v1H3v-1l2,-3V9a7,7 0 0,1 7,-7zM9.5,18h5a2.5,2.5 0 0,1 -5,0z" />
+</vector>

@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_app"
+    android:orientation="vertical">
+
+    <!-- ============================== Top app bar ============================== -->
+    <LinearLayout
+        android:id="@+id/appBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/surface"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/space_l"
+        android:paddingTop="14dp"
+        android:paddingEnd="@dimen/space_l"
+        android:paddingBottom="14dp">
+
+        <ImageView
+            android:id="@+id/backButton"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/cd_back"
+            android:padding="2dp"
+            android:src="@drawable/ic_back"
+            app:tint="@color/ink" />
+
+        <ImageView
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="@dimen/space_m"
+            android:background="@drawable/bg_tile_genie"
+            android:padding="5dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/learn_logo"
+            android:importantForAccessibility="no" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/space_m"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/HG.Title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/chat_title" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-medium"
+                android:text="@string/chat_status"
+                android:textColor="@color/green_ok"
+                android:textSize="@dimen/text_micro" />
+        </LinearLayout>
+
+        <!-- Whether answers are read out automatically after a spoken question. -->
+        <ImageView
+            android:id="@+id/autoSpeakToggle"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:layout_marginEnd="@dimen/space_s"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/cd_auto_speak"
+            android:padding="6dp"
+            android:src="@drawable/ic_speaker"
+            app:tint="@color/blue_deep" />
+
+        <TextView
+            android:id="@+id/talkToHrbp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_pill_blue_tint"
+            android:paddingStart="@dimen/space_m"
+            android:paddingTop="7dp"
+            android:paddingEnd="@dimen/space_m"
+            android:paddingBottom="7dp"
+            android:text="@string/action_talk_to_hrbp"
+            android:textColor="@color/blue_deep"
+            android:textSize="@dimen/text_micro"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/divider" />
+
+    <!-- ============================== Message list ============================= -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/messageList"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:paddingStart="@dimen/space_l"
+        android:paddingTop="@dimen/space_screen"
+        android:paddingEnd="@dimen/space_l"
+        android:paddingBottom="@dimen/space_s"
+        android:scrollbars="none"
+        tools:listitem="@layout/item_message_bot" />
+
+    <!-- ============================ Suggestion chips =========================== -->
+    <HorizontalScrollView
+        android:id="@+id/suggestionScroller"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:clipToPadding="false"
+        android:paddingStart="14dp"
+        android:paddingTop="@dimen/space_s"
+        android:paddingEnd="14dp"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:id="@+id/suggestionRow"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" />
+    </HorizontalScrollView>
+
+    <!-- ================================ Composer =============================== -->
+    <LinearLayout
+        android:id="@+id/composer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="14dp"
+        android:paddingTop="@dimen/space_m"
+        android:paddingEnd="14dp"
+        android:paddingBottom="14dp">
+
+        <!-- The field and the recording bar occupy the same slot: one is always
+             hidden, so the composer never changes height mid-gesture. -->
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="@dimen/height_composer"
+            android:layout_weight="1">
+
+            <EditText
+                android:id="@+id/composerInput"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/bg_input_white"
+                android:hint="@string/chat_hint"
+                android:imeOptions="actionSend"
+                android:importantForAutofill="no"
+                android:inputType="textCapSentences"
+                android:maxLines="1"
+                android:paddingStart="@dimen/space_l"
+                android:paddingEnd="@dimen/space_l"
+                android:textColor="@color/ink"
+                android:textColorHint="@color/text_muted"
+                android:textSize="@dimen/text_body"
+                tools:ignore="LabelFor" />
+
+            <LinearLayout
+                android:id="@+id/recordingBar"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/bg_recording_bar"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="@dimen/space_l"
+                android:paddingEnd="@dimen/space_m"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <View
+                    android:id="@+id/recordingDot"
+                    android:layout_width="9dp"
+                    android:layout_height="9dp"
+                    android:background="@drawable/bg_dot_recording"
+                    android:importantForAccessibility="no" />
+
+                <TextView
+                    android:id="@+id/recordingTimer"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:textColor="@color/ink"
+                    android:textSize="@dimen/text_body"
+                    tools:text="0:03" />
+
+                <TextView
+                    android:id="@+id/recordingHint"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_m"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:gravity="end"
+                    android:maxLines="1"
+                    android:text="@string/voice_slide_to_cancel"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="@dimen/text_caption_lg" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <ImageView
+            android:id="@+id/micButton"
+            android:layout_width="@dimen/height_composer"
+            android:layout_height="@dimen/height_composer"
+            android:layout_marginStart="10dp"
+            android:background="@drawable/bg_mic"
+            android:contentDescription="@string/cd_voice_input"
+            android:padding="14dp"
+            android:src="@drawable/ic_mic" />
+    </LinearLayout>
+</LinearLayout>

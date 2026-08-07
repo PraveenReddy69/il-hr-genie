@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Spacing -->
+    <dimen name="space_xxs">2dp</dimen>
+    <dimen name="space_xs">4dp</dimen>
+    <dimen name="space_s">8dp</dimen>
+    <dimen name="space_m">12dp</dimen>
+    <dimen name="space_l">16dp</dimen>
+    <dimen name="space_screen">18dp</dimen>
+    <dimen name="space_xl">22dp</dimen>
+    <dimen name="space_xxl">28dp</dimen>
+
+    <!-- Radii -->
+    <dimen name="radius_bar">6dp</dimen>
+    <dimen name="radius_pill">8dp</dimen>
+    <dimen name="radius_tile">14dp</dimen>
+    <dimen name="radius_input">16dp</dimen>
+    <dimen name="radius_card">20dp</dimen>
+    <dimen name="radius_card_lg">22dp</dimen>
+    <dimen name="radius_hero">24dp</dimen>
+    <dimen name="radius_header">28dp</dimen>
+
+    <!-- Component sizes -->
+    <dimen name="height_button">56dp</dimen>
+    <dimen name="height_input">54dp</dimen>
+    <dimen name="height_button_small">46dp</dimen>
+    <dimen name="height_composer">48dp</dimen>
+    <dimen name="avatar_sm">32dp</dimen>
+    <dimen name="avatar_md">42dp</dimen>
+    <dimen name="tile_hero">76dp</dimen>
+    <!-- Sign-in mark: the Infinity Learn lockup is 3:2, so the tile follows it. -->
+    <dimen name="logo_tile_width">132dp</dimen>
+    <dimen name="logo_tile_height">88dp</dimen>
+    <dimen name="stroke_hairline">1dp</dimen>
+    <!-- Enough room under a scroller for the floating chat button. -->
+    <dimen name="space_fab_clearance">92dp</dimen>
+
+    <!-- Type scale -->
+    <dimen name="text_display">32sp</dimen>
+    <dimen name="text_h1">26sp</dimen>
+    <dimen name="text_h1_lg">28sp</dimen>
+    <dimen name="text_h2">24sp</dimen>
+    <dimen name="text_h3">16.5sp</dimen>
+    <dimen name="text_title">15sp</dimen>
+    <dimen name="text_title_lg">15.5sp</dimen>
+    <dimen name="text_body">13.5sp</dimen>
+    <dimen name="text_body_sm">13sp</dimen>
+    <dimen name="text_caption">12sp</dimen>
+    <dimen name="text_caption_lg">12.5sp</dimen>
+    <dimen name="text_eyebrow">11sp</dimen>
+    <dimen name="text_eyebrow_sm">10.5sp</dimen>
+    <dimen name="text_micro">11.5sp</dimen>
+
+    <!-- Charts -->
+    <dimen name="chart_zone_personal">96dp</dimen>
+    <dimen name="chart_zone_org">88dp</dimen>
+    <dimen name="bar_min_height">18dp</dimen>
+    <dimen name="bar_max_extra">62dp</dimen>
+    <dimen name="track_height">7dp</dimen>
+</resources>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Header KPI tile: a translucent pane with a lit top edge, so it sits on the
+     gradient rather than blocking it out. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="@dimen/radius_card" />
+            <gradient
+                android:angle="270"
+                android:endColor="@color/white_08"
+                android:startColor="@color/white_16"
+                android:type="linear" />
+            <stroke
+                android:width="@dimen/stroke_hairline"
+                android:color="@color/white_22" />
+        </shape>
+    </item>
+</layer-list>

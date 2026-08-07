@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/sheetRoot"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_sheet_top"
+    android:orientation="vertical"
+    android:paddingStart="@dimen/space_screen"
+    android:paddingTop="10dp"
+    android:paddingEnd="@dimen/space_screen"
+    android:paddingBottom="@dimen/space_l">
+
+    <View
+        android:layout_width="38dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:background="@drawable/bg_sheet_grabber"
+        android:importantForAccessibility="no" />
+
+    <TextView
+        android:id="@+id/sheetTitle"
+        style="@style/HG.H3"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_l"
+        tools:text="Checked in today" />
+
+    <TextView
+        android:id="@+id/sheetSubtitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="3dp"
+        android:textColor="@color/text_secondary"
+        android:textSize="@dimen/text_caption"
+        tools:text="1 of 4 on the roll" />
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_m"
+        android:clipToPadding="false"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:id="@+id/sheetList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </androidx.core.widget.NestedScrollView>
+
+    <TextView
+        android:id="@+id/sheetEmpty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_m"
+        android:background="@drawable/bg_empty_state"
+        android:gravity="center"
+        android:lineSpacingMultiplier="1.4"
+        android:paddingStart="@dimen/space_l"
+        android:paddingTop="@dimen/space_xl"
+        android:paddingEnd="@dimen/space_l"
+        android:paddingBottom="@dimen/space_xl"
+        android:textColor="@color/text_secondary"
+        android:textSize="@dimen/text_caption"
+        tools:text="Nobody has clocked in yet today." />
+
+    <TextView
+        android:id="@+id/sheetNote"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_l"
+        android:gravity="center"
+        android:lineSpacingMultiplier="1.5"
+        android:text="@string/hr_detail_note"
+        android:textColor="@color/text_muted"
+        android:textSize="@dimen/text_eyebrow_sm" />
+</LinearLayout>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Circular plate behind the bot mark, so a transparent PNG still reads as a button. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <gradient android:angle="315" android:startColor="@color/blue_primary" android:endColor="@color/blue_deep" />
+    <stroke android:width="2dp" android:color="@color/white" />
+</shape>

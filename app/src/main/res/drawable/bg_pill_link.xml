@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Card header link ("View", "View all") as a tinted pill rather than bare text. -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="@color/blue_tint_18">
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="20dp" />
+            <solid android:color="@color/blue_tint_07" />
+        </shape>
+    </item>
+</ripple>

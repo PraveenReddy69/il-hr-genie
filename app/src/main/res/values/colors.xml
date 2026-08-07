@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ============================================================
+         HR Genie design tokens — from design_handoff_hr_genie/tokens
+         ============================================================ -->
+    <color name="ink">#FF0A1430</color>
+    <color name="ink_mid">#FF153A80</color>
+    <color name="ink_deep">#FF12306E</color>
+    <color name="blue_primary">#FF2B8CFF</color>
+    <color name="blue_deep">#FF1A6FD6</color>
+    <color name="blue_light">#FF5AA9FF</color>
+    <color name="blue_pale">#FFBCD8FF</color>
+    <color name="blue_pale_mid">#FF8FBDF5</color>
+    <color name="blue_wash">#FFCFE2FF</color>
+    <color name="blue_wash_mid">#FF9CC4F0</color>
+    <color name="blue_sky">#FF7EC2FF</color>
+    <color name="cyan">#FF4DC9FF</color>
+    <color name="purple">#FF7A5AF8</color>
+    <color name="surface">#FFFFFFFF</color>
+    <color name="bg_app">#FFF6F9FF</color>
+    <color name="bg_canvas">#FFEEF3FB</color>
+    <color name="bg_app_deep">#FFE8F0FF</color>
+    <color name="bg_cell">#FFFBFCFF</color>
+    <color name="bg_risk_row">#FFFFF7F7</color>
+    <color name="text_primary">#FF0A1430</color>
+    <color name="text_secondary">#FF7A89A8</color>
+    <color name="text_tertiary">#FF8A99B8</color>
+    <color name="text_muted">#FF9AA8C4</color>
+    <color name="text_slate">#FF5B6B8C</color>
+    <color name="text_faint">#FFC3CDDF</color>
+    <color name="green_ok">#FF42C07A</color>
+    <color name="green_delta">#FF5BE08F</color>
+    <color name="orange_warn">#FFF08A5D</color>
+    <color name="orange_soft">#FFFF8A5B</color>
+    <color name="orange_amber">#FFFFD08A</color>
+    <color name="red_risk">#FFE5484D</color>
+    <color name="red_badge">#FFFF6B6B</color>
+    <color name="pulse_mid">#FF1B2F6B</color>
+    <color name="pulse_end">#FF1A4FA8</color>
+    <color name="tab_indicator">#FF1A3FA8</color>
+
+    <!-- Avatar palette (wishes) -->
+    <color name="avatar_orange">#FFF2683C</color>
+    <color name="avatar_green">#FF42C07A</color>
+    <color name="avatar_blue">#FF2B8CFF</color>
+    <color name="avatar_purple">#FF7A5AF8</color>
+
+    <!-- Alpha derivatives — named <base>_<alpha percent> -->
+    <color name="divider">#120A1430</color>              <!-- rgba(10,20,48,.07) -->
+    <color name="ink_04">#0A0A1430</color>
+    <color name="ink_05">#0D0A1430</color>
+    <color name="ink_06">#0F0A1430</color>
+    <color name="ink_08">#140A1430</color>
+    <color name="ink_09">#170A1430</color>
+    <color name="ink_12">#1F0A1430</color>
+    <color name="ink_15">#260A1430</color>
+    <color name="ink_25">#400A1430</color>
+
+    <color name="blue_tint_07">#122B8CFF</color>
+    <color name="blue_tint_10">#1A2B8CFF</color>
+    <color name="blue_tint_12">#1F2B8CFF</color>
+    <color name="blue_tint_18">#2E2B8CFF</color>
+    <color name="blue_tint_22">#382B8CFF</color>
+    <color name="blue_tint_28">#472B8CFF</color>
+
+    <color name="purple_tint_12">#1F7A5AF8</color>
+    <color name="purple_tint_45">#737A5AF8</color>
+    <color name="green_tint_14">#2442C07A</color>
+    <color name="red_tint_14">#24FF6B6B</color>
+    <color name="red_tint_28">#47FF6B6B</color>
+    <color name="orange_tint_14">#24F08A5D</color>
+    <color name="scrim_ink">#8C0A1430</color>
+
+    <color name="white_08">#14FFFFFF</color>
+    <color name="white_10">#1AFFFFFF</color>
+    <color name="white_14">#24FFFFFF</color>
+    <color name="white_16">#29FFFFFF</color>
+    <color name="white_18">#2EFFFFFF</color>
+    <color name="white_22">#38FFFFFF</color>
+    <color name="white_45">#73FFFFFF</color>
+    <color name="white_50">#80FFFFFF</color>
+    <color name="white_55">#8CFFFFFF</color>
+    <color name="white_60">#99FFFFFF</color>
+    <color name="white_62">#9EFFFFFF</color>
+    <color name="white_68">#ADFFFFFF</color>
+    <color name="white_72">#B8FFFFFF</color>
+    <color name="white_78">#C7FFFFFF</color>
+    <color name="white_80">#CCFFFFFF</color>
+    <color name="white_82">#D1FFFFFF</color>
+    <color name="white_85">#D9FFFFFF</color>
+
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="transparent">#00000000</color>
+</resources>

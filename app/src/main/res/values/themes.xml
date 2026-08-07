@@ -1,0 +1,191 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <style name="Base.Theme.ILHRGenie" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">@color/blue_primary</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorPrimaryContainer">@color/blue_tint_10</item>
+        <item name="colorOnPrimaryContainer">@color/blue_deep</item>
+        <item name="colorSecondary">@color/purple</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/ink</item>
+        <item name="colorError">@color/red_risk</item>
+        <item name="android:colorBackground">@color/bg_app</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@color/surface</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:textColorPrimary">@color/ink</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:textColorHint">@color/text_muted</item>
+        <!-- Plus Jakarta Sans is the design font; the platform sans stack is the
+             sanctioned fallback (see handoff § Typography). -->
+        <item name="android:fontFamily">sans-serif</item>
+    </style>
+
+    <style name="Theme.ILHRGenie" parent="Base.Theme.ILHRGenie" />
+
+    <!-- ============================ Type scale ============================ -->
+
+    <style name="HG.Text" parent="android:Widget.TextView">
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:textColor">@color/ink</item>
+    </style>
+
+    <!-- w800 -->
+    <style name="HG.Display" parent="HG.Text">
+        <item name="android:textSize">@dimen/text_display</item>
+        <item name="android:fontFamily">sans-serif-black</item>
+        <item name="android:letterSpacing">-0.03</item>
+        <item name="android:lineSpacingMultiplier">1.1</item>
+    </style>
+
+    <style name="HG.H1" parent="HG.Text">
+        <item name="android:textSize">@dimen/text_h1</item>
+        <item name="android:fontFamily">sans-serif-black</item>
+        <item name="android:letterSpacing">-0.027</item>
+        <item name="android:lineSpacingMultiplier">1.2</item>
+    </style>
+
+    <style name="HG.H2" parent="HG.Text">
+        <item name="android:textSize">@dimen/text_h2</item>
+        <item name="android:fontFamily">sans-serif-black</item>
+        <item name="android:letterSpacing">-0.025</item>
+    </style>
+
+    <!-- w700 -->
+    <style name="HG.H3" parent="HG.Text">
+        <item name="android:textSize">@dimen/text_h3</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">-0.018</item>
+    </style>
+
+    <style name="HG.Title" parent="HG.Text">
+        <item name="android:textSize">@dimen/text_title</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="HG.Body" parent="HG.Text">
+        <item name="android:textSize">@dimen/text_body</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:lineSpacingMultiplier">1.55</item>
+    </style>
+
+    <style name="HG.Caption" parent="HG.Text">
+        <item name="android:textSize">@dimen/text_caption_lg</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textColor">@color/text_secondary</item>
+    </style>
+
+    <style name="HG.Eyebrow" parent="HG.Text">
+        <item name="android:textSize">@dimen/text_eyebrow</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.09</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:textColor">@color/text_tertiary</item>
+    </style>
+
+    <!-- ============================ Components ============================ -->
+
+    <style name="HG.Button.Primary" parent="HG.Text">
+        <item name="android:layout_height">@dimen/height_button</item>
+        <item name="android:background">@drawable/bg_button_blue</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textSize">15.5sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+    </style>
+
+    <style name="HG.Button.White" parent="HG.Button.Primary">
+        <item name="android:background">@drawable/bg_button_white</item>
+        <item name="android:textColor">@color/ink</item>
+    </style>
+
+    <style name="HG.Button.Outline" parent="HG.Button.Primary">
+        <item name="android:background">@drawable/bg_button_outline</item>
+        <item name="android:textColor">@color/ink</item>
+        <item name="android:textSize">@dimen/text_title</item>
+    </style>
+
+    <style name="HG.FieldLabel" parent="HG.Text">
+        <item name="android:textSize">@dimen/text_micro</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.05</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:textColor">@color/white_55</item>
+    </style>
+
+    <style name="HG.CardTitle" parent="HG.Text">
+        <item name="android:textSize">14.5sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="HG.SectionLabel" parent="HG.Eyebrow">
+        <item name="android:letterSpacing">0.09</item>
+        <item name="android:textColor">@color/text_tertiary</item>
+    </style>
+
+    <style name="HG.BottomNav" parent="Widget.Material3.BottomNavigationView">
+        <item name="android:background">@color/surface</item>
+        <item name="itemIconTint">@color/selector_nav_icon</item>
+        <item name="itemTextColor">@color/selector_nav_label</item>
+        <item name="itemActiveIndicatorStyle">@null</item>
+        <item name="labelVisibilityMode">labeled</item>
+        <item name="itemRippleColor">@color/blue_tint_10</item>
+        <item name="elevation">0dp</item>
+    </style>
+
+    <!--
+        A segmented control rather than underlined tabs: the indicator is a full-bleed
+        rounded pill (stretch gravity) sitting on a tinted track, so the selected
+        segment reads as a raised chip.
+    -->
+    <style name="HG.WishTabs" parent="Widget.Material3.TabLayout">
+        <item name="tabIndicator">@drawable/bg_tab_pill</item>
+        <!-- TabLayout tints the indicator with this, so it has to match the pill's
+             own fill or the segment would come out painted in colorPrimary. -->
+        <item name="tabIndicatorColor">@color/surface</item>
+        <item name="tabIndicatorGravity">stretch</item>
+        <item name="tabIndicatorFullWidth">true</item>
+        <item name="tabIndicatorAnimationMode">elastic</item>
+        <item name="tabSelectedTextColor">@color/ink</item>
+        <item name="tabTextColor">@color/text_tertiary</item>
+        <item name="tabTextAppearance">@style/HG.WishTabText</item>
+        <item name="tabRippleColor">@null</item>
+        <item name="tabMode">fixed</item>
+        <item name="tabGravity">fill</item>
+        <item name="tabPaddingStart">2dp</item>
+        <item name="tabPaddingEnd">2dp</item>
+        <item name="tabMinWidth">0dp</item>
+        <item name="android:background">@android:color/transparent</item>
+    </style>
+
+    <!--
+        The cropper puts its Done action in an options menu, so its activity needs a
+        theme WITH an action bar — the app theme is NoActionBar, which left the crop
+        screen with no way to confirm.
+    -->
+    <style name="HG.Cropper" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+        <item name="colorPrimary">@color/ink</item>
+        <item name="colorPrimaryVariant">@color/ink</item>
+        <item name="colorAccent">@color/blue_primary</item>
+        <item name="android:windowBackground">@color/ink</item>
+        <item name="android:statusBarColor">@color/ink</item>
+    </style>
+
+    <!-- Circle-crops an uploaded photo inside the avatar tile. -->
+    <!-- Empty parent: a shapeAppearanceOverlay contributes only these two attrs. -->
+    <style name="HG.CircleImage" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
+    <style name="HG.WishTabText" parent="TextAppearance.Material3.LabelMedium">
+        <!-- Segments are narrower than the old full-width tabs, and "Work
+             Anniversary" has to sit on one line inside its pill. -->
+        <item name="android:textSize">@dimen/text_micro</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:letterSpacing">0</item>
+    </style>
+</resources>

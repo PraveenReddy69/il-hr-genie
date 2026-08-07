@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Category chips the bot offers when a ticket flow starts. Two per line, so long
+     labels like "Something else" never truncate. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="46dp"
+    android:paddingTop="2dp"
+    android:paddingEnd="@dimen/space_l"
+    android:paddingBottom="6dp">
+
+    <LinearLayout
+        android:id="@+id/categoryList"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" />
+</LinearLayout>

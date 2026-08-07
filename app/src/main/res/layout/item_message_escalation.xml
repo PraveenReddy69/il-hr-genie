@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shown after "Talk to HRBP": the handover card. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_bubble_escalation"
+    android:elevation="1dp"
+    android:orientation="vertical"
+    android:padding="@dimen/space_l">
+
+    <TextView
+        style="@style/HG.Eyebrow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp"
+        android:letterSpacing="0.073"
+        android:text="@string/escalation_eyebrow"
+        android:textColor="@color/blue_deep" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="@dimen/avatar_md"
+            android:layout_height="@dimen/avatar_md"
+            android:background="@drawable/bg_avatar_hrbp"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:text="@string/avatar_initials_hrbp"
+            android:textColor="@color/white"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:importantForAccessibility="no" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/space_m"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/HG.CardTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/hrbp_name" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/hrbp_meta"
+                android:textColor="@color/text_secondary"
+                android:textSize="@dimen/text_caption" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/sendQuestion"
+            android:layout_width="0dp"
+            android:layout_height="@dimen/avatar_md"
+            android:layout_weight="1"
+            android:background="@drawable/bg_button_blue_sm"
+            android:gravity="center"
+            android:text="@string/action_send_question"
+            android:textColor="@color/white"
+            android:textSize="@dimen/text_body"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/bookFifteen"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/avatar_md"
+            android:layout_marginStart="@dimen/space_s"
+            android:background="@drawable/bg_button_outline_sm"
+            android:fontFamily="sans-serif-medium"
+            android:gravity="center"
+            android:paddingStart="@dimen/space_l"
+            android:paddingEnd="@dimen/space_l"
+            android:text="@string/action_book_15"
+            android:textColor="@color/ink"
+            android:textSize="@dimen/text_body" />
+    </LinearLayout>
+</LinearLayout>

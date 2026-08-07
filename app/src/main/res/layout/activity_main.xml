@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_app">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <androidx.fragment.app.FragmentContainerView
+                android:id="@+id/navHost"
+                android:name="androidx.navigation.fragment.NavHostFragment"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                app:defaultNavHost="true"
+                app:navGraph="@navigation/nav_graph" />
+
+            <!-- Sits above the bottom bar because it lives inside the nav host frame. -->
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/chatFab"
+                android:layout_width="62dp"
+                android:layout_height="62dp"
+                android:layout_gravity="bottom|end"
+                android:layout_marginEnd="18dp"
+                android:layout_marginBottom="18dp"
+                android:background="@drawable/bg_fab_bot"
+                android:clickable="true"
+                android:contentDescription="@string/action_ask_genie"
+                android:elevation="12dp"
+                android:focusable="true"
+                android:padding="5dp"
+                android:scaleType="centerCrop"
+                android:src="@drawable/hr_bot"
+                app:shapeAppearanceOverlay="@style/HG.CircleImage" />
+
+            <!-- Unread dot: HR has moved a ticket since the employee last opened chat. -->
+            <View
+                android:id="@+id/chatFabBadge"
+                android:layout_width="15dp"
+                android:layout_height="15dp"
+                android:layout_gravity="bottom|end"
+                android:layout_marginEnd="20dp"
+                android:layout_marginBottom="64dp"
+                android:background="@drawable/bg_fab_badge"
+                android:elevation="13dp"
+                android:importantForAccessibility="no"
+                android:visibility="gone" />
+        </FrameLayout>
+
+        <!-- Hidden as a unit on Sign in, Chat and Holidays. BottomNavigationView
+             applies the navigation-bar inset to itself, so this container must not
+             pad for it again. -->
+        <LinearLayout
+            android:id="@+id/navContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@color/surface"
+            android:visibility="gone">
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/divider" />
+
+            <com.google.android.material.bottomnavigation.BottomNavigationView
+                android:id="@+id/bottomNav"
+                style="@style/HG.BottomNav"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="4dp"
+                app:menu="@menu/menu_bottom_nav" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Screens draw full-bleed under the status bar; this sits on top so scrolled
+         content never collides with the clock. Height comes from the inset and the
+         colour is set per destination. -->
+    <View
+        android:id="@+id/statusScrim"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_gravity="top"
+        android:background="@color/ink"
+        android:importantForAccessibility="no" />
+
+</FrameLayout>

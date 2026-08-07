@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One of the employee's own tickets, as shown inside a chat card. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingTop="12dp"
+    android:paddingBottom="12dp">
+
+    <View
+        android:id="@+id/chatTicketAccent"
+        android:layout_width="3dp"
+        android:layout_height="34dp"
+        android:background="@drawable/bg_track_fill_orange"
+        android:importantForAccessibility="no" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/chatTicketSubject"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:letterSpacing="-0.01"
+            android:maxLines="2"
+            android:textColor="@color/ink"
+            android:textSize="@dimen/text_body_sm"
+            android:textStyle="bold"
+            tools:text="My July payslip is missing from the portal." />
+
+        <TextView
+            android:id="@+id/chatTicketMeta"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:textColor="@color/text_tertiary"
+            android:textSize="@dimen/text_eyebrow"
+            tools:text="HRG-0001 · Payroll · just now" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/chatTicketStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/space_s"
+        android:background="@drawable/bg_pill_status"
+        android:includeFontPadding="false"
+        android:paddingStart="9dp"
+        android:paddingTop="5dp"
+        android:paddingEnd="9dp"
+        android:paddingBottom="5dp"
+        android:textSize="@dimen/text_eyebrow_sm"
+        android:textStyle="bold"
+        tools:text="Open" />
+</LinearLayout>

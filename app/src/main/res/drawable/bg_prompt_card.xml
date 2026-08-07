@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Follow-up card under a bot answer. Lighter than a bubble so it reads as an
+     aside rather than another thing the bot said. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="@dimen/radius_card" />
+    <solid android:color="@color/bg_cell" />
+    <stroke
+        android:width="@dimen/stroke_hairline"
+        android:color="@color/ink_08" />
+</shape>

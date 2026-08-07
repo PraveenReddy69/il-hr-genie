@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/scroller"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_app"
+    android:clipToPadding="false"
+    android:scrollbars="none">
+
+    <LinearLayout
+        android:id="@+id/content"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- ================================ Header ================================ -->
+        <FrameLayout
+            android:id="@+id/header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_header_home">
+
+            <View
+                android:layout_width="260dp"
+                android:layout_height="260dp"
+                android:layout_gravity="top|end"
+                android:layout_marginTop="-110dp"
+                android:layout_marginEnd="-80dp"
+                android:background="@drawable/bg_header_glow"
+                android:importantForAccessibility="no" />
+
+            <LinearLayout
+                android:id="@+id/headerContent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="@dimen/space_screen"
+                android:paddingTop="@dimen/space_xl"
+                android:paddingEnd="@dimen/space_screen"
+                android:paddingBottom="@dimen/space_xl">
+
+                <TextView
+                    style="@style/HG.Eyebrow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/space_s"
+                    android:letterSpacing="0.073"
+                    android:text="@string/my_tickets_eyebrow"
+                    android:textColor="@color/white_50" />
+
+                <TextView
+                    style="@style/HG.H2"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/my_tickets_title"
+                    android:textColor="@color/white" />
+
+                <TextView
+                    android:id="@+id/myTicketsSubtitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textColor="@color/white_55"
+                    android:textSize="@dimen/text_body_sm"
+                    tools:text="2 raised · 1 still open" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- ================================= Body =================================
+             The tickets are cards in their own right rather than rows inside one
+             list card — nesting a card in a card flattens them all into a block. -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingTop="@dimen/space_l"
+            android:paddingBottom="@dimen/space_fab_clearance">
+
+            <!-- Bleeds to both screen edges so the chip row can scroll out of view
+                 rather than stopping short of it. -->
+            <HorizontalScrollView
+                android:id="@+id/myTicketFilterScroller"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clipToPadding="false"
+                android:paddingStart="@dimen/space_screen"
+                android:paddingEnd="@dimen/space_screen"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:id="@+id/myTicketFilters"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal" />
+            </HorizontalScrollView>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="@dimen/space_screen"
+                android:paddingEnd="@dimen/space_screen">
+
+                <LinearLayout
+                    android:id="@+id/myTicketList"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_m"
+                    android:orientation="vertical" />
+
+                <!-- Nothing raised at all, or nothing under this filter. -->
+                <LinearLayout
+                    android:id="@+id/myTicketsEmpty"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_m"
+                    android:background="@drawable/bg_card"
+                    android:elevation="2dp"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:paddingStart="@dimen/space_l"
+                    android:paddingTop="@dimen/space_xxl"
+                    android:paddingEnd="@dimen/space_l"
+                    android:paddingBottom="@dimen/space_xxl"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:importantForAccessibility="no"
+                        android:includeFontPadding="false"
+                        android:text="@string/emoji_tray"
+                        android:textSize="30sp" />
+
+                    <TextView
+                        android:id="@+id/myTicketsEmptyTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:textColor="@color/ink"
+                        android:textSize="@dimen/text_title"
+                        android:textStyle="bold"
+                        tools:text="Nothing raised yet" />
+
+                    <TextView
+                        android:id="@+id/myTicketsEmptyBody"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:gravity="center"
+                        android:lineSpacingMultiplier="1.4"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="@dimen/text_caption"
+                        tools:text="Ask HR Genie to raise one and it will show up here." />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/raiseTicketCta"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/height_button"
+                    android:layout_marginTop="@dimen/space_xl"
+                    android:background="@drawable/bg_button_gradient_blue"
+                    android:elevation="6dp"
+                    android:gravity="center"
+                    android:orientation="horizontal"
+                    android:outlineProvider="background">
+
+                    <TextView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:background="@drawable/bg_cta_plus"
+                        android:gravity="center"
+                        android:importantForAccessibility="no"
+                        android:includeFontPadding="false"
+                        android:text="@string/glyph_plus"
+                        android:textColor="@color/white"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="9dp"
+                        android:includeFontPadding="false"
+                        android:text="@string/my_tickets_raise"
+                        android:textColor="@color/white"
+                        android:textSize="@dimen/text_body"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_m"
+                    android:gravity="center"
+                    android:lineSpacingMultiplier="1.5"
+                    android:text="@string/my_tickets_note"
+                    android:textColor="@color/text_muted"
+                    android:textSize="@dimen/text_eyebrow" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

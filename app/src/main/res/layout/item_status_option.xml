@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One status HR can move a ticket to. The current one is marked, not hidden, so
+     the sheet always shows where the ticket stands. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/statusOption"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_status_option"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="14dp"
+    android:paddingTop="14dp"
+    android:paddingEnd="14dp"
+    android:paddingBottom="14dp">
+
+    <View
+        android:id="@+id/statusDot"
+        android:layout_width="9dp"
+        android:layout_height="9dp"
+        android:layout_marginEnd="12dp"
+        android:background="@drawable/bg_dot_live"
+        android:importantForAccessibility="no" />
+
+    <TextView
+        android:id="@+id/statusLabel"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:fontFamily="sans-serif-medium"
+        android:textColor="@color/ink"
+        android:textSize="@dimen/text_body_sm"
+        tools:text="In progress" />
+
+    <TextView
+        android:id="@+id/statusCurrent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:includeFontPadding="false"
+        android:text="@string/ticket_status_current"
+        android:textColor="@color/blue_deep"
+        android:textSize="@dimen/text_eyebrow_sm"
+        android:textStyle="bold"
+        android:visibility="gone"
+        tools:visibility="visible" />
+</LinearLayout>

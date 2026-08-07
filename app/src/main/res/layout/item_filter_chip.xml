@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Status filter above the ticket list. Selected fills solid; the label carries the
+     status name and its count, so the row never relies on colour. -->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/filterChip"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_filter_chip"
+    android:fontFamily="sans-serif-medium"
+    android:includeFontPadding="false"
+    android:paddingStart="12dp"
+    android:paddingTop="8dp"
+    android:paddingEnd="12dp"
+    android:paddingBottom="8dp"
+    android:textColor="@color/selector_filter_chip_text"
+    android:textSize="@dimen/text_eyebrow"
+    tools:text="Open 2" />

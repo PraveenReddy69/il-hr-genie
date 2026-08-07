@@ -1,0 +1,375 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/scroller"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_app"
+    android:clipToPadding="false"
+    android:scrollbars="none">
+
+    <LinearLayout
+        android:id="@+id/content"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- ================================ Header ================================ -->
+        <LinearLayout
+            android:id="@+id/header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_header_home"
+            android:orientation="vertical"
+            android:paddingStart="@dimen/space_screen"
+            android:paddingTop="@dimen/space_l"
+            android:paddingEnd="@dimen/space_screen"
+            android:paddingBottom="30dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/space_l"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:id="@+id/backButton"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/cd_back"
+                    android:src="@drawable/ic_back"
+                    app:tint="@color/white_85" />
+
+                <TextView
+                    style="@style/HG.Eyebrow"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_m"
+                    android:layout_weight="1"
+                    android:letterSpacing="0.067"
+                    android:text="@string/profile_title"
+                    android:textColor="@color/white_50"
+                    android:textSize="@dimen/text_caption" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <FrameLayout
+                    android:id="@+id/profileAvatarWrap"
+                    android:layout_width="72dp"
+                    android:layout_height="72dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:contentDescription="@string/cd_change_photo"
+                    android:focusable="true">
+
+                    <FrameLayout
+                        android:id="@+id/profileAvatar"
+                        android:layout_width="64dp"
+                        android:layout_height="64dp"
+                        android:layout_gravity="top|start"
+                        android:background="@drawable/bg_avatar_user">
+
+                        <ImageView
+                            android:id="@+id/profileAvatarIcon"
+                            android:layout_width="38dp"
+                            android:layout_height="38dp"
+                            android:layout_gravity="center"
+                            app:tint="@color/white"
+                            android:importantForAccessibility="no"
+                            tools:src="@drawable/ic_avatar_female" />
+
+                        <com.google.android.material.imageview.ShapeableImageView
+                            android:id="@+id/profileAvatarPhoto"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:scaleType="centerCrop"
+                            android:visibility="gone"
+                            app:shapeAppearanceOverlay="@style/HG.CircleImage"
+                            android:importantForAccessibility="no" />
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/photoBadge"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:layout_gravity="bottom|end"
+                        android:background="@drawable/bg_photo_badge"
+                        android:padding="6dp"
+                        android:src="@drawable/ic_camera"
+                        app:tint="@color/white"
+                        android:importantForAccessibility="no" />
+                </FrameLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_l"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/profileName"
+                        style="@style/HG.H2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/white"
+                        android:textSize="22sp"
+                        tools:text="Aamy C P" />
+
+                    <TextView
+                        android:id="@+id/profileEmployeeId"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:fontFamily="sans-serif-medium"
+                        android:letterSpacing="0.03"
+                        android:textColor="@color/white_55"
+                        android:textSize="@dimen/text_body_sm"
+                        tools:text="HYD609552" />
+
+                    <TextView
+                        android:id="@+id/profileRole"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:lineSpacingMultiplier="1.35"
+                        android:textColor="@color/white_60"
+                        android:textSize="@dimen/text_micro"
+                        tools:text="Assistant Manager - HRBP • Human Resource &amp; Administration" />
+
+                    <TextView
+                        android:id="@+id/photoHint"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:textColor="@color/cyan"
+                        android:textSize="@dimen/text_micro"
+                        tools:text="Tap your avatar to add a profile photo." />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ============================== Detail card ============================= -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="@dimen/space_screen"
+            android:paddingTop="@dimen/space_l"
+            android:paddingEnd="@dimen/space_screen"
+            android:paddingBottom="@dimen/space_fab_clearance">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_card"
+                android:elevation="2dp"
+                android:orientation="vertical">
+
+                <!-- Three-up strip -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:baselineAligned="false"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/space_screen"
+                    android:paddingTop="20dp"
+                    android:paddingEnd="@dimen/space_screen"
+                    android:paddingBottom="20dp">
+
+                    <include
+                        android:id="@+id/stat1"
+                        layout="@layout/item_profile_stat"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1" />
+
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="@dimen/space_m"
+                        android:layout_marginEnd="@dimen/space_m"
+                        android:background="@color/ink_08" />
+
+                    <include
+                        android:id="@+id/stat2"
+                        layout="@layout/item_profile_stat"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1" />
+
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="@dimen/space_m"
+                        android:layout_marginEnd="@dimen/space_m"
+                        android:background="@color/ink_08" />
+
+                    <include
+                        android:id="@+id/stat3"
+                        layout="@layout/item_profile_stat"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1.2" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/ink_06" />
+
+                <!-- Designation / department -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:baselineAligned="false"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/space_screen"
+                    android:paddingTop="@dimen/space_screen"
+                    android:paddingEnd="@dimen/space_screen"
+                    android:paddingBottom="@dimen/space_screen">
+
+                    <include
+                        android:id="@+id/fieldTitle"
+                        layout="@layout/item_profile_field"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1.15" />
+
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="@dimen/space_l"
+                        android:layout_marginEnd="@dimen/space_l"
+                        android:background="@color/ink_08" />
+
+                    <include
+                        android:id="@+id/fieldDepartment"
+                        layout="@layout/item_profile_field"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/ink_06" />
+
+                <!-- Both dates, which are short enough to share a row. -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:baselineAligned="false"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/space_screen"
+                    android:paddingTop="@dimen/space_screen"
+                    android:paddingEnd="@dimen/space_screen"
+                    android:paddingBottom="@dimen/space_screen">
+
+                    <include
+                        android:id="@+id/fieldJoining"
+                        layout="@layout/item_profile_field"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1" />
+
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="@dimen/space_l"
+                        android:layout_marginEnd="@dimen/space_l"
+                        android:background="@color/ink_08" />
+
+                    <include
+                        android:id="@+id/fieldDob"
+                        layout="@layout/item_profile_field"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/ink_06" />
+
+                <!-- Full width: sharing a row broke the address mid-word. -->
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="@dimen/space_screen"
+                    android:paddingTop="@dimen/space_screen"
+                    android:paddingEnd="@dimen/space_screen"
+                    android:paddingBottom="@dimen/space_screen">
+
+                    <include
+                        android:id="@+id/fieldOfficialEmail"
+                        layout="@layout/item_profile_field"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+                </FrameLayout>
+
+                <View
+                    android:id="@+id/orgUnitDivider"
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/ink_06" />
+
+                <!-- Hidden as a whole row: hiding only the field inside would leave
+                     this container's padding behind as a gap. -->
+                <FrameLayout
+                    android:id="@+id/orgUnitRow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="@dimen/space_screen"
+                    android:paddingTop="@dimen/space_screen"
+                    android:paddingEnd="@dimen/space_screen"
+                    android:paddingBottom="@dimen/space_screen">
+
+                    <include
+                        android:id="@+id/fieldOrgUnit"
+                        layout="@layout/item_profile_field"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+                </FrameLayout>
+            </LinearLayout>
+
+            <!-- Privacy line, as every personal surface in this app carries one. -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_l"
+                android:orientation="horizontal"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/emoji_lock"
+                    android:textSize="13sp"
+                    android:importantForAccessibility="no" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="9dp"
+                    android:layout_weight="1"
+                    android:lineSpacingMultiplier="1.5"
+                    android:text="@string/profile_privacy"
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="@dimen/text_micro" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

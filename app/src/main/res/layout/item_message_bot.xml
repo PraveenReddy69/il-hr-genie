@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingTop="6dp"
+    android:paddingBottom="6dp">
+
+    <TextView
+        android:id="@+id/bubble"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_bubble_bot"
+        android:elevation="1dp"
+        android:lineSpacingMultiplier="1.6"
+        android:paddingStart="@dimen/space_l"
+        android:paddingTop="13dp"
+        android:paddingEnd="@dimen/space_l"
+        android:paddingBottom="13dp"
+        android:textColor="@color/ink"
+        android:textSize="@dimen/text_body"
+        tools:text="You have 12 earned leaves and 4 casual leaves left for 2026." />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <!-- Reads this answer aloud; tap again to stop. -->
+        <ImageView
+            android:id="@+id/speakButton"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/cd_read_aloud"
+            android:padding="5dp"
+            android:src="@drawable/ic_speaker"
+            app:tint="@color/text_muted" />
+
+        <!-- Where the answer came from, when it came from the policy library. -->
+        <TextView
+            android:id="@+id/bubbleSource"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="2dp"
+            android:ellipsize="middle"
+            android:maxLines="1"
+            android:textColor="@color/text_muted"
+            android:textSize="@dimen/text_eyebrow_sm"
+            android:visibility="gone"
+            tools:text="📄 From Leave Policy"
+            tools:visibility="visible" />
+    </LinearLayout>
+</LinearLayout>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A raised ticket, or the employee's list of them. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="46dp"
+    android:paddingTop="2dp"
+    android:paddingEnd="@dimen/space_l"
+    android:paddingBottom="8dp">
+
+    <LinearLayout
+        android:id="@+id/ticketCardList"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_card"
+        android:elevation="2dp"
+        android:orientation="vertical"
+        android:paddingStart="@dimen/space_l"
+        android:paddingTop="4dp"
+        android:paddingEnd="@dimen/space_l"
+        android:paddingBottom="4dp" />
+</LinearLayout>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One question and the option the employee chose. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/answerQuestion"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:lineSpacingMultiplier="1.4"
+        android:textColor="@color/white_55"
+        android:textSize="@dimen/text_micro"
+        tools:text="Is your workload manageable right now?" />
+
+    <TextView
+        android:id="@+id/answerValue"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="3dp"
+        android:textColor="@color/white"
+        android:textSize="@dimen/text_body"
+        android:textStyle="bold"
+        tools:text="Busy but okay" />
+</LinearLayout>

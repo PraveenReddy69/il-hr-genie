@@ -1,0 +1,349 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_signin"
+    android:clipChildren="false">
+
+    <!-- Decorative only (handoff §1): top-right cyan Ø420dp, bottom-left purple Ø340dp. -->
+    <View
+        android:layout_width="420dp"
+        android:layout_height="420dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="-140dp"
+        android:layout_marginEnd="-160dp"
+        android:background="@drawable/bg_blob_cyan"
+        android:importantForAccessibility="no" />
+
+    <View
+        android:layout_width="340dp"
+        android:layout_height="340dp"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="-150dp"
+        android:layout_marginBottom="60dp"
+        android:background="@drawable/bg_blob_purple"
+        android:importantForAccessibility="no" />
+
+    <ScrollView
+        android:id="@+id/scroller"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:clipToPadding="false"
+        android:paddingTop="24dp"
+        android:paddingBottom="24dp"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:id="@+id/content"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:paddingStart="28dp"
+            android:paddingEnd="28dp">
+
+            <!-- App mark -->
+            <FrameLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="14dp">
+
+                <View
+                    android:id="@+id/halo"
+                    android:layout_width="@dimen/logo_tile_width"
+                    android:layout_height="@dimen/logo_tile_height"
+                    android:layout_gravity="center"
+                    android:background="@drawable/bg_halo_ring"
+                    android:importantForAccessibility="no" />
+
+                <ImageView
+                    android:id="@+id/appMark"
+                    android:layout_width="70dp"
+                    android:layout_height="70dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="@string/signin_title"
+                    android:src="@drawable/main_logo" />
+            </FrameLayout>
+
+            <TextView
+                style="@style/HG.Display"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="@string/signin_title"
+                android:textColor="@color/white" />
+
+            <TextView
+                style="@style/HG.Body"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:maxWidth="270dp"
+                android:gravity="center"
+                android:text="@string/signin_subtitle"
+                android:textSize="14sp"
+                android:textColor="@color/white_68" />
+
+            <!-- Form -->
+            <TextView
+                style="@style/HG.FieldLabel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="26dp"
+                android:text="@string/label_employee_id" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/height_input"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/bg_input_dark"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:alpha="0.7"
+                    android:text="@string/emoji_person"
+                    android:textSize="15sp"
+                    android:importantForAccessibility="no" />
+
+                <EditText
+                    android:id="@+id/employeeIdInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="11dp"
+                    android:background="@null"
+                    android:fontFamily="sans-serif-medium"
+                    android:gravity="center_vertical"
+                    android:hint="@string/hint_employee_id"
+                    android:importantForAutofill="no"
+                    android:inputType="textCapCharacters"
+                    android:letterSpacing="0.027"
+                    android:maxLines="1"
+                    android:textColor="@color/white"
+                    android:textColorHint="@color/white_45"
+                    android:textSize="15sp"
+                    tools:ignore="LabelFor" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/employeeIdError"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:textColor="@color/red_badge"
+                android:textSize="@dimen/text_micro"
+                android:visibility="gone"
+                tools:text="@string/error_invalid_employee_id"
+                tools:visibility="visible" />
+
+            <TextView
+                style="@style/HG.FieldLabel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/label_password" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/height_input"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/bg_input_dark"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:alpha="0.7"
+                    android:text="@string/emoji_lock"
+                    android:textSize="15sp"
+                    android:importantForAccessibility="no" />
+
+                <EditText
+                    android:id="@+id/passwordInput"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="11dp"
+                    android:layout_weight="1"
+                    android:background="@null"
+                    android:fontFamily="sans-serif-medium"
+                    android:gravity="center_vertical"
+                    android:hint="@string/hint_password"
+                    android:importantForAutofill="no"
+                    android:inputType="textPassword"
+                    android:maxLines="1"
+                    android:textColor="@color/white"
+                    android:textColorHint="@color/white_45"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    tools:ignore="LabelFor" />
+
+                <TextView
+                    android:id="@+id/togglePassword"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:gravity="center"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="0dp"
+                    android:text="@string/action_show"
+                    android:textColor="@color/cyan"
+                    android:textSize="@dimen/text_caption"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/passwordError"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:textColor="@color/red_badge"
+                android:textSize="@dimen/text_micro"
+                android:visibility="gone"
+                tools:text="@string/error_password_required"
+                tools:visibility="visible" />
+
+            <!-- Keep signed in / forgot -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:layout_marginBottom="6dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:id="@+id/keepSignedInRow"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="?attr/selectableItemBackground"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp">
+
+                    <TextView
+                        android:id="@+id/keepSignedInBox"
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:background="@drawable/bg_checkbox"
+                        android:gravity="center"
+                        android:includeFontPadding="false"
+                        android:text="@string/checkmark"
+                        android:textColor="@color/ink"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:importantForAccessibility="no" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="@string/keep_signed_in"
+                        android:textColor="@color/white_72"
+                        android:textSize="@dimen/text_caption_lg" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/forgotPassword"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="?attr/selectableItemBackground"
+                    android:fontFamily="sans-serif-medium"
+                    android:padding="4dp"
+                    android:text="@string/forgot_password"
+                    android:textColor="@color/cyan"
+                    android:textSize="@dimen/text_caption_lg" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/signInButton"
+                style="@style/HG.Button.White"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/height_button"
+                android:layout_marginTop="6dp"
+                android:text="@string/action_sign_in" />
+
+            <!-- The sheet used to raise itself when an id was not recognised. The
+                 server no longer says whether an id exists, so it needs its own way in. -->
+            <TextView
+                android:id="@+id/contactHrLink"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:gravity="center"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp"
+                android:text="@string/signin_contact_hr"
+                android:textColor="@color/white_60"
+                android:textSize="@dimen/text_caption" />
+
+            <!-- Footer -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="33dp"
+                    android:layout_height="22dp"
+                    android:background="@drawable/bg_brand_chip"
+                    android:padding="4dp"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/learn_logo"
+                    android:importantForAccessibility="no" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="0.03"
+                    android:text="@string/brand"
+                    android:textColor="@color/white_60"
+                    android:textSize="@dimen/text_caption" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:gravity="center"
+                android:lineSpacingMultiplier="1.6"
+                android:text="@string/signin_legal"
+                android:textColor="@color/white_45"
+                android:textSize="@dimen/text_micro" />
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Scrim + "connect to HR" sheet, shown for IDs that aren't in the directory. -->
+    <View
+        android:id="@+id/hrHelpScrim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/scrim_ink"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone"
+        tools:visibility="visible" />
+
+    <include
+        android:id="@+id/hrHelp"
+        layout="@layout/view_hr_help_card"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom" />
+</FrameLayout>

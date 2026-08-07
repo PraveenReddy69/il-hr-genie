@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The ticket reference, set apart from the rest of the meta line — it is the thing
+     an employee quotes back to HR. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/ink_04" />
+    <corners android:radius="@dimen/radius_bar" />
+</shape>

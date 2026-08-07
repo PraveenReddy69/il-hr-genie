@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/signInFragment">
+
+    <fragment
+        android:id="@+id/signInFragment"
+        android:name="com.infinitylearn.hrgenie.ui.signin.SignInFragment"
+        android:label="Sign in">
+        <action
+            android:id="@+id/action_signIn_to_home"
+            app:destination="@id/mainGraph"
+            app:popUpTo="@id/signInFragment"
+            app:popUpToInclusive="true" />
+        <!-- An HR id skips the employee app entirely. -->
+        <action
+            android:id="@+id/action_signIn_to_insights"
+            app:destination="@id/insightsFragment"
+            app:popUpTo="@id/signInFragment"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <!-- The HRBP dashboard sits outside mainGraph: it is a whole screen on its own,
+         with no bottom navigation and nothing behind it. -->
+    <fragment
+        android:id="@+id/insightsFragment"
+        android:name="com.infinitylearn.hrgenie.ui.insights.HrInsightsFragment"
+        android:label="HR insights">
+        <action
+            android:id="@+id/action_insights_to_tickets"
+            app:destination="@id/ticketsFragment" />
+        <action
+            android:id="@+id/action_insights_to_trends"
+            app:destination="@id/trendsFragment" />
+    </fragment>
+
+    <!-- Mood and pulse over time, rather than today's snapshot. -->
+    <fragment
+        android:id="@+id/trendsFragment"
+        android:name="com.infinitylearn.hrgenie.ui.insights.TrendsFragment"
+        android:label="Mood and pulse history" />
+
+    <!-- The full ticket queue, with its own chart and filters. -->
+    <fragment
+        android:id="@+id/ticketsFragment"
+        android:name="com.infinitylearn.hrgenie.ui.insights.TicketsFragment"
+        android:label="Tickets" />
+
+    <!-- Everything behind the sign-in wall. Home is the start destination so the
+         bottom nav treats it as the back-stack root. -->
+    <navigation
+        android:id="@+id/mainGraph"
+        app:startDestination="@id/homeFragment">
+
+        <fragment
+            android:id="@+id/homeFragment"
+            android:name="com.infinitylearn.hrgenie.ui.home.HomeFragment"
+            android:label="Home">
+            <action
+                android:id="@+id/action_home_to_chat"
+                app:destination="@id/chatFragment" />
+            <action
+                android:id="@+id/action_home_to_mood"
+                app:destination="@id/moodFragment" />
+            <action
+                android:id="@+id/action_home_to_pulse"
+                app:destination="@id/pulseFragment" />
+            <action
+                android:id="@+id/action_home_to_holidays"
+                app:destination="@id/holidaysFragment" />
+            <action
+                android:id="@+id/action_home_to_profile"
+                app:destination="@id/profileFragment" />
+            <action
+                android:id="@+id/action_home_to_attendance_history"
+                app:destination="@id/attendanceHistoryFragment" />
+        </fragment>
+
+        <fragment
+            android:id="@+id/attendanceHistoryFragment"
+            android:name="com.infinitylearn.hrgenie.ui.attendance.AttendanceHistoryFragment"
+            android:label="Attendance history" />
+
+        <fragment
+            android:id="@+id/profileFragment"
+            android:name="com.infinitylearn.hrgenie.ui.profile.ProfileFragment"
+            android:label="My Profile" />
+
+        <fragment
+            android:id="@+id/chatFragment"
+            android:name="com.infinitylearn.hrgenie.ui.chat.ChatFragment"
+            android:label="Ask HR Genie" />
+
+        <fragment
+            android:id="@+id/moodFragment"
+            android:name="com.infinitylearn.hrgenie.ui.mood.MoodCheckInFragment"
+            android:label="Check-in">
+            <!-- Set when a face is tapped on Home so step 1 opens pre-selected. -->
+            <argument
+                android:name="moodKey"
+                android:defaultValue="@null"
+                app:argType="string"
+                app:nullable="true" />
+        </fragment>
+
+        <fragment
+            android:id="@+id/pulseFragment"
+            android:name="com.infinitylearn.hrgenie.ui.pulse.PulseFragment"
+            android:label="Monthly pulse" />
+
+        <fragment
+            android:id="@+id/myTicketsFragment"
+            android:name="com.infinitylearn.hrgenie.ui.tickets.MyTicketsFragment"
+            android:label="My tickets">
+            <!-- Set when a push notification is tapped, so that row opens expanded. -->
+            <argument
+                android:name="ticketId"
+                android:defaultValue="@null"
+                app:argType="string"
+                app:nullable="true" />
+            <action
+                android:id="@+id/action_myTickets_to_chat"
+                app:destination="@id/chatFragment" />
+        </fragment>
+
+        <fragment
+            android:id="@+id/holidaysFragment"
+            android:name="com.infinitylearn.hrgenie.ui.holidays.HolidaysFragment"
+            android:label="Holiday calendar" />
+    </navigation>
+</navigation>

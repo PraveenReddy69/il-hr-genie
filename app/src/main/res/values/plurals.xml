@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="history_week_offs">
+        <item quantity="one">%d week off</item>
+        <item quantity="other">%d week offs</item>
+    </plurals>
+    <plurals name="history_selected">
+        <item quantity="one">%d day selected</item>
+        <item quantity="other">%d days selected</item>
+    </plurals>
+    <plurals name="history_regularized">
+        <item quantity="one">%d day sent to HR for regularisation.</item>
+        <item quantity="other">%d days sent to HR for regularisation.</item>
+    </plurals>
+</resources>

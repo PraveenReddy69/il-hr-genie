@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Mood check-in, step 1: why. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/whyScroller"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipToPadding="false"
+    android:scrollbars="none">
+
+    <LinearLayout
+        android:id="@+id/whyContent"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="@dimen/space_xl"
+        android:paddingTop="26dp"
+        android:paddingEnd="@dimen/space_xl"
+        android:paddingBottom="40dp">
+
+        <TextView
+            android:id="@+id/whyEmoji"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="14dp"
+            android:includeFontPadding="false"
+            android:textSize="52sp"
+            android:importantForAccessibility="no"
+            tools:text="😊" />
+
+        <TextView
+            android:id="@+id/whyTitle"
+            style="@style/HG.H1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            tools:text="Nice — what's helping?" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_s"
+            android:text="@string/mood_step1_sub"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp" />
+
+        <com.infinitylearn.hrgenie.ui.common.FlowLayout
+            android:id="@+id/reasonFlow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_xl" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:background="@drawable/bg_card_note"
+            android:orientation="vertical"
+            android:padding="@dimen/space_l">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/space_s"
+                android:text="@string/mood_note_label"
+                android:textColor="@color/ink"
+                android:textSize="@dimen/text_caption_lg"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/noteInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@null"
+                android:gravity="top|start"
+                android:hint="@string/mood_note_hint"
+                android:importantForAutofill="no"
+                android:inputType="textMultiLine|textCapSentences"
+                android:lineSpacingMultiplier="1.6"
+                android:minHeight="64dp"
+                android:textColor="@color/ink"
+                android:textColorHint="@color/text_muted"
+                android:textSize="@dimen/text_body_sm"
+                tools:ignore="LabelFor" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/saveCheckIn"
+            style="@style/HG.Button.Primary"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/height_input"
+            android:layout_marginTop="@dimen/space_xl"
+            android:elevation="4dp"
+            android:text="@string/action_save_checkin" />
+    </LinearLayout>
+</ScrollView>

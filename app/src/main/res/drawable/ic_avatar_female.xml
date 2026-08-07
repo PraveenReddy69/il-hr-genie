@@ -1,0 +1,13 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <!-- hair, falling past the shoulders so the silhouette reads at 20dp -->
+    <path android:fillColor="@android:color/white"
+        android:pathData="M12,2.6C8.5,2.6 5.6,5.5 5.6,9v7.4h2.6V9c0,-2.1 1.7,-3.8 3.8,-3.8s3.8,1.7 3.8,3.8v7.4h2.6V9C18.4,5.5 15.5,2.6 12,2.6z" />
+    <!-- face -->
+    <path android:fillColor="@android:color/white"
+        android:pathData="M12,5.2c-2.1,0 -3.8,1.7 -3.8,3.8s1.7,3.8 3.8,3.8s3.8,-1.7 3.8,-3.8S14.1,5.2 12,5.2z" />
+    <!-- shoulders, narrower than the hair -->
+    <path android:fillColor="@android:color/white"
+        android:pathData="M12,13.6c-2.6,0 -4.7,2.1 -4.7,4.2v2h9.4v-2C16.7,15.7 14.6,13.6 12,13.6z" />
+</vector>

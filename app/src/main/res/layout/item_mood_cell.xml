@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One of five faces in the Home mood grid. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_mood_cell"
+    android:clickable="true"
+    android:focusable="true"
+    android:gravity="center_horizontal"
+    android:orientation="vertical"
+    android:paddingStart="4dp"
+    android:paddingTop="@dimen/space_m"
+    android:paddingEnd="4dp"
+    android:paddingBottom="@dimen/space_m">
+
+    <TextView
+        android:id="@+id/moodEmoji"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:includeFontPadding="false"
+        android:textSize="26sp"
+        android:importantForAccessibility="no"
+        tools:text="😊" />
+
+    <TextView
+        android:id="@+id/moodLabel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:fontFamily="sans-serif-medium"
+        android:gravity="center"
+        android:textColor="@color/text_slate"
+        android:textSize="10sp"
+        tools:text="Great" />
+</LinearLayout>

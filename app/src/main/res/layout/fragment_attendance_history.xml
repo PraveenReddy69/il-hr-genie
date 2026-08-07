@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_app"
+    android:orientation="vertical">
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/scroller"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:id="@+id/content"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- ============================== Header ============================== -->
+            <LinearLayout
+                android:id="@+id/header"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_header_plain"
+                android:orientation="vertical"
+                android:paddingStart="@dimen/space_screen"
+                android:paddingTop="@dimen/space_l"
+                android:paddingEnd="@dimen/space_screen"
+                android:paddingBottom="@dimen/space_xl">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/space_l"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:id="@+id/backButton"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/cd_back"
+                        android:src="@drawable/ic_back"
+                        app:tint="@color/white_85" />
+
+                    <TextView
+                        style="@style/HG.Eyebrow"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/space_m"
+                        android:layout_weight="1"
+                        android:letterSpacing="0.067"
+                        android:text="@string/history_eyebrow"
+                        android:textColor="@color/white_50"
+                        android:textSize="@dimen/text_caption" />
+                </LinearLayout>
+
+                <TextView
+                    style="@style/HG.H2"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/history_title"
+                    android:textColor="@color/white" />
+
+                <TextView
+                    android:id="@+id/weekRange"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textColor="@color/white_55"
+                    android:textSize="@dimen/text_body_sm"
+                    tools:text="3 – 9 Aug 2026" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_screen"
+                    android:baselineAligned="false"
+                    android:orientation="horizontal">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_kpi_tile"
+                        android:orientation="vertical"
+                        android:padding="13dp">
+
+                        <TextView
+                            android:id="@+id/weekHours"
+                            style="@style/HG.H1"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/white"
+                            tools:text="22h 07m" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="@string/history_hours_label"
+                            android:textColor="@color/white_55"
+                            android:textSize="@dimen/text_eyebrow" />
+
+                        <TextView
+                            android:id="@+id/weekHoursDelta"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="5dp"
+                            android:textColor="@color/green_delta"
+                            android:textSize="@dimen/text_eyebrow_sm"
+                            android:textStyle="bold"
+                            tools:text="of 40h target" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_kpi_tile"
+                        android:orientation="vertical"
+                        android:padding="13dp">
+
+                        <TextView
+                            android:id="@+id/weekPresent"
+                            style="@style/HG.H1"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/white"
+                            tools:text="3/5" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:text="@string/history_present_label"
+                            android:textColor="@color/white_55"
+                            android:textSize="@dimen/text_eyebrow" />
+
+                        <TextView
+                            android:id="@+id/weekPresentDelta"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="5dp"
+                            android:textColor="@color/white_55"
+                            android:textSize="@dimen/text_eyebrow_sm"
+                            android:textStyle="bold"
+                            tools:text="2 week offs" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ============================== Breakdown ============================ -->
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clipToPadding="false"
+                android:paddingStart="@dimen/space_screen"
+                android:paddingTop="@dimen/space_l"
+                android:paddingEnd="@dimen/space_screen"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:id="@+id/statusCounts"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal" />
+            </HorizontalScrollView>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/space_screen"
+                android:layout_marginTop="@dimen/space_l"
+                android:layout_marginEnd="@dimen/space_screen"
+                android:layout_marginBottom="@dimen/space_screen"
+                android:background="@drawable/bg_card"
+                android:clipToOutline="true"
+                android:elevation="2dp"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_band_blue"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/space_screen"
+                    android:paddingTop="11dp"
+                    android:paddingEnd="@dimen/space_screen"
+                    android:paddingBottom="11dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:text="@string/emoji_calendar"
+                        android:textSize="14sp"
+                        android:importantForAccessibility="no" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="9dp"
+                        android:layout_weight="1"
+                        android:letterSpacing="0.023"
+                        android:text="@string/history_day_by_day"
+                        android:textColor="@color/white"
+                        android:textSize="@dimen/text_body_sm"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/dayList"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="6dp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/space_xl"
+                android:layout_marginEnd="@dimen/space_xl"
+                android:layout_marginBottom="@dimen/space_xl"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/emoji_bulb"
+                    android:textSize="13sp"
+                    android:importantForAccessibility="no" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="9dp"
+                    android:layout_weight="1"
+                    android:lineSpacingMultiplier="1.5"
+                    android:text="@string/history_tip"
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="@dimen/text_micro" />
+            </LinearLayout>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- Appears only when something correctable is ticked. -->
+    <LinearLayout
+        android:id="@+id/regularizeBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/surface"
+        android:elevation="16dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/space_screen"
+        android:paddingTop="@dimen/space_m"
+        android:paddingEnd="@dimen/space_screen"
+        android:paddingBottom="@dimen/space_m"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <TextView
+            android:id="@+id/regularizeCount"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/text_secondary"
+            android:textSize="@dimen/text_caption_lg"
+            tools:text="2 days selected" />
+
+        <TextView
+            android:id="@+id/regularizeAction"
+            style="@style/HG.Button.Primary"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/height_button_small"
+            android:layout_marginStart="@dimen/space_m"
+            android:background="@drawable/bg_button_gradient_blue"
+            android:paddingStart="@dimen/space_screen"
+            android:paddingEnd="@dimen/space_screen"
+            android:text="@string/action_regularize"
+            android:textSize="@dimen/text_body" />
+    </LinearLayout>
+</LinearLayout>

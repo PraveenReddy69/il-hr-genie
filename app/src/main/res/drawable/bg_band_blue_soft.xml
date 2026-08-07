@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Holidays counterpart to bg_band_navy_soft. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="@dimen/radius_tile" />
+    <gradient
+        android:angle="0"
+        android:endColor="@color/blue_primary"
+        android:startColor="@color/blue_deep"
+        android:type="linear" />
+</shape>
