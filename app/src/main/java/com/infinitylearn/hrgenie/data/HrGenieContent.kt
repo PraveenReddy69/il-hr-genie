@@ -51,7 +51,7 @@ object HrGenieContent {
         ),
         Mood(
             MoodKey.OKAY, "😐", "Okay", "Getting through the week",
-            "Noted. If 'okay' turns into 'stretched', I'll nudge you to talk to Meera.", 6,
+            "Noted. If 'okay' turns into 'stretched', I'll nudge you to talk to your HRBP.", 6,
         ),
         Mood(
             MoodKey.STRESSED, "😔", "Stressed", "Carrying a bit too much",

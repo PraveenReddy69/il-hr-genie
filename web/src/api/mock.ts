@@ -79,7 +79,7 @@ export const EMPLOYEES: Employee[] = [
   },
   {
     employeeId: 'HR000',
-    name: 'Meera Krishnan',
+    name: 'Aamy C P',
     title: 'HR Business Partner',
     department: 'Human Resource & Administration',
     officialEmail: 'hr@infinitylearn.com',

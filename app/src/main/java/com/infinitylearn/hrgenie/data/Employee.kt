@@ -165,7 +165,7 @@ object EmployeeDirectory {
         // The HR demo account, kept until the HRMS issues real HR logins.
         Employee(
             employeeId = "HR000",
-            name = "Meera Krishnan",
+            name = "Aamy C P",
             title = "HR Business Partner",
             department = "Human Resource & Administration",
             gender = "Female",
