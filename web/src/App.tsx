@@ -127,26 +127,44 @@ function SignIn({ onSignedIn }: { onSignedIn: (employee: Employee) => void }) {
   return (
     <div className="signin">
       <form className="signin__card" onSubmit={submit}>
-        <div className="signin__mark">🧞</div>
-        <h2 style={{ margin: 0, letterSpacing: '-0.02em' }}>HRBP console</h2>
-        <p style={{ color: 'var(--text-secondary)', margin: '6px 0 0', fontSize: 13 }}>
-          Sign in with your HR employee ID.
+        <div className="signin__mark">
+          {/* Same mark as the employee app, so the two read as one product. */}
+          <img src={`${import.meta.env.BASE_URL}hr-genie-mark.png`} alt="" />
+        </div>
+
+        <h1 className="signin__title">HR Genie</h1>
+        <p className="signin__subtitle">
+          The HRBP console. Sign in with your HR employee ID.
         </p>
 
-        <input
-          value={employeeId}
-          onChange={(event) => setEmployeeId(event.target.value)}
-          placeholder="HR000"
-          autoFocus
-          autoComplete="off"
-        />
-        <input
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          placeholder="Password"
-          autoComplete="current-password"
-        />
+        <div className="signin__field">
+          <label className="signin__label" htmlFor="employee-id">
+            Employee ID
+          </label>
+          <input
+            id="employee-id"
+            value={employeeId}
+            onChange={(event) => setEmployeeId(event.target.value)}
+            placeholder="HR000"
+            autoFocus
+            autoComplete="off"
+          />
+        </div>
+
+        <div className="signin__field">
+          <label className="signin__label" htmlFor="password">
+            Password
+          </label>
+          <input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="Enter your password"
+            autoComplete="current-password"
+          />
+        </div>
+
         {error && <div className="error">{error}</div>}
 
         <button
@@ -154,7 +172,7 @@ function SignIn({ onSignedIn }: { onSignedIn: (employee: Employee) => void }) {
           type="submit"
           disabled={busy || !employeeId.trim() || !password}
         >
-          {busy ? 'Checking…' : 'Sign in'}
+          {busy ? 'Signing in…' : 'Sign in'}
         </button>
 
         {!isLive && (
@@ -165,6 +183,15 @@ function SignIn({ onSignedIn }: { onSignedIn: (employee: Employee) => void }) {
             <span className="env-flag">Mock data</span>
           </>
         )}
+
+        <div className="signin__footer">
+          {/* Wordmark only — the round mark is far too detailed to read at this
+              size, and repeating it would compete with the one above. */}
+          <span className="signin__brand">Infinity Learn</span>
+        </div>
+        <p className="signin__legal">
+          Employees use the mobile app. This console is for the HR team.
+        </p>
       </form>
     </div>
   )
