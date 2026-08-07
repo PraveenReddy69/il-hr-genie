@@ -72,7 +72,8 @@ export const MOCK_IN_LIVE = ['Chat analytics'] as const
  * Names are rendered synchronously all over the console (ticket rows, comment
  * authors), so they cannot each await a lookup. [ensureDirectory] fills this once and
  * [employeeName] reads it. Without it the console falls back to the mock directory,
- * which is how HR000 was showing as "Meera Krishnan" when the server says "Meera Nair".
+ * which is how the HR account was showing the seed name rather than the one the
+ * server returns.
  */
 const directory = new Map<string, Employee>()
 
@@ -784,6 +785,51 @@ export async function fetchMoodDetail(dateIso: string): Promise<PersonEntry[]> {
             : 'WARNING',
     }
   })
+}
+
+/**
+ * Who is on the clock today.
+ *
+ * The "checked in" tile used to open the mood drawer, which meant a tile reading 1
+ * opened a list of 0 — two unrelated figures wired to the same drill-down.
+ */
+export async function fetchAttendanceDetail(dateIso: string): Promise<PersonEntry[]> {
+  if (!isLive) return mocked([])
+
+  const [response, employees] = await Promise.all([
+    get<{ records: RawAttendance[] }>(`/api/hr/attendance?from=${dateIso}&to=${dateIso}`),
+    fetchEmployees(),
+  ])
+  const directory = new Map(employees.map((one) => [one.employeeId, one]))
+
+  return response.records
+    .filter((row) => row.checkInMillis !== null)
+    .map((row) => {
+      const employee = directory.get(row.employeeId)
+      const open = row.checkOutMillis === null
+      return {
+        employeeId: row.employeeId,
+        name: row.name ?? employee?.name ?? row.employeeId,
+        department: employee?.department ?? '',
+        subtitle: `In ${clockOf(row.checkInMillis!)}${
+          open ? '' : ` · out ${clockOf(row.checkOutMillis!)}`
+        }`,
+        value: open ? 'On the clock' : hoursOf(row.workedMillis),
+        tone: open ? 'POSITIVE' : 'NEUTRAL',
+      }
+    })
+}
+
+function clockOf(millis: number): string {
+  return new Date(millis).toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}
+
+function hoursOf(millis: number): string {
+  const minutes = Math.round(millis / 60000)
+  return minutes < 60 ? `${minutes}m` : `${Math.floor(minutes / 60)}h ${minutes % 60}m`
 }
 
 export async function fetchPulseDetail(cycle: string): Promise<PersonEntry[]> {

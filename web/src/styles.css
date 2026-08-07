@@ -82,14 +82,14 @@ button {
   margin-bottom: 26px;
 }
 
+/* The app mark. Round rather than a rounded square, because the artwork is a
+   circle — a 12px radius clipped its edge and left grey corners showing. */
 .sidebar__mark {
   width: 38px;
   height: 38px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--blue-primary), var(--purple));
-  display: grid;
-  place-items: center;
-  font-size: 18px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(6, 14, 38, 0.45);
 }
 
 .sidebar__title {
@@ -113,6 +113,21 @@ button {
   text-decoration: none;
   font-weight: 500;
   transition: background 0.15s, color 0.15s;
+}
+
+/* Sized here rather than on the SVG so every icon lines up on the same optical
+   axis regardless of how much of its 24-grid it fills. */
+.sidebar__icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  opacity: 0.75;
+  transition: opacity 0.15s;
+}
+
+.sidebar__link:hover .sidebar__icon,
+.sidebar__link--active .sidebar__icon {
+  opacity: 1;
 }
 
 .sidebar__link:hover {
@@ -310,11 +325,17 @@ button {
   color: rgba(255, 255, 255, 0.8);
 }
 
+/* Green while the figures are refreshing on schedule; amber once an attempt has
+   failed, so a stale dashboard says it is stale rather than looking current. */
 .hero__dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: #5be08f;
+}
+
+.hero__dot--stale {
+  background: var(--orange-warn);
 }
 
 .hero h2 {

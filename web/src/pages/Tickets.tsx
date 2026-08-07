@@ -51,7 +51,12 @@ export function Tickets({ actorId }: { actorId: string }) {
         </p>
       </div>
 
-      <Card chip="🎫" chipColour="var(--orange-tint-14)" title="Status mix">
+      <Card
+        chip="🎫"
+        chipColour="var(--orange-tint-14)"
+        title="Where tickets stand"
+        subtitle="The whole queue, by status"
+      >
         <Donut
           total={counts.all}
           caption={counts.all === 1 ? 'ticket' : 'tickets'}

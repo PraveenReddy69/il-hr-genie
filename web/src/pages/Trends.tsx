@@ -38,27 +38,50 @@ export function Trends() {
       ? null
       : answered.reduce((sum, day) => sum + (day.score ?? 0), 0) / answered.length
 
-  async function openDay(dateIso: string) {
-    const entries = await fetchMoodDetail(dateIso)
-    const shared = entries.filter((entry) => entry.tone !== 'MUTED').length
-    setDrill({
-      title: new Date(`${dateIso}T00:00:00`).toLocaleDateString(undefined, {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-      }),
-      subtitle: `${shared} of ${entries.length} shared that day`,
-      entries,
+  // Every cycle reports today's roster, so any of them gives the workforce size.
+  const headcount = cycles.find((cycle) => cycle.headcount > 0)?.headcount
+
+  /** Same guard as the dashboard: a failed load must not look like a dead control. */
+  async function drillInto(
+    title: string,
+    load: () => Promise<{ subtitle: string; entries: PersonEntry[] }>,
+  ) {
+    try {
+      const { subtitle, entries } = await load()
+      setDrill({ title, subtitle, entries })
+    } catch {
+      setDrill({
+        title,
+        subtitle: 'Could not reach HR Genie — this list could not be loaded.',
+        entries: [],
+      })
+    }
+  }
+
+  function openDay(dateIso: string) {
+    const title = new Date(`${dateIso}T00:00:00`).toLocaleDateString(undefined, {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    })
+    return drillInto(title, async () => {
+      const entries = await fetchMoodDetail(dateIso)
+      const shared = entries.filter((entry) => entry.tone !== 'MUTED').length
+      return {
+        subtitle: `${shared} of ${headcount ?? entries.length} employees shared that day`,
+        entries,
+      }
     })
   }
 
-  async function openCycle() {
-    const entries = await fetchPulseDetail(selected)
-    const done = entries.filter((entry) => entry.tone === 'POSITIVE').length
-    setDrill({
-      title: monthLabel(selected),
-      subtitle: `${done} of ${entries.length} answered · click a name for their answers`,
-      entries,
+  function openCycle() {
+    return drillInto(monthLabel(selected), async () => {
+      const entries = await fetchPulseDetail(selected)
+      const done = entries.filter((entry) => entry.tone === 'POSITIVE').length
+      return {
+        subtitle: `${done} of ${headcount ?? entries.length} employees answered · click a name for their answers`,
+        entries,
+      }
     })
   }
 
