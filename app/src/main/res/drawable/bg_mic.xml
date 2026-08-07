@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+<!-- The mic / send button at rest. A circle rather than a rounded square, so it does
+     not change shape when it turns red on hold — bg_mic_recording is an oval too, and
+     the two swapping between a squircle and a circle read as a glitch mid-gesture.
+     The button is a 48dp square, so an oval is a true circle. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
     <solid android:color="@color/blue_primary" />
-    <corners android:radius="@dimen/radius_input" />
 </shape>

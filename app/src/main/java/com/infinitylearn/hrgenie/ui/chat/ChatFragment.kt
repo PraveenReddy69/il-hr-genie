@@ -10,6 +10,7 @@ import android.util.Log
 import android.view.HapticFeedbackConstants
 import android.view.LayoutInflater
 import android.view.MotionEvent
+import android.view.animation.OvershootInterpolator
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
@@ -353,18 +354,20 @@ class ChatFragment : Fragment() {
                 }
 
                 MotionEvent.ACTION_MOVE -> {
-                    if (isRecording && event.rawX - touchDownX < -cancelThresholdPx()) {
-                        cancelRecording()
-                    }
+                    if (isRecording) dragMic(event.rawX - touchDownX)
                     true
                 }
 
                 MotionEvent.ACTION_UP -> {
+                    // Settle on release rather than waiting for the recogniser to
+                    // finish — the button should follow the finger, not the network.
+                    settleMic()
                     if (isRecording) voice?.stop()
                     true
                 }
 
                 MotionEvent.ACTION_CANCEL -> {
+                    settleMic()
                     if (isRecording) cancelRecording()
                     true
                 }
@@ -404,6 +407,51 @@ class ChatFragment : Fragment() {
         ticker.post(tick)
     }
 
+    /**
+     * Drags the mic with the finger, so the cancel gesture shows its own progress.
+     *
+     * It used to sit still until the threshold tripped and the recording vanished,
+     * which gave no clue how far was far enough. Now it follows the finger, fades as
+     * the cancel point nears, and takes the hint text with it.
+     *
+     * Leftward only — dragging right is not a gesture, and letting the button wander
+     * off the other side would just look broken. Movement past the threshold is
+     * damped so the control feels tethered rather than flung.
+     */
+    private fun dragMic(dx: Float) {
+        val binding = _binding ?: return
+        val threshold = cancelThresholdPx()
+        val pulled = dx.coerceAtMost(0f)
+
+        val travel = if (-pulled <= threshold) {
+            pulled
+        } else {
+            -(threshold + (-pulled - threshold) * RUBBER_BAND)
+        }
+        val progress = (-pulled / threshold).coerceIn(0f, 1f)
+
+        binding.micButton.translationX = travel
+        binding.micButton.alpha = 1f - FADE_AT_CANCEL * progress
+        // The hint travels with it, at a slower rate, so the two read as one gesture.
+        binding.recordingHint.translationX = travel * HINT_DRIFT
+        binding.recordingHint.alpha = 1f - progress
+
+        if (-pulled >= threshold) cancelRecording()
+    }
+
+    /** Springs the mic home. A slight overshoot reads as elastic rather than mechanical. */
+    private fun settleMic() {
+        val binding = _binding ?: return
+        binding.micButton.animate()
+            .translationX(0f)
+            .alpha(1f)
+            .setDuration(260L)
+            .setInterpolator(OvershootInterpolator(2.4f))
+            .start()
+        binding.recordingHint.translationX = 0f
+        binding.recordingHint.alpha = 1f
+    }
+
     private fun cancelRecording() {
         voice?.cancel()
         stopRecordingUi()
@@ -419,6 +467,7 @@ class ChatFragment : Fragment() {
             it.micButton.scaleX = 1f
             it.micButton.scaleY = 1f
         }
+        settleMic()
     }
 
     /** Half the screen width would be a drag; 90dp is a deliberate flick. */
@@ -504,5 +553,14 @@ class ChatFragment : Fragment() {
         /** Timer resolution while holding the mic. */
         const val TICK_MS = 200L
         const val TAG = "HrGenieTickets"
+
+        /** How much of the drag past the cancel point still moves the button. */
+        const val RUBBER_BAND = 0.25f
+
+        /** How faint the mic goes by the moment it cancels. */
+        const val FADE_AT_CANCEL = 0.45f
+
+        /** The hint trails the mic rather than matching it, which reads as depth. */
+        const val HINT_DRIFT = 0.4f
     }
 }
