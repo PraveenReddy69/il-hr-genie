@@ -119,6 +119,8 @@
     <string name="attendance_summary_auto">Auto-closed 11:59 PM · %1$s worked · %2$s short of 8h</string>
     <string name="attendance_summary_auto_full">Auto-closed 11:59 PM · %1$s worked · %2$s overtime</string>
 
+    <!-- Splits the Home column: your own day, then what the team is up to. -->
+    <string name="home_section_team">Around the team</string>
     <string name="wishes">Wishes</string>
     <string name="action_view">View</string>
     <string name="action_view_all">View all</string>

@@ -92,4 +92,10 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="transparent">#00000000</color>
+
+    <!-- Card shadows. Android's default is neutral grey, which reads as dust on a
+         blue-tinted surface; an ink-blue cast makes stacked cards feel deliberate.
+         Honoured from API 28; ignored below, where the default grey applies. -->
+    <color name="card_shadow_ambient">#3D1A3A7A</color>
+    <color name="card_shadow_spot">#661A3A7A</color>
 </resources>
