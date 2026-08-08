@@ -18,8 +18,36 @@ export function Tickets({ actorId }: { actorId: string }) {
   const [filter, setFilter] = useState<TicketStatus | null>(null)
   const [open, setOpen] = useState<Ticket | null>(null)
 
+  /**
+   * Reloads on a timer and whenever the tab is looked at again.
+   *
+   * The queue was fetched once on mount, so a console left open never saw a ticket
+   * raised after it loaded — which reads as "the app did not file it" rather than
+   * "this page is stale". A failed refresh keeps the rows already on screen.
+   */
   useEffect(() => {
-    Promise.all([fetchTickets(), ensureDirectory()]).then(([rows]) => setTickets(rows))
+    let cancelled = false
+
+    const load = () => {
+      Promise.all([fetchTickets(), ensureDirectory()])
+        .then(([rows]) => {
+          if (!cancelled) setTickets(rows)
+        })
+        .catch(() => {})
+    }
+
+    load()
+    const timer = window.setInterval(load, REFRESH_MS)
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') load()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [])
 
   const counts = useMemo(() => {
@@ -124,3 +152,6 @@ export function Tickets({ actorId }: { actorId: string }) {
     </>
   )
 }
+
+/** Often enough that a ticket raised on the phone shows up while HR is looking. */
+const REFRESH_MS = 30_000

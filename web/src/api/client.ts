@@ -876,10 +876,15 @@ export async function fetchPulseDetail(cycle: string): Promise<PersonEntry[]> {
 
 export async function fetchTickets(): Promise<Ticket[]> {
   if (!isLive) return mocked(mockTickets())
-  // `/tickets` needs an employeeId; `/tickets/list` is the HR-wide one and pages,
-  // capped at 200 by the server.
-  const page = await get<{ items: Ticket[] }>('/api/tickets/list?page=1&limit=200')
-  return page.items
+  // `/tickets` needs an employeeId; `/tickets/list` is the HR-wide one.
+  //
+  // Every page, not just the first. The endpoint documents no ordering, so taking
+  // page 1 alone was a bet that the newest ticket is on it — and once the queue
+  // passes the page limit, a wrong bet hides new tickets entirely rather than
+  // failing visibly.
+  const tickets = await pagedItems<Ticket>('/api/tickets/list')
+  // Newest first regardless of what order the server chose to return them in.
+  return [...tickets].sort((a, b) => b.createdAtMillis - a.createdAtMillis)
 }
 
 export async function updateTicketStatus(
