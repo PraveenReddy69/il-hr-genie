@@ -5,6 +5,7 @@ import { Attendance } from './pages/Attendance'
 import { Dashboard } from './pages/Dashboard'
 import { Holidays } from './pages/Holidays'
 import { People } from './pages/People'
+import { SalesInsights } from './pages/SalesInsights'
 import { Tickets } from './pages/Tickets'
 import { Trends } from './pages/Trends'
 import {
@@ -14,6 +15,7 @@ import {
   HistoryIcon,
   HolidaysIcon,
   PeopleIcon,
+  SalesIcon,
   TicketsIcon,
 } from './components/Icons'
 import { clearToken, fetchMe, isLive, isUnauthorized, signIn } from './api/client'
@@ -26,6 +28,7 @@ const NAV = [
   { to: '/tickets', label: 'Tickets', Icon: TicketsIcon },
   { to: '/people', label: 'People', Icon: PeopleIcon },
   { to: '/attendance', label: 'Attendance', Icon: AttendanceIcon },
+  { to: '/sales', label: 'Sales Insights', Icon: SalesIcon },
   { to: '/analytics', label: 'Analytics', Icon: AnalyticsIcon },
   { to: '/trends', label: 'History', Icon: HistoryIcon },
   { to: '/holidays', label: 'Holidays', Icon: HolidaysIcon },
@@ -129,6 +132,7 @@ export default function App() {
           <Route path="/tickets" element={<Tickets actorId={hr.employeeId} />} />
           <Route path="/people" element={<People />} />
           <Route path="/attendance" element={<Attendance />} />
+          <Route path="/sales" element={<SalesInsights />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/trends" element={<Trends />} />
           <Route path="/holidays" element={<Holidays />} />

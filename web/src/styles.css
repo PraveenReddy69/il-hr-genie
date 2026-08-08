@@ -1200,3 +1200,287 @@ textarea:focus {
   background: var(--orange-tint-14);
   color: var(--orange-warn);
 }
+
+/* ------------------------------------------------------------ sales bands */
+
+/*
+ * The band breakdown on Sales Insights.
+ *
+ * Each row is a button, not a div with a click handler: it is a filter control, and
+ * keyboard and screen-reader users have as much reason to narrow the roster as anyone
+ * else. Band colour arrives as an inline `--band`, which lets one rule set paint six
+ * different rows — tint, count and bar all read from it.
+ */
+.bands {
+  display: grid;
+  gap: 2px;
+}
+
+.band {
+  position: relative;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 3px 14px;
+  align-items: baseline;
+  padding: 11px 12px;
+  border: 0;
+  border-radius: var(--radius-tile);
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: opacity 0.18s ease;
+}
+
+/* The tint lives on a layer so the band colour can be used at low alpha without
+   needing a second, pre-mixed variable for every band. */
+.band::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-tile);
+  background: var(--band);
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  pointer-events: none;
+}
+
+.band:hover::before {
+  opacity: 0.07;
+}
+
+.band--on::before {
+  opacity: 0.13;
+}
+
+/* Not selected while something else is — dimmed rather than hidden, so the shape of
+   the whole distribution is still readable. */
+.band--off {
+  opacity: 0.45;
+}
+
+.band:focus-visible {
+  outline: 2px solid var(--blue-primary);
+  outline-offset: 2px;
+}
+
+.band__name {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-weight: 650;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.band__swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--band);
+  flex-shrink: 0;
+}
+
+.band__count {
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--band);
+  line-height: 1;
+}
+
+.band__rule {
+  grid-column: 1;
+  padding-left: 18px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.band__share {
+  grid-column: 2;
+  justify-self: end;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary);
+}
+
+.band__track {
+  grid-column: 1 / -1;
+  height: 5px;
+  margin: 7px 0 1px 18px;
+  border-radius: 6px;
+  background: var(--ink-06);
+  overflow: hidden;
+}
+
+.band__fill {
+  /* A span, so it needs blockifying before height and width mean anything. */
+  display: block;
+  height: 100%;
+  border-radius: 6px;
+  background: var(--band);
+  transition: width 0.4s ease;
+}
+
+/* The two statuses that are not a performance judgement. Set apart from the bands
+   above so the percentages there are not read as covering everyone. */
+.band-aside {
+  margin-top: 12px;
+  padding: 11px 13px;
+  border-radius: var(--radius-tile);
+  background: var(--bg-cell);
+  border: 1px solid var(--ink-05);
+  font-size: 11px;
+  line-height: 1.65;
+  color: var(--text-tertiary);
+}
+
+.band-aside strong {
+  color: var(--text-slate);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The strip of figures under the band ring on Sales Insights. The ring shows the
+   spread; these answer "so how is the cycle going", which it cannot. */
+.stat-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--ink-05);
+}
+
+.stat-strip__item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.stat-strip__value {
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  color: var(--ink);
+}
+
+.stat-strip__label {
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--text-tertiary);
+}
+
+/*
+ * Markers under a person's meta line.
+ *
+ * On their own row rather than beside the description: alongside it, the marker
+ * pushed the department and joining date into an ellipsis on any normal name, and
+ * the context is worth more than the horizontal space.
+ */
+.row__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 5px;
+}
+
+/* A one-word marker. Never a sentence — it sits under a line of context. */
+.tag {
+  display: inline-block;
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border-radius: 20px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  vertical-align: 1px;
+}
+
+.tag--ramp {
+  background: var(--purple-tint-12);
+  color: var(--purple);
+}
+
+/*
+ * The mood reading beside a person's numbers.
+ *
+ * Deliberately quiet: neutral by default, and marked only when it crosses the same
+ * strain threshold the attention cards act on. Mood sits next to performance here,
+ * never inside it.
+ */
+.mood {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: 10px;
+  padding: 5px 10px 5px 8px;
+  border-radius: 20px;
+  background: var(--bg-cell);
+  border: 1px solid var(--ink-05);
+  font-size: 11.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-slate);
+  white-space: nowrap;
+}
+
+.mood__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.mood__scale {
+  margin-left: -2px;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.mood--low {
+  background: var(--orange-tint-14);
+  border-color: transparent;
+  color: #b4571f;
+}
+
+.mood--low .mood__dot {
+  background: var(--orange-warn);
+}
+
+/* No check-ins is not a low score — it is an absence, and it reads as one. */
+.mood--none {
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 10.5px;
+}
+
+.mood--none .mood__dot {
+  background: transparent;
+  border: 1.5px dashed var(--ink-12);
+}
+
+/* A tick on a selected multi-select chip. The filled background alone reads as
+   "the one that's on"; with several on at once, the mark says they add up. */
+.chip__tick {
+  margin-right: 5px;
+  font-size: 9.5px;
+  vertical-align: 1px;
+}
+
+/* A chip that acts on the selection rather than being part of it. */
+.chip--ghost {
+  border-style: dashed;
+}
+
+.note--left {
+  text-align: left;
+  margin-top: 12px;
+}

@@ -128,7 +128,9 @@ export function isUnauthorized(error: unknown): boolean {
   return error instanceof ApiError && error.status === 401
 }
 
-async function get<T>(path: string): Promise<T> {
+/** Exported so sibling modules (sales.ts) can reach the API without duplicating the
+ *  auth header, ngrok header and error handling. */
+export async function get<T>(path: string): Promise<T> {
   return request<T>(path, { method: 'GET' })
 }
 

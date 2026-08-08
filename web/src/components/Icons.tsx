@@ -84,6 +84,16 @@ export const HistoryIcon = (props: IconProps) => (
   </Svg>
 )
 
+/** A target with an arrow in it — quota attainment. */
+export const SalesIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <circle cx="11" cy="13" r="7.5" />
+    <circle cx="11" cy="13" r="3.6" />
+    <path d="m11 13 8.5-8.5" />
+    <path d="M16.8 4.2h3v3" />
+  </Svg>
+)
+
 /** A calendar with a marked day. */
 export const HolidaysIcon = (props: IconProps) => (
   <Svg {...props}>
