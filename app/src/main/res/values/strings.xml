@@ -173,7 +173,7 @@
 
     <!-- Chat -->
     <string name="chat_title">HR Genie</string>
-    <string name="chat_status">● Always on</string>
+    <string name="chat_status">● 24/7 Available</string>
     <string name="action_ask_genie">Ask HR Genie</string>
     <string name="action_talk_to_hrbp">Talk to HRBP</string>
     <string name="chat_day_today">Today</string>
@@ -243,9 +243,12 @@
     <string name="prompt_retry">↻ Try again</string>
 
     <!-- Chat: ticket raising -->
-    <string name="chip_raise_ticket">🎫 Raise a ticket</string>
+    <string name="chip_raise_ticket">Raise a ticket</string>
     <string name="chip_my_tickets">My tickets</string>
     <string name="ticket_draft_title">Ticket preview</string>
+    <!-- Nothing has been written yet. Someone who assumes it has will sit waiting on
+         HR instead of tapping the button. -->
+    <string name="ticket_draft_note">Nothing has gone to HR yet. Tap Raise it and it goes straight over.</string>
     <string name="ticket_raised_by">Raised by %1$s · %2$s</string>
     <string name="action_raise_ticket">Raise it</string>
     <string name="action_cancel">Cancel</string>
@@ -423,6 +426,8 @@
     <string name="voice_read_on">Spoken answers on — ask out loud and I\'ll reply out loud.</string>
     <string name="voice_read_off">Spoken answers off. Tap the speaker on any reply to hear it.</string>
     <string name="cd_read_aloud">Read this answer aloud</string>
+    <!-- Header on the ticket category picker. -->
+    <string name="chat_pick_category">Pick a category</string>
     <string name="cd_auto_speak">Spoken answers</string>
     <string name="cd_avatar">Your profile</string>
     <string name="cd_send_wish">Send a wish</string>

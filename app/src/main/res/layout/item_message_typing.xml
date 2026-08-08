@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- The dots rise and scale as they animate, which takes them outside the box they
+     were measured in. Every container between them and the row therefore has to stop
+     clipping, or the top of each dot is shaved off at the peak of its bounce. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:clipChildren="false"
+    android:clipToPadding="false"
     android:paddingTop="6dp"
     android:paddingBottom="6dp">
 
@@ -10,6 +15,8 @@
         android:layout_height="wrap_content"
         android:layout_gravity="start"
         android:background="@drawable/bg_bubble_bot"
+        android:clipChildren="false"
+        android:clipToPadding="false"
         android:elevation="1dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"

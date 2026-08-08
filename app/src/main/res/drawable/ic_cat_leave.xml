@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A calendar with a tick — leave. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?attr/colorControlNormal">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M7,2.2a1.2,1.2 0,0 1,1.2 1.2v1.1h7.6L15.8,3.4a1.2,1.2 0,0 1,2.4 0v1.1h1.1A2.7,2.7 0,0 1,22 7.2v12.1A2.7,2.7 0,0 1,19.3 22L4.7,22A2.7,2.7 0,0 1,2 19.3L2,7.2A2.7,2.7 0,0 1,4.7 4.5h1.1L5.8,3.4A1.2,1.2 0,0 1,7 2.2ZM4.4,10v9.3c0,0.17 0.13,0.3 0.3,0.3h14.6c0.17,0 0.3,-0.13 0.3,-0.3L19.6,10Z" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M15.9,12.6a1.15,1.15 0,0 1,0.1 1.72l-4.2,4.2a1.15,1.15 0,0 1,-1.63 0l-2.1,-2.1a1.15,1.15 0,0 1,1.63 -1.63l1.28,1.28 3.38,-3.38a1.15,1.15 0,0 1,1.54 -0.09Z" />
+</vector>

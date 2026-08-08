@@ -68,26 +68,11 @@
             android:id="@+id/autoSpeakToggle"
             android:layout_width="34dp"
             android:layout_height="34dp"
-            android:layout_marginEnd="@dimen/space_s"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/cd_auto_speak"
             android:padding="6dp"
             android:src="@drawable/ic_speaker"
             app:tint="@color/blue_deep" />
-
-        <TextView
-            android:id="@+id/talkToHrbp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="@drawable/bg_pill_blue_tint"
-            android:paddingStart="@dimen/space_m"
-            android:paddingTop="7dp"
-            android:paddingEnd="@dimen/space_m"
-            android:paddingBottom="7dp"
-            android:text="@string/action_talk_to_hrbp"
-            android:textColor="@color/blue_deep"
-            android:textSize="@dimen/text_micro"
-            android:textStyle="bold" />
     </LinearLayout>
 
     <View
@@ -95,12 +80,16 @@
         android:layout_height="1dp"
         android:background="@color/divider" />
 
-    <!-- ============================== Message list ============================= -->
+    <!-- ============================== Message list =============================
+         clipChildren is off because the typing dots animate beyond their row's
+         bounds; with it on, the list shaves the top off each one at the peak of
+         its bounce. -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/messageList"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
+        android:clipChildren="false"
         android:clipToPadding="false"
         android:paddingStart="@dimen/space_l"
         android:paddingTop="@dimen/space_screen"

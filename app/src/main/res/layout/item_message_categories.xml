@@ -1,18 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Category chips the bot offers when a ticket flow starts. Two per line, so long
-     labels like "Something else" never truncate. -->
+<!-- The category tiles the bot offers when a ticket flow starts. They sit on their own
+     panel, aligned to the bubble above, so the picker reads as one thing to answer
+     rather than six chips loose in the transcript. Two per line: "Something else" and
+     "IT & access" both truncate in a three-up row. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:clipChildren="false"
+    android:clipToPadding="false"
     android:orientation="vertical"
-    android:paddingStart="46dp"
     android:paddingTop="2dp"
-    android:paddingEnd="@dimen/space_l"
     android:paddingBottom="6dp">
 
+    <!-- Width is set in code to the same fraction the bubbles use, so the picker lines
+         up with the message that asked the question rather than running past it. -->
     <LinearLayout
-        android:id="@+id/categoryList"
+        android:id="@+id/categoryCard"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical" />
+        android:background="@drawable/bg_categories_card"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:orientation="vertical"
+        android:padding="10dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:layout_marginTop="2dp"
+            android:layout_marginBottom="9dp"
+            android:fontFamily="sans-serif-medium"
+            android:letterSpacing="0.07"
+            android:text="@string/chat_pick_category"
+            android:textAllCaps="true"
+            android:textColor="@color/text_muted"
+            android:textSize="@dimen/text_eyebrow_sm" />
+
+        <LinearLayout
+            android:id="@+id/categoryList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:orientation="vertical" />
+    </LinearLayout>
 </LinearLayout>

@@ -3,8 +3,17 @@
 **Goal:** HR marks a ticket resolved → the employee's phone buzzes → tapping the
 notification opens that ticket.
 
-The Android client is **finished and verified on a real device**. Everything below
-is the server half, which the app cannot do itself.
+The Android client is **finished and verified on a real device**, including the
+registration call in §6 — it already posts to `/api/devices` at every sign-in and
+gets a 404 today. Everything below is the server half, which the app cannot do
+itself. Nothing on the phone needs changing when you ship: build the two pieces in
+§5 and §6 and the loop closes.
+
+**The two things to build**
+
+1. `POST /api/devices` — store the token the app is already sending (§6).
+2. On a successful ticket status change, send the §4 payload to that employee's
+   tokens (§5).
 
 ---
 
@@ -116,12 +125,22 @@ no way to send with a static key any more; the service account is the only route
 
 ### Rules
 
-**Data-only. Do not add a `notification` block.** This is the one that bites. With a
-`notification` block, Android draws the notification itself while the app is
-backgrounded and the app never sees the message — so the tap opens the home screen
-instead of the ticket, and our styling and channel are ignored. Data-only means our
-service is invoked in every app state and builds the notification with the deep link
-attached.
+**Prefer data-only, but a `notification` block does work.** With one, Android draws
+the notification itself while the app is backgrounded and our service never runs. The
+client survives that: FCM copies the `data` keys onto the launch intent, and
+`MainActivity` reads `ticketId` from there — so the tap still opens the right ticket.
+**Verified on a real device on 2026-08-08, for both IN_PROGRESS and RESOLVED.**
+
+What is lost by sending one, none of it blocking:
+
+- Long `body` text truncates, because the system notification does not use our
+  `BigTextStyle`.
+- Repeat updates to the same ticket stack instead of replacing one another.
+- The `employeeId` check below is skipped, so on a shared phone signed in as someone
+  else the notification text is still shown — the tap lands them in their own ticket
+  list, so nothing further leaks.
+
+Send data-only when convenient. Do not rewrite a working integration for it.
 
 **All values must be strings.** FCM rejects `data` maps containing numbers, booleans
 or nested objects. `"status": "RESOLVED"`, never `"status": 1`.
@@ -169,14 +188,35 @@ A queue/retry is nice but not needed for the hackathon.
 
 ## 6. Device registration
 
-`POST /api/devices`
+`POST /api/employees/fcm-token` — **your contract, already implemented on the phone.**
 
 ```json
-{ "employeeId": "EMP3801", "token": "fcm-token…", "platform": "android" }
+{ "token": "fcm-token…" }
 ```
 
-The app calls this at sign-in. Today it stops at a `// TODO` in `SignInFragment.kt`
-because there's no endpoint — **tell me the URL and auth and I'll wire it in minutes.**
+Taking the employee from the bearer rather than the body is the right call and the
+app follows it: nothing is sent that could be used to pair someone else's device.
+
+One thing to confirm: you wrote the path as `/employees/fcm-token`, and every other
+route on the service carries the `/api` global prefix. The app calls
+**`/api/employees/fcm-token`**. If that is wrong it is one constant —
+`DevicesApi.FCM_TOKEN_PATH` — and both spellings 404 identically until you deploy, so
+we cannot tell them apart from here.
+
+**The app already sends exactly this**, on every sign-in *and* whenever Firebase
+rotates the token — you asked for both. It is live in `PushRegistration`, and today it
+gets a 404 back, logs it and carries on. So you can build against real traffic: sign
+into the app and watch your access log.
+
+Request details:
+
+- `Authorization: Bearer <the login JWT>` is set, same as every other authenticated
+  call the app makes. It is the only thing identifying the employee.
+- `Content-Type: application/json`.
+- Any 2xx is treated as success and the pairing is recorded, so the app stops
+  re-sending for that employee. **An empty 200 body is fine.**
+- Any non-2xx is logged and dropped. Nothing is shown to the employee and sign-in is
+  unaffected — so a broken endpoint can never lock anyone out.
 
 - Upsert on `token`, not on `employeeId`. The token identifies the *install*, and
   re-signing in on the same phone must not create a duplicate row.
@@ -191,7 +231,6 @@ Suggested table:
 CREATE TABLE device_token (
   token        VARCHAR(255) PRIMARY KEY,
   employee_id  VARCHAR(32)  NOT NULL,
-  platform     VARCHAR(16)  NOT NULL,
   updated_at   TIMESTAMP    NOT NULL,
   INDEX (employee_id)
 );
@@ -309,38 +348,55 @@ export async function notifyStatusChange(ticket, note) {
 
 ## 9. How to test your side
 
-1. Get a real device token: sign into the app, then
-   `adb logcat -s HrGeniePush` — it's logged at sign-in.
+1. Get a real device token: either read it from your own `/api/devices` rows once
+   §6 is up, or sign into the app and run `adb logcat -s HrGeniePush` — the pairing
+   attempt and its outcome are both logged at sign-in.
 2. Send the §4 payload to that token from your service.
 3. The phone should show **"HR closed HRG-0001"**; tapping it should land directly
    on that ticket, not the home screen.
 
-To confirm it took our path rather than Android's fallback:
+To see which side drew the notification:
 
 ```bash
 adb shell dumpsys notification | grep -A3 hrgenie
 ```
 
-You want `channel=hr_genie_tickets`. If you see
-`fcm_fallback_notification_channel`, you sent a `notification` block — remove it.
+Look at the **tag**, not the channel. `tag=FCM-Notification:…` means the Firebase SDK
+drew it, which is what happens when a `notification` block is present; our own service
+posts with a per-ticket id and no such tag.
 
-### Already verified
+The channel is not a reliable signal here: the manifest names `hr_genie_tickets` as
+FCM's default channel, so an SDK-drawn notification lands on it too.
 
-This exact payload was sent from the Firebase console to a Samsung device on
-2026-08-08 and produced:
+### Already verified end to end
 
-```
-Notification(channel=hr_genie_tickets  color=0xff2b8cff
-             category=status  flags=AUTO_CANCEL)
-```
+On 2026-08-08, against your deployed service on a real Samsung device:
 
-— our own notification, our channel, deep link attached. So if it doesn't work
-from your service, the difference is in the send, not in the app.
+- `POST /api/employees/fcm-token` accepted a live token and returned 200 —
+  `Device paired for HYD600630`.
+- HR resolved a ticket in the console, the phone received the push, and tapping it
+  opened that ticket.
+- Both `IN_PROGRESS` and `RESOLVED` behave correctly.
+
+Nothing is outstanding. The rest of this document is reference for changing the send
+later, not work to do.
 
 ---
 
-## 10. What I need from you
+## 10. Checklist
 
-1. The `POST /api/devices` URL and its auth header — the client TODO is waiting on it.
-2. A heads-up when the send is live, so we can run the full HR-resolves → employee-taps
-   path end to end before the demo.
+Server side, in order:
+
+- [ ] Generate the service-account key (§2) and load it from a secret, not git.
+- [x] `POST /api/employees/fcm-token` — upsert on `token` (§6). Done and verified.
+- [ ] Firebase Admin SDK wired at startup (§8).
+- [ ] Send on successful `PATCH /api/tickets/{id}/status`, after commit, never
+      failing the PATCH (§5).
+- [ ] Delete rows on `UNREGISTERED` (§7).
+- [ ] Optional: drop the `notification` block for data-only (§4). Cosmetic only —
+      see the list there for exactly what it buys.
+
+Then ping me and we'll run HR-resolves → phone-buzzes → tap-opens-the-ticket end to
+end before the demo.
+
+Nothing is outstanding on the client.

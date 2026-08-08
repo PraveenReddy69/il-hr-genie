@@ -22,6 +22,8 @@ import androidx.navigation.NavController
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
+import com.infinitylearn.hrgenie.push.PushRegistration
+import com.infinitylearn.hrgenie.ui.common.navigateSafely
 import com.infinitylearn.hrgenie.data.EmployeeDirectory
 import com.infinitylearn.hrgenie.data.SessionStore
 import com.infinitylearn.hrgenie.data.TicketStore
@@ -96,10 +98,16 @@ class MainActivity : AppCompatActivity() {
             session.signIn(remembered.employee, keepSignedIn = true, token = remembered.token)
         }
 
+        // Catches installs that were signed in before push registration worked. It
+        // does nothing once the token has been accepted for this employee.
+        if (remembered != null) {
+            PushRegistration.pair(this, remembered.employee.employeeId, remembered.token)
+        }
+
         // Navigating is cold-start only: after a recreate the NavController restores
         // its own back stack and must not be re-pointed at Home.
         if (savedInstanceState == null && remembered != null) {
-            navController.navigate(
+            navController.navigateSafely(
                 // An HR account restores straight to the dashboard, never into the
                 // employee app.
                 if (remembered.employee.isHr) R.id.insightsFragment else R.id.mainGraph,
@@ -113,7 +121,7 @@ class MainActivity : AppCompatActivity() {
         sizeStatusScrim()
 
         binding.chatFab.setOnClickListener {
-            navController.navigate(R.id.chatFragment)
+            navController.navigateSafely(R.id.chatFragment)
         }
 
         navController.addOnDestinationChangedListener { _, destination, _ ->
@@ -161,10 +169,10 @@ class MainActivity : AppCompatActivity() {
 
         val employee = session.signedInEmployee ?: return
         if (employee.isHr) {
-            navController.navigate(R.id.ticketsFragment)
+            navController.navigateSafely(R.id.ticketsFragment)
             return
         }
-        navController.navigate(
+        navController.navigateSafely(
             R.id.myTicketsFragment,
             bundleOf(ARG_TICKET_ID to ticketId),
         )

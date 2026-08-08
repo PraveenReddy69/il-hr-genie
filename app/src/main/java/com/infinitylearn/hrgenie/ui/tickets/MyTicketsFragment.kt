@@ -14,6 +14,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.snackbar.Snackbar
+import com.infinitylearn.hrgenie.ui.common.navigateSafely
 import com.infinitylearn.hrgenie.MainActivity
 import com.infinitylearn.hrgenie.R
 import com.infinitylearn.hrgenie.data.EmployeeDirectory
@@ -75,7 +76,7 @@ class MyTicketsFragment : Fragment() {
         }
 
         binding.raiseTicketCta.setOnClickListener {
-            findNavController().navigate(R.id.action_myTickets_to_chat)
+            findNavController().navigateSafely(R.id.action_myTickets_to_chat)
         }
     }
 

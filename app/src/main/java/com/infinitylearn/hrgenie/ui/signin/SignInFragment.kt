@@ -18,6 +18,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.snackbar.Snackbar
+import com.infinitylearn.hrgenie.ui.common.navigateSafely
 import com.infinitylearn.hrgenie.R
 import com.infinitylearn.hrgenie.data.Auth
 import com.infinitylearn.hrgenie.data.EmployeeDirectory
@@ -26,7 +27,7 @@ import com.infinitylearn.hrgenie.data.SessionStore
 import com.infinitylearn.hrgenie.data.net.ApiException
 import com.infinitylearn.hrgenie.data.net.ApiFailure
 import com.infinitylearn.hrgenie.databinding.FragmentSignInBinding
-import com.infinitylearn.hrgenie.push.PushTokenStore
+import com.infinitylearn.hrgenie.push.PushRegistration
 import kotlinx.coroutines.launch
 import com.infinitylearn.hrgenie.ui.common.SessionViewModel
 import com.infinitylearn.hrgenie.ui.common.applyBottomInsetPadding
@@ -171,10 +172,10 @@ class SignInFragment : Fragment() {
         val store = SessionStore(requireContext())
         if (keepSignedIn) store.remember(signedIn) else store.forget()
         session.signIn(employee, keepSignedIn, signedIn.token)
-        pairDeviceForPush(employee.employeeId)
+        pairDeviceForPush(employee.employeeId, signedIn.token)
 
         // The server says who is HR; the app does not guess from the id.
-        findNavController().navigate(
+        findNavController().navigateSafely(
             if (employee.isHr) R.id.action_signIn_to_insights else R.id.action_signIn_to_home
         )
     }
@@ -227,17 +228,14 @@ class SignInFragment : Fragment() {
      * to address a push. Until POST /api/devices exists there is nowhere to send it —
      * the token is kept locally and the log line says what would be sent.
      */
-    private fun pairDeviceForPush(employeeId: String) {
-        val tokens = PushTokenStore(requireContext())
-        tokens.refresh { token ->
-            if (!tokens.needsRegistering(employeeId)) return@refresh
-            Log.i(
-                "HrGeniePush",
-                "Device ready to pair: employeeId=$employeeId token=${token.take(12)}…",
-            )
-            // TODO: POST /api/devices { employeeId, token, platform: "android" }
-            tokens.markRegistered(employeeId)
-        }
+    /**
+     * Hands this install's FCM token to the backend so pushes can reach it.
+     *
+     * The whole of it lives in [PushRegistration], because the token can also rotate
+     * later — and the two paths having their own copy is how they drift apart.
+     */
+    private fun pairDeviceForPush(employeeId: String, authToken: String) {
+        PushRegistration.pair(requireContext(), employeeId, authToken)
     }
 
     // ------------------------------------------------------- connect to HR sheet

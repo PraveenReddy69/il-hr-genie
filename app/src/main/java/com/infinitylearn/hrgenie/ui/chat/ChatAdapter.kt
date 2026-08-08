@@ -7,6 +7,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.LinearInterpolator
 import android.widget.LinearLayout
+import androidx.annotation.ColorRes
+import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.AsyncDifferConfig
@@ -59,11 +61,12 @@ sealed interface ChatRow {
         val text: String,
         val source: KbSource? = null,
         val isOffline: Boolean = false,
+        val at: Long = 0L,
     ) : ChatRow
 
     /** A two-option follow-up card. See [PromptKind]. */
     data class Prompt(val kind: PromptKind) : ChatRow
-    data class User(val text: String) : ChatRow
+    data class User(val text: String, val at: Long = 0L) : ChatRow
     data object Typing : ChatRow
     data object Escalation : ChatRow
 
@@ -147,12 +150,19 @@ class ChatAdapter(
                 val binding = (holder as BotHolder).binding
                 // Knowledge-base answers arrive as markdown.
                 binding.bubble.text = renderAnswer(row.text)
-                binding.bubble.maxWidth = (parentWidth(binding.root) * 0.84f).toInt()
+
+                // Fixed, not a maximum: a one-word answer in a shrink-wrapped bubble
+                // leaves the column of cards with a ragged edge. Every bot card is the
+                // same width, so they line up down the screen.
+                val cardWidth = botWidth(binding.root)
+                binding.bubbleCard.layoutParams =
+                    binding.bubbleCard.layoutParams.apply { width = cardWidth }
 
                 // The line under the bubble says where the answer came from — the
                 // policy document, or a note that this is the offline stand-in.
                 val context = binding.root.context
-                binding.bubbleSource.maxWidth = (parentWidth(binding.root) * 0.84f).toInt()
+                // Leaves room for the speaker and the time it sits beside.
+                binding.bubbleSource.maxWidth = (cardWidth * 0.55f).toInt()
                 when {
                     row.isOffline -> {
                         binding.bubbleSource.visibility = View.VISIBLE
@@ -186,17 +196,23 @@ class ChatAdapter(
                     )
                 )
                 binding.speakButton.setOnClickListener { onSpeak(row.text) }
+
+                binding.bubbleTime.text = clockTime(row.at)
             }
 
             is ChatRow.User -> {
                 val binding = (holder as UserHolder).binding
                 binding.bubble.text = row.text
-                binding.bubble.maxWidth = (parentWidth(binding.root) * 0.80f).toInt()
+                // A cap rather than a fixed width: these hug the right edge already, so
+                // a short question in a full-width bubble would just be empty space.
+                binding.bubble.maxWidth = (parentWidth(binding.root) * USER_WIDTH).toInt()
+                binding.bubbleTime.text = clockTime(row.at)
             }
 
             is ChatRow.Typing -> (holder as TypingHolder).start()
 
             is ChatRow.Escalation -> {
+                endAtBotWidth(holder.itemView)
                 val binding = (holder as EscalationHolder).binding
                 binding.sendQuestion.setOnClickListener { onSendQuestion() }
                 binding.bookFifteen.setOnClickListener { onBookMeeting() }
@@ -205,8 +221,17 @@ class ChatAdapter(
             is ChatRow.Categories -> bindCategories(holder as CategoriesHolder, row)
 
             is ChatRow.Draft -> {
+                endAtBotWidth(holder.itemView)
                 val binding = (holder as DraftHolder).binding
                 binding.draftCategory.text = row.draft.category
+
+                // The same colour the tile carried in the picker, so the preview reads
+                // as a continuation of the choice rather than a fresh screen.
+                val look = categoryLook(row.draft.category)
+                val context = binding.root.context
+                binding.draftCategory.setTextColor(ContextCompat.getColor(context, look.ink))
+                binding.draftCategory.backgroundTintList =
+                    ColorStateList.valueOf(ContextCompat.getColor(context, look.wash))
                 binding.draftSubject.text = row.draft.subject
                 binding.draftRaisedBy.text = raisedByLine()
                 binding.raiseTicket.setOnClickListener { onRaiseTicket() }
@@ -227,6 +252,7 @@ class ChatAdapter(
     }
 
     private fun bindPrompt(holder: PromptHolder, kind: PromptKind) {
+        endAtBotWidth(holder.itemView)
         val binding = holder.binding
         binding.promptText.setText(kind.prompt)
         binding.promptPrimary.setText(kind.primary)
@@ -236,36 +262,95 @@ class ChatAdapter(
     }
 
     private fun bindCategories(holder: CategoriesHolder, row: ChatRow.Categories) {
+        // The same share of the width a bot bubble may take, so the picker ends where
+        // the question above it ends. A fixed inset drifts apart from it on any screen
+        // whose width the two rules round differently.
+        holder.binding.categoryCard.layoutParams =
+            holder.binding.categoryCard.layoutParams.apply {
+                width = botWidth(holder.binding.root)
+            }
+
         val list = holder.binding.categoryList
         list.removeAllViews()
         val inflater = LayoutInflater.from(list.context)
         val density = list.resources.displayMetrics.density
+        val context = list.context
 
         // Two per line: "Something else" would truncate in a three-up row.
         row.options.chunked(2).forEachIndexed { lineIndex, pair ->
-            val line = LinearLayout(list.context).apply {
+            val line = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
+                // The tiles are raised, and a shadow is drawn outside its view's
+                // bounds — clipped by default, which flattens them again.
+                clipChildren = false
+                clipToPadding = false
                 layoutParams = LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT,
                 ).apply { if (lineIndex > 0) topMargin = (8 * density).toInt() }
             }
             pair.forEachIndexed { index, option ->
-                val chip = ItemCategoryChipBinding.inflate(inflater, line, false)
-                chip.chip.text = option
-                chip.chip.setOnClickListener { onChooseCategory(option) }
+                val tile = ItemCategoryChipBinding.inflate(inflater, line, false)
+                val look = categoryLook(option)
+                tile.label.text = option
+                tile.glyph.setImageResource(look.icon)
+                tile.glyph.imageTintList =
+                    ColorStateList.valueOf(ContextCompat.getColor(context, look.ink))
+                tile.glyph.backgroundTintList =
+                    ColorStateList.valueOf(ContextCompat.getColor(context, look.wash))
+                tile.chip.setOnClickListener { onChooseCategory(option) }
                 val params = LinearLayout.LayoutParams(
                     0,
                     ViewGroup.LayoutParams.WRAP_CONTENT,
                     1f,
                 ).apply { if (index > 0) marginStart = (8 * density).toInt() }
-                line.addView(chip.root, params)
+                line.addView(tile.root, params)
             }
             list.addView(line)
         }
     }
 
+    /** Icon and colour for a ticket category. */
+    private data class CategoryLook(
+        @DrawableRes val icon: Int,
+        @ColorRes val ink: Int,
+        @ColorRes val wash: Int,
+    )
+
+    /**
+     * Matched on the label because that is what the row carries.
+     *
+     * The catch-all is the `else` branch, so a category added server-side still gets a
+     * tile — a neutral one — rather than an empty circle.
+     */
+    private fun categoryLook(option: String): CategoryLook = when (option) {
+        "Payroll" -> CategoryLook(R.drawable.ic_cat_payroll, R.color.green_ok, R.color.green_tint_14)
+        "Leave" -> CategoryLook(R.drawable.ic_cat_leave, R.color.blue_primary, R.color.blue_tint_12)
+        "IT & access" -> CategoryLook(R.drawable.ic_cat_it, R.color.purple, R.color.purple_tint_12)
+        "Insurance" ->
+            CategoryLook(R.drawable.ic_cat_insurance, R.color.blue_deep, R.color.blue_tint_12)
+        "Facilities" ->
+            CategoryLook(R.drawable.ic_cat_facilities, R.color.orange_warn, R.color.orange_tint_14)
+        else -> CategoryLook(R.drawable.ic_cat_other, R.color.text_slate, R.color.ink_06)
+    }
+
+    private val clockFormat =
+        java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())
+
+    /**
+     * "10:42 AM" — java.time is unavailable at this minSdk.
+     *
+     * Upper-cased because the platform hands back a lower-case "am" on recent Android,
+     * which reads as a slip beside the rest of the UI.
+     */
+    private fun clockTime(at: Long): String = if (at <= 0L) {
+        ""
+    } else {
+        clockFormat.format(java.util.Date(at)).uppercase(java.util.Locale.getDefault())
+    }
+
     private fun bindTickets(holder: TicketsHolder, tickets: List<Ticket>) {
+        endAtBotWidth(holder.itemView)
         val list = holder.binding.ticketCardList
         list.removeAllViews()
         val inflater = LayoutInflater.from(list.context)
@@ -278,33 +363,34 @@ class ChatAdapter(
                 R.string.hr_ticket_meta, ticket.id, ticket.category, ticket.ageLabel(now),
             )
             row.chatTicketStatus.text = ticket.status.label
-            row.chatTicketAccent.setBackgroundResource(accentFor(ticket.status))
+
+            // The same glyph and colour the category carries everywhere else, so a
+            // ticket is recognisable as payroll or leave before the text is read.
+            val look = categoryLook(ticket.category)
+            row.chatTicketGlyph.setImageResource(look.icon)
+            row.chatTicketGlyph.imageTintList =
+                ColorStateList.valueOf(ContextCompat.getColor(list.context, look.ink))
+            row.chatTicketGlyph.backgroundTintList =
+                ColorStateList.valueOf(ContextCompat.getColor(list.context, look.wash))
+
             row.chatTicketStatus.backgroundTintList = ColorStateList.valueOf(
                 ContextCompat.getColor(list.context, fillFor(ticket.status))
             )
             row.chatTicketStatus.setTextColor(
                 ContextCompat.getColor(list.context, textFor(ticket.status))
             )
-            list.addView(row.root)
 
-            if (index < tickets.lastIndex) {
-                list.addView(
-                    View(list.context).apply {
-                        layoutParams = LinearLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            (list.resources.displayMetrics.density).toInt().coerceAtLeast(1),
-                        )
-                        setBackgroundColor(ContextCompat.getColor(context, R.color.ink_05))
-                    }
-                )
-            }
+            // Tiles are separated by a gap now, not a hairline.
+            list.addView(
+                row.root,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                ).apply {
+                    if (index > 0) topMargin = (8 * list.resources.displayMetrics.density).toInt()
+                },
+            )
         }
-    }
-
-    private fun accentFor(status: TicketStatus): Int = when (status) {
-        TicketStatus.OPEN -> R.drawable.bg_track_fill_orange
-        TicketStatus.IN_PROGRESS -> R.drawable.bg_track_fill_blue
-        TicketStatus.RESOLVED -> R.drawable.bg_track_fill_green
     }
 
     private fun fillFor(status: TicketStatus): Int = when (status) {
@@ -328,6 +414,25 @@ class ChatAdapter(
      * The list is full-width with 16dp side padding, so the usable track is known
      * before layout — safer than reading the parent's width during bind.
      */
+    /** The width every bot-side card is drawn at. */
+    private fun botWidth(view: View): Int = (parentWidth(view) * BOT_WIDTH).toInt()
+
+    /**
+     * Ends a full-width card on the same line as the bubbles.
+     *
+     * These layouts fill the row and inset themselves, so the end padding is what
+     * decides where they stop — set here rather than in each XML because the figure
+     * is a share of the list width, which dp cannot express.
+     */
+    private fun endAtBotWidth(root: View) {
+        root.setPaddingRelative(
+            root.paddingStart,
+            root.paddingTop,
+            parentWidth(root) - botWidth(root),
+            root.paddingBottom,
+        )
+    }
+
     private fun parentWidth(view: View): Int {
         val metrics = view.resources.displayMetrics
         return metrics.widthPixels - (2 * 16 * metrics.density).toInt()
@@ -423,6 +528,10 @@ class ChatAdapter(
     }
 
     private companion object {
+        /** How much of the list width each side of the conversation may occupy. */
+        const val BOT_WIDTH = 0.80f
+        const val USER_WIDTH = 0.80f
+
         const val TYPE_DAY = 0
         const val TYPE_BOT = 1
         const val TYPE_USER = 2

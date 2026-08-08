@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- A raised ticket, or the employee's list of them. -->
+<!-- A raised ticket, or the employee's list of them. The panel is tinted and each
+     ticket is a raised tile on it, matching the category picker — on a white panel
+     the tiles would dissolve into it. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:clipChildren="false"
+    android:clipToPadding="false"
     android:orientation="vertical"
-    android:paddingStart="46dp"
     android:paddingTop="2dp"
-    android:paddingEnd="@dimen/space_l"
     android:paddingBottom="8dp">
 
     <LinearLayout
         android:id="@+id/ticketCardList"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@drawable/bg_card"
-        android:elevation="2dp"
+        android:background="@drawable/bg_categories_card"
+        android:clipChildren="false"
+        android:clipToPadding="false"
         android:orientation="vertical"
-        android:paddingStart="@dimen/space_l"
-        android:paddingTop="4dp"
-        android:paddingEnd="@dimen/space_l"
-        android:paddingBottom="4dp" />
+        android:padding="10dp" />
 </LinearLayout>

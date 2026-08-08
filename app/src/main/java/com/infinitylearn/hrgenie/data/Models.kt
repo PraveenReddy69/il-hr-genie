@@ -89,9 +89,18 @@ data class ChatMessage(
     val source: KbSource? = null,
     /** True when this is a seeded answer standing in for an unreachable service. */
     val isOffline: Boolean = false,
+    /** When it was said, for the time stamped on the bubble. */
+    val at: Long = System.currentTimeMillis(),
 )
 
-data class Suggestion(val question: String, val answer: String)
+/**
+ * A chip in the chat suggestion row.
+ *
+ * [answer] is a stand-in used only when the knowledge base cannot be reached. It is
+ * blank for every current suggestion: guessing at company policy would be worse than
+ * admitting the service is down.
+ */
+data class Suggestion(val question: String, val answer: String = "")
 
 data class DeptScore(val name: String, val score: Double)
 

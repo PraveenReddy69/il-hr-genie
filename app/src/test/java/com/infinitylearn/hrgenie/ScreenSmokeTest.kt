@@ -6,6 +6,7 @@ import androidx.navigation.fragment.NavHostFragment
 import androidx.test.core.app.ApplicationProvider
 import com.infinitylearn.hrgenie.data.AccessRole
 import com.infinitylearn.hrgenie.data.Auth
+import com.infinitylearn.hrgenie.data.Devices
 import com.infinitylearn.hrgenie.data.EmployeeDirectory
 import com.infinitylearn.hrgenie.data.Session
 import com.infinitylearn.hrgenie.data.SessionStore
@@ -86,6 +87,10 @@ class ScreenSmokeTest {
         Pulses.gateway = { FakePulseGateway(context) }
         Attendances.gateway = { FakeAttendanceGateway(context) }
         Employees.gateway = { FakeEmployeeGateway() }
+        // Sign-in pairs the device for push. Firebase is absent under Robolectric so
+        // the callback never fires, but the seam is stubbed regardless — a test must
+        // not be one SDK change away from posting to a real server.
+        Devices.gateway = { _, _ -> Result.success(Unit) }
     }
 
     /** Keeps every screen's ticket calls off the network. See [FakeTicketGateway]. */
@@ -468,7 +473,7 @@ class ScreenSmokeTest {
     }
 
     @Test
-    fun `a knowledge base failure falls back to the offline answer`() {
+    fun `a knowledge base failure says so rather than inventing an answer`() {
         val (activity, nav) = launch()
         submitSignIn(activity, employeeId = "EMP3801")
         nav.navigate(R.id.action_home_to_chat)
@@ -486,13 +491,37 @@ class ScreenSmokeTest {
         idle()
         settle()
 
-        // The seeded answer stands in, but it is labelled as offline rather than
-        // passed off as the service's answer, and a retry is offered.
+        // No suggestion carries a seeded answer any more — guessing at policy would be
+        // worse than admitting the service is down — so the reply must say what
+        // happened, must not be dressed up as an answer, and must offer a retry.
         val reply = lastBotRow(activity)
-        assertEquals(question.answer, reply.text)
-        assertNull(reply.source)
-        assertTrue("the stand-in must be labelled offline", reply.isOffline)
+        assertNull("a failure must not be attributed to a policy document", reply.source)
+        assertFalse(
+            "with nothing seeded, this is a failure notice rather than a stand-in answer",
+            reply.isOffline,
+        )
+        assertTrue(
+            "the reply should name the failure, not answer the question",
+            reply.text.contains("couldn't", ignoreCase = true) ||
+                reply.text.contains("cannot", ignoreCase = true) ||
+                reply.text.contains("can't", ignoreCase = true) ||
+                reply.text.contains("reach", ignoreCase = true),
+        )
         assertTrue("a recovery card should be offered", hasPrompt(activity, PromptKind.RECOVERY))
+    }
+
+    @Test
+    fun `no suggestion ships a hard-coded policy answer`() {
+        // The chips ask about notice periods, F&F and encashment caps. A stand-in
+        // answer for any of those is invented company policy, and an employee acting
+        // on it could be materially out of pocket.
+        com.infinitylearn.hrgenie.data.HrGenieContent.SUGGESTIONS.forEach { suggestion ->
+            assertEquals(
+                "${suggestion.question} must have no seeded answer",
+                null,
+                com.infinitylearn.hrgenie.data.HrGenieContent.seededAnswer(suggestion.question),
+            )
+        }
     }
 
     @Test

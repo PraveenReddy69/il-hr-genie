@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The tinted disc behind a category icon. Left white here and tinted per category
+     in code, so one drawable serves all six. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <solid android:color="@color/white" />
+</shape>

@@ -17,6 +17,7 @@ import android.view.inputmethod.EditorInfo
 import android.widget.LinearLayout
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.VisibleForTesting
+import androidx.annotation.DrawableRes
 import androidx.core.content.ContextCompat
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
@@ -114,7 +115,6 @@ class ChatFragment : Fragment() {
         setUpComposer()
 
         binding.backButton.setOnClickListener { findNavController().popBackStack() }
-        binding.talkToHrbp.setOnClickListener { viewModel.escalate() }
 
         viewModel.greet(session.signedInEmployee?.firstName.orEmpty())
         announceTicketUpdates()
@@ -216,27 +216,56 @@ class ChatFragment : Fragment() {
         val row = binding.suggestionRow
         row.removeAllViews()
 
-        // Ticket actions lead: they are what the composer row is for now.
-        addChip(row, getString(R.string.chip_raise_ticket), first = true) {
+        // Ticket actions lead: they are what the composer row is for now. They carry an
+        // icon and the questions do not, which is what separates doing something from
+        // asking something at a glance.
+        addChip(
+            row,
+            getString(R.string.chip_raise_ticket),
+            first = true,
+            icon = R.drawable.ic_chip_ticket_add,
+        ) {
             viewModel.startTicket()
         }
-        addChip(row, getString(R.string.chip_my_tickets)) {
+        addChip(row, getString(R.string.chip_my_tickets), icon = R.drawable.ic_chip_tickets) {
             viewModel.showTickets(myTickets())
         }
         viewModel.suggestions.forEach { suggestion ->
             addChip(row, suggestion.question) { viewModel.send(suggestion.question) }
         }
+
+        // The row is now long enough to scroll well off screen, and it was opening
+        // part-way along — which hid the two ticket actions, the chips most likely to
+        // be wanted. Pin it back to the start once the children have been measured.
+        binding.suggestionScroller.post { binding.suggestionScroller.scrollTo(0, 0) }
     }
 
     private fun addChip(
         row: LinearLayout,
         label: String,
         first: Boolean = false,
+        @DrawableRes icon: Int? = null,
         onClick: () -> Unit,
     ) {
         val chip = ItemSuggestionChipBinding.inflate(layoutInflater, row, false)
         chip.chip.text = label
         chip.chip.setOnClickListener { onClick() }
+
+        if (icon != null) {
+            chip.chip.setCompoundDrawablesRelativeWithIntrinsicBounds(icon, 0, 0, 0)
+            chip.chip.compoundDrawablePadding = 6.dp(chip.chip)
+            chip.chip.compoundDrawableTintList = ColorStateList.valueOf(
+                ContextCompat.getColor(requireContext(), R.color.blue_primary)
+            )
+            // The glyph carries its own optical margin, so the leading padding comes in
+            // to keep the chip from looking lopsided.
+            chip.chip.setPaddingRelative(
+                11.dp(chip.chip),
+                chip.chip.paddingTop,
+                chip.chip.paddingEnd,
+                chip.chip.paddingBottom,
+            )
+        }
 
         val params = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -516,9 +545,10 @@ class ChatFragment : Fragment() {
             viewModel.messages.value.orEmpty().forEach { message ->
                 add(
                     when (message.role) {
-                        ChatRole.BOT ->
-                            ChatRow.Bot(message.text, message.source, message.isOffline)
-                        ChatRole.ME -> ChatRow.User(message.text)
+                        ChatRole.BOT -> ChatRow.Bot(
+                            message.text, message.source, message.isOffline, message.at,
+                        )
+                        ChatRole.ME -> ChatRow.User(message.text, message.at)
                     }
                 )
             }

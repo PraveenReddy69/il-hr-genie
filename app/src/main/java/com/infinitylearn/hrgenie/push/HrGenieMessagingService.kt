@@ -62,9 +62,16 @@ class HrGenieMessagingService : FirebaseMessagingService() {
      * Fired when the token is minted or rotated. The backend needs it to address this
      * device, so it is kept locally and handed over on the next sign-in.
      */
+    /**
+     * Firebase rotates tokens on reinstall, restore-to-a-new-device and data clear.
+     * The old one stops delivering the moment it does, so the backend has to be told
+     * straight away rather than at the next sign-in — which for a remembered session
+     * might be weeks away.
+     */
     override fun onNewToken(token: String) {
         Log.i(TAG, "FCM token refreshed")
         PushTokenStore(this).save(token)
+        PushRegistration.pairAfterRefresh(this, token)
     }
 
     private fun defaultTitle(ticketId: String, status: TicketStatus?): String = when (status) {

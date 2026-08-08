@@ -158,30 +158,49 @@ object HrGenieContent {
 
     const val CHAT_FALLBACK = "Let me pull that from the handbook — one moment."
 
+    /**
+     * The questions the chip row offers.
+     *
+     * No seeded answers: these go to the live knowledge base, and writing stand-in
+     * text for notice periods, F&F timelines or encashment caps would be inventing
+     * company policy — an employee acting on a guess here could be materially out of
+     * pocket. When the service cannot be reached the app says so instead.
+     */
     val SUGGESTIONS = listOf(
-        Suggestion(
-            "How many leaves do I have left?",
-            "You have 12 earned leaves and 4 casual leaves left for 2026. Earned leave next credits on 1 Sept. Want me to open the leave form?",
-        ),
-        Suggestion(
-            "What does my insurance cover?",
-            "You're on the GMC family floater — ₹5,00,000 sum insured, spouse, two children and parents covered. Cashless at 8,400+ hospitals, no room-rent cap. I can pull the hospital list near Hyderabad if that helps.",
-        ),
-        Suggestion(
-            "When does my reimbursement land?",
-            "Your ₹4,820 travel claim was approved on 31 July. It rides with the August payroll, credited 30 Aug. Nothing pending from your side.",
-        ),
-        Suggestion(
-            "Explain the WFH policy",
-            "Hybrid: 3 days from office, Tue–Thu anchored with your team. Full remote is available 15 days a year with manager approval — I can start that request for you.",
-        ),
+        Suggestion("Why is my salary less this month"),
+        Suggestion("What are the deductions"),
+        Suggestion("How can I claim my medical insurance"),
+        Suggestion("When will I get my incentives"),
+        Suggestion("When will appraisals happen"),
+        Suggestion("How do I fill my OKRs"),
+        Suggestion("What's the notice period"),
+        Suggestion("What are company holidays"),
+        Suggestion("What's the resignation procedure"),
+        Suggestion("When will I get my F&F"),
+        Suggestion("When will I get my Relieving Letter"),
+        Suggestion("I can't log into HRMS"),
+        Suggestion("How many leaves do I have left"),
+        Suggestion("Why is my leave balance not reflecting in the portal"),
+        Suggestion("What is sandwich leave"),
+        Suggestion("Where can I see my payslip"),
+        Suggestion("How to login to ZingHR"),
+        Suggestion("What's the maximum number of Privilege Leaves that can be encashed"),
+        Suggestion("Can I apply half day leave"),
+        Suggestion("Where to find company policies"),
     )
 
     fun replyTo(question: String): String = seededAnswer(question) ?: CHAT_FALLBACK
 
-    /** The offline answer for a question, or null if there isn't one. */
-    fun seededAnswer(question: String): String? =
-        SUGGESTIONS.firstOrNull { it.question.equals(question, ignoreCase = true) }?.answer
+    /**
+     * The offline answer for a question, or null if there isn't one.
+     *
+     * Null for every suggestion now — see [SUGGESTIONS]. Kept because the mechanism
+     * is still the right one if a question ever gets an answer safe to hard-code.
+     */
+    fun seededAnswer(question: String): String? = SUGGESTIONS
+        .firstOrNull { it.question.equals(question, ignoreCase = true) }
+        ?.answer
+        ?.takeIf { it.isNotBlank() }
 
     /**
      * What to tell the employee when the policy service does not answer.

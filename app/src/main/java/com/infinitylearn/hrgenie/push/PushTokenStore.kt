@@ -27,12 +27,30 @@ class PushTokenStore(context: Context) {
             .commit()
     }
 
-    /** True when this employee still needs their device paired on the server. */
-    fun needsRegistering(employeeId: String): Boolean =
-        token() != null && prefs.getString(KEY_REGISTERED_FOR, null) != employeeId
+    /**
+     * True when this employee still needs their device paired on the server.
+     *
+     * A build shipped before the endpoint existed wrote [KEY_REGISTERED_FOR] without
+     * ever calling anything, so on those installs the flag is a lie and the device
+     * would never register. [KEY_SCHEMA] invalidates it exactly once.
+     */
+    fun needsRegistering(employeeId: String): Boolean {
+        if (token() == null) return false
+        if (prefs.getInt(KEY_SCHEMA, 0) < SCHEMA) return true
+        return prefs.getString(KEY_REGISTERED_FOR, null) != employeeId
+    }
 
+    /** Only ever called after the server has accepted the token. */
     fun markRegistered(employeeId: String) {
-        prefs.edit().putString(KEY_REGISTERED_FOR, employeeId).commit()
+        prefs.edit()
+            .putString(KEY_REGISTERED_FOR, employeeId)
+            .putInt(KEY_SCHEMA, SCHEMA)
+            .commit()
+    }
+
+    /** Forgets who this token was paired for, so the next sign-in registers again. */
+    fun clearRegistration() {
+        prefs.edit().remove(KEY_REGISTERED_FOR).commit()
     }
 
     /**
@@ -61,5 +79,9 @@ class PushTokenStore(context: Context) {
         const val FILE_NAME = "hr_genie_push"
         const val KEY_TOKEN = "fcm_token"
         const val KEY_REGISTERED_FOR = "registered_for"
+        const val KEY_SCHEMA = "registered_schema"
+
+        /** Bump when a stored "registered" flag can no longer be trusted. */
+        const val SCHEMA = 1
     }
 }

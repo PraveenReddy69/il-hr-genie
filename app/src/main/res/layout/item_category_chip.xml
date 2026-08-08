@@ -1,15 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
-<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- One category in the ticket picker. Icon on the left rather than above the label:
+     two tiles fit across the width, and a stacked icon would make each tile tall
+     enough that the six of them push the composer off screen. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/chip"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:background="@drawable/bg_chip_category"
-    android:fontFamily="sans-serif-medium"
-    android:paddingStart="14dp"
-    android:paddingTop="9dp"
-    android:paddingEnd="14dp"
-    android:paddingBottom="9dp"
-    android:textColor="@color/blue_deep"
-    android:textSize="@dimen/text_caption_lg"
-    tools:text="Payroll" />
+    android:background="@drawable/bg_category_tile"
+    android:elevation="1.5dp"
+    android:gravity="center_vertical"
+    android:minHeight="52dp"
+    android:orientation="horizontal"
+    android:paddingStart="9dp"
+    android:paddingTop="8dp"
+    android:paddingEnd="10dp"
+    android:paddingBottom="8dp">
+
+    <ImageView
+        android:id="@+id/glyph"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:background="@drawable/bg_category_glyph"
+        android:contentDescription="@null"
+        android:padding="6dp"
+        tools:src="@drawable/ic_cat_payroll" />
+
+    <TextView
+        android:id="@+id/label"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="9dp"
+        android:layout_weight="1"
+        android:fontFamily="sans-serif-medium"
+        android:lineSpacingMultiplier="1.1"
+        android:maxLines="2"
+        android:textColor="@color/ink_deep"
+        android:textSize="@dimen/text_caption_lg"
+        tools:text="IT &amp; access" />
+</LinearLayout>

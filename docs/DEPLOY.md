@@ -50,7 +50,7 @@ Not "Deploy from a branch" — the workflow uploads an artifact instead.
 
 | Name | Value |
 |---|---|
-| `VITE_API_BASE_URL` | `https://<your-tunnel>.ngrok-free.app` |
+| `VITE_API_BASE_URL` | `https://35-161-200-62.sslip.io` |
 
 A **variable**, not a secret: it is compiled into the bundle and visible to anyone
 who opens the page, so treating it as secret would be pretending. The build fails
@@ -65,17 +65,23 @@ The site lands at `https://<you>.github.io/<repo>/`.
 
 ---
 
-## When the tunnel address changes
+## When the backend address changes
 
-ngrok issues a new host on every restart, and the old one is compiled into the
-published bundle. After a restart:
+The address is compiled into the published bundle, so a change needs a rebuild on
+both sides:
 
-1. Update the `VITE_API_BASE_URL` variable.
-2. **Actions → Run workflow** to rebuild.
+1. Update the `VITE_API_BASE_URL` variable, then **Actions → Run workflow**.
+2. Update `ApiConfig.BASE_URL` in
+   `app/src/main/java/com/infinitylearn/hrgenie/data/net/Api.kt` and ship a new APK.
 
-The Android app has the same constant in
-`app/src/main/java/com/infinitylearn/hrgenie/data/net/Api.kt`, which needs a rebuild
-to match. A stable address for the backend would remove this chore from both.
+**It must be HTTPS.** The console is served over HTTPS from Pages, and a browser will
+not let an HTTPS page call a plain-HTTP API — the requests are blocked as mixed
+content, with no override. The Android app has no such restriction, which is why the
+two could briefly disagree; they should not be allowed to drift apart again.
+
+The current host, `35-161-200-62.sslip.io`, is sslip.io resolving a dashed IP back to
+that address with a valid certificate for it. It is stable as long as the EC2 address
+is, and needs no DNS of our own.
 
 ---
 
@@ -97,7 +103,7 @@ expected and browsers render it normally.
 
 ```bash
 cd web
-VITE_BASE_PATH=/your-repo/ VITE_API_BASE_URL=https://your-tunnel.ngrok-free.app npm run build
+VITE_BASE_PATH=/your-repo/ VITE_API_BASE_URL=https://35-161-200-62.sslip.io npm run build
 ```
 
 Serve `dist/` from a `your-repo/` subdirectory. Note that `npx http-server` does **not**

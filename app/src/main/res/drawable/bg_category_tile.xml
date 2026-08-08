@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A category tile in the ticket picker. A soft-bordered card rather than a pill:
+     each option carries an icon now, and a pill shape crops awkwardly around one. -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="@color/blue_tint_18">
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="16dp" />
+            <solid android:color="@color/surface" />
+            <stroke
+                android:width="1.25dp"
+                android:color="@color/ink_08" />
+        </shape>
+    </item>
+</ripple>

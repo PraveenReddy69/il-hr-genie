@@ -2,6 +2,9 @@ package com.infinitylearn.hrgenie
 
 import android.app.Application
 import com.infinitylearn.hrgenie.push.TicketNotifications
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 
 /**
  * Exists to create the notification channel at process start.
@@ -17,5 +20,16 @@ class HrGenieApp : Application() {
     override fun onCreate() {
         super.onCreate()
         TicketNotifications.ensureChannel(this)
+    }
+
+    companion object {
+        /**
+         * For work that must outlive the screen that started it.
+         *
+         * Device pairing is the case: it is kicked off from sign-in and the very next
+         * line navigates away, which would cancel a fragment-scoped call mid-flight.
+         * Nothing here touches the UI, so there is no leak to worry about.
+         */
+        val backgroundScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     }
 }

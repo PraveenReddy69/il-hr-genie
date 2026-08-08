@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Three dots in a ring — anything else. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?attr/colorControlNormal">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M12,2.6a9.4,9.4 0,1 1,0 18.8,9.4 9.4,0 0,1 0,-18.8ZM12,4.9a7.1,7.1 0,1 0,0 14.2,7.1 7.1,0 0,0 0,-14.2Z" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M7.9,10.7a1.35,1.35 0,1 1,0 2.7,1.35 1.35,0 0,1 0,-2.7ZM12,10.7a1.35,1.35 0,1 1,0 2.7,1.35 1.35,0 0,1 0,-2.7ZM16.1,10.7a1.35,1.35 0,1 1,0 2.7,1.35 1.35,0 0,1 0,-2.7Z" />
+</vector>

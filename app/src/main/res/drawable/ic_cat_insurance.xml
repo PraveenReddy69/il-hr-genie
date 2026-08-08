@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A shield with a cross — insurance. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?attr/colorControlNormal">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M11.55,2.13a1.2,1.2 0,0 1,0.9 0l7.3,2.9A1.2,1.2 0,0 1,20.5 6.15v5.1c0,4.35 -2.83,8.2 -7.02,9.55l-1.11,0.36a1.2,1.2 0,0 1,-0.74 0l-1.11,-0.36C6.33,19.45 3.5,15.6 3.5,11.25v-5.1a1.2,1.2 0,0 1,0.75 -1.12ZM5.9,7l0,4.25c0,3.3 2.14,6.22 5.32,7.25l0.78,0.25 0.78,-0.25c3.18,-1.03 5.32,-3.95 5.32,-7.25L18.1,7 12,4.57Z" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M10.85,7.6h2.3v2.3h2.3v2.3h-2.3v2.3h-2.3v-2.3h-2.3v-2.3h2.3Z" />
+</vector>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A ticket stub with its perforation — the ones already filed. Pairs with
+     ic_chip_ticket_add, drawn to the same 18dp so the two chips sit level. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="18dp"
+    android:height="18dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M4.6,4.8h14.8A2.4,2.4 0,0 1,21.8 7.2v2.1a1.1,1.1 0,0 1,-0.83 1.07,2.05 2.05,0 0,0 0,3.98 1.1,1.1 0,0 1,0.83 1.07v2.1a2.4,2.4 0,0 1,-2.4 2.4L4.6,19.9A2.4,2.4 0,0 1,2.2 17.5v-2.1a1.1,1.1 0,0 1,0.83 -1.07,2.05 2.05,0 0,0 0,-3.98A1.1,1.1 0,0 1,2.2 9.3L2.2,7.2A2.4,2.4 0,0 1,4.6 4.8ZM4.4,7.2v1.34a4.25,4.25 0,0 1,0 6.92v1.34c0,0.11 0.09,0.2 0.2,0.2h14.8c0.11,0 0.2,-0.09 0.2,-0.2v-1.34a4.25,4.25 0,0 1,0 -6.92L19.6,7.2c0,-0.11 -0.09,-0.2 -0.2,-0.2L4.6,7A0.2,0.2 0,0 0,4.4 7.2Z" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M10.95,8.1h2.1v2.1h-2.1zM10.95,10.95h2.1v2.1h-2.1zM10.95,13.8h2.1v2.1h-2.1z" />
+</vector>

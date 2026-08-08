@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- A bot answer. The read-aloud control, the time and the source all live inside the
+     bubble, under a hairline: loose under the card they read as stray icons belonging
+     to nothing, and the footer is what makes it look like a card rather than a slab. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -8,51 +11,75 @@
     android:paddingTop="6dp"
     android:paddingBottom="6dp">
 
-    <TextView
-        android:id="@+id/bubble"
+    <LinearLayout
+        android:id="@+id/bubbleCard"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:background="@drawable/bg_bubble_bot"
         android:elevation="1dp"
-        android:lineSpacingMultiplier="1.6"
+        android:orientation="vertical"
         android:paddingStart="@dimen/space_l"
         android:paddingTop="13dp"
         android:paddingEnd="@dimen/space_l"
-        android:paddingBottom="13dp"
-        android:textColor="@color/ink"
-        android:textSize="@dimen/text_body"
-        tools:text="You have 12 earned leaves and 4 casual leaves left for 2026." />
+        android:paddingBottom="7dp">
 
-    <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <!-- Reads this answer aloud; tap again to stop. -->
-        <ImageView
-            android:id="@+id/speakButton"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/cd_read_aloud"
-            android:padding="5dp"
-            android:src="@drawable/ic_speaker"
-            app:tint="@color/text_muted" />
-
-        <!-- Where the answer came from, when it came from the policy library. -->
         <TextView
-            android:id="@+id/bubbleSource"
+            android:id="@+id/bubble"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="2dp"
-            android:ellipsize="middle"
-            android:maxLines="1"
-            android:textColor="@color/text_muted"
-            android:textSize="@dimen/text_eyebrow_sm"
-            android:visibility="gone"
-            tools:text="📄 From Leave Policy"
-            tools:visibility="visible" />
+            android:lineSpacingMultiplier="1.6"
+            android:textColor="@color/ink"
+            android:textSize="@dimen/text_body"
+            tools:text="You have 12 earned leaves and 4 casual leaves left for 2026." />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="9dp"
+            android:background="@color/ink_06" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:layout_marginTop="3dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <!-- Where the answer came from, when it came from the policy library. It
+                 leads the row so the two controls stay pinned to the trailing edge. -->
+            <TextView
+                android:id="@+id/bubbleSource"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="9dp"
+                android:ellipsize="middle"
+                android:maxLines="1"
+                android:textColor="@color/text_muted"
+                android:textSize="@dimen/text_eyebrow_sm"
+                android:visibility="gone"
+                tools:text="📄 From Leave Policy"
+                tools:visibility="visible" />
+
+            <!-- Reads this answer aloud; tap again to stop. -->
+            <ImageView
+                android:id="@+id/speakButton"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/cd_read_aloud"
+                android:padding="5dp"
+                android:src="@drawable/ic_speaker"
+                app:tint="@color/text_muted" />
+
+            <TextView
+                android:id="@+id/bubbleTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="3dp"
+                android:textColor="@color/text_muted"
+                android:textSize="@dimen/text_eyebrow_sm"
+                tools:text="10:42 AM" />
+        </LinearLayout>
     </LinearLayout>
 </LinearLayout>

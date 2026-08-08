@@ -23,6 +23,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.snackbar.Snackbar
+import com.infinitylearn.hrgenie.ui.common.navigateSafely
 import com.infinitylearn.hrgenie.R
 import com.infinitylearn.hrgenie.data.DepartmentMood
 import com.infinitylearn.hrgenie.data.Employee
@@ -120,7 +121,7 @@ class HrInsightsFragment : Fragment() {
         binding.kpiPulseTile.setOnClickListener { openDetail(HrDetailKind.PULSE) }
         binding.moodCard.setOnClickListener { openDetail(HrDetailKind.MOOD) }
         binding.viewHistory.setOnClickListener {
-            findNavController().navigate(R.id.action_insights_to_trends)
+            findNavController().navigateSafely(R.id.action_insights_to_trends)
         }
         binding.attendanceCard.setOnClickListener { openDetail(HrDetailKind.ATTENDANCE) }
     }
@@ -287,7 +288,7 @@ class HrInsightsFragment : Fragment() {
         binding.viewAllTickets.visibility = if (hidden > 0) View.VISIBLE else View.GONE
         binding.viewAllTickets.text = getString(R.string.hr_view_all_tickets, stats.tickets.size)
         binding.viewAllTickets.setOnClickListener {
-            findNavController().navigate(R.id.action_insights_to_tickets)
+            findNavController().navigateSafely(R.id.action_insights_to_tickets)
         }
     }
 
@@ -532,7 +533,7 @@ class HrInsightsFragment : Fragment() {
         SessionStore(requireContext()).forget()
         session.signOut()
         val navController = findNavController()
-        navController.navigate(
+        navController.navigateSafely(
             R.id.signInFragment,
             null,
             NavOptions.Builder()

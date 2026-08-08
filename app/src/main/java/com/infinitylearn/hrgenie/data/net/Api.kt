@@ -17,13 +17,17 @@ import org.json.JSONException
 import org.json.JSONObject
 
 /**
- * Where the backend lives.
+ * Where the backend lives. **This is the one line to update.**
  *
- * An ngrok tunnel for the prototype, so the host changes every time it restarts —
- * **this is the one line to update.** The knowledge base is on the same host.
+ * No trailing slash: paths are concatenated raw and every one of them starts with a
+ * slash of its own.
+ *
+ * HTTPS via sslip.io, which resolves a dashed IP to that address and carries a valid
+ * certificate for it — so the same host works for the app and for the browser console,
+ * which cannot call plain HTTP from an HTTPS page at all.
  */
 object ApiConfig {
-    const val BASE_URL = "https://559c-103-161-31-154.ngrok-free.app"
+    const val BASE_URL = "https://35-161-200-62.sslip.io"
 }
 
 /**
@@ -93,6 +97,30 @@ object HttpJson {
         var connection: HttpURLConnection? = null
         try {
             connection = open(path, "PATCH", token)
+            connection.doOutput = true
+            connection.outputStream.use { it.write(body.toString().toByteArray()) }
+            read(connection)
+        } catch (e: Exception) {
+            fail(path, transportFailure(e))
+        } finally {
+            connection?.disconnect()
+        }
+    }
+
+    /**
+     * DELETEs [path] with a body. Same failure vocabulary as [post].
+     *
+     * A body on a DELETE is unusual but is what the unregister endpoint takes, and
+     * HttpURLConnection will send one as long as output is opened explicitly.
+     */
+    suspend fun delete(
+        path: String,
+        body: JSONObject,
+        token: String? = null,
+    ): Result<JSONObject> = withContext(Dispatchers.IO) {
+        var connection: HttpURLConnection? = null
+        try {
+            connection = open(path, "DELETE", token)
             connection.doOutput = true
             connection.outputStream.use { it.write(body.toString().toByteArray()) }
             read(connection)

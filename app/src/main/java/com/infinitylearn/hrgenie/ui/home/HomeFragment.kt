@@ -21,6 +21,8 @@ import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.tabs.TabLayout
+import com.infinitylearn.hrgenie.push.PushRegistration
+import com.infinitylearn.hrgenie.ui.common.navigateSafely
 import com.infinitylearn.hrgenie.R
 import com.infinitylearn.hrgenie.data.AttendanceRepository
 import com.infinitylearn.hrgenie.data.WishPerson
@@ -235,7 +237,7 @@ class HomeFragment : Fragment() {
     /** Tapping a face jumps straight to step 1 of the check-in with that mood held. */
     private fun openCheckIn(mood: Mood) {
         val args = Bundle().apply { putString("moodKey", mood.key.name) }
-        findNavController().navigate(R.id.action_home_to_mood, args)
+        findNavController().navigateSafely(R.id.action_home_to_mood, args)
     }
 
     // --------------------------------------------------------------------- wishes
@@ -428,7 +430,7 @@ class HomeFragment : Fragment() {
 
         menu.myProfile.setOnClickListener {
             popup.dismiss()
-            findNavController().navigate(R.id.action_home_to_profile)
+            findNavController().navigateSafely(R.id.action_home_to_profile)
         }
         menu.logout.setOnClickListener {
             popup.dismiss()
@@ -440,10 +442,12 @@ class HomeFragment : Fragment() {
     }
 
     private fun logOut() {
+        // Before the session is cleared — the call needs its bearer.
+        PushRegistration.unpairOnSignOut(requireContext(), SessionStore(requireContext()).token())
         SessionStore(requireContext()).forget()
         session.signOut()
         val navController = findNavController()
-        navController.navigate(
+        navController.navigateSafely(
             R.id.signInFragment,
             null,
             NavOptions.Builder()
@@ -457,13 +461,13 @@ class HomeFragment : Fragment() {
     private fun bindCtas() {
         binding.avatar.setOnClickListener { showProfileMenu(it) }
         binding.attendance.attendanceWeekLink.setOnClickListener {
-            findNavController().navigate(R.id.action_home_to_attendance_history)
+            findNavController().navigateSafely(R.id.action_home_to_attendance_history)
         }
         binding.pulseNudge.setOnClickListener {
-            findNavController().navigate(R.id.action_home_to_pulse)
+            findNavController().navigateSafely(R.id.action_home_to_pulse)
         }
         binding.holidaysViewAll.setOnClickListener {
-            findNavController().navigate(R.id.action_home_to_holidays)
+            findNavController().navigateSafely(R.id.action_home_to_holidays)
         }
         binding.wishesViewAll.setOnClickListener {
             Snackbar.make(binding.root, R.string.wishes, Snackbar.LENGTH_SHORT).show()

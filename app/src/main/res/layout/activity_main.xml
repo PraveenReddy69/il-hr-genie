@@ -25,7 +25,9 @@
                 app:defaultNavHost="true"
                 app:navGraph="@navigation/nav_graph" />
 
-            <!-- Sits above the bottom bar because it lives inside the nav host frame. -->
+            <!-- Sits above the bottom bar because it lives inside the nav host frame.
+                 Starts hidden: before the first destination change there is nothing to
+                 navigate from, and a tap in that window used to crash the app. -->
             <com.google.android.material.imageview.ShapeableImageView
                 android:id="@+id/chatFab"
                 android:layout_width="62dp"
@@ -41,6 +43,7 @@
                 android:padding="5dp"
                 android:scaleType="centerCrop"
                 android:src="@drawable/hr_bot"
+                android:visibility="gone"
                 app:shapeAppearanceOverlay="@style/HG.CircleImage" />
 
             <!-- Unread dot: HR has moved a ticket since the employee last opened chat. -->
