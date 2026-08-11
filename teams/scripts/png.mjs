@@ -13,11 +13,21 @@ import { deflateSync } from 'node:zlib'
  * @param pixel (x, y, size) => [r, g, b, a], sampled at pixel centres
  */
 export function png(size, pixel) {
-  const stride = size * 4 + 1
-  const raw = Buffer.alloc(stride * size)
-  for (let y = 0; y < size; y += 1) {
+  return pngRect(size, size, (x, y) => pixel(x, y, size))
+}
+
+/**
+ * @param width  in pixels
+ * @param height in pixels
+ * @param pixel  (x, y) => [r, g, b, a], sampled at pixel centres
+ */
+export function pngRect(width, height, pixel) {
+  const size = width
+  const stride = width * 4 + 1
+  const raw = Buffer.alloc(stride * height)
+  for (let y = 0; y < height; y += 1) {
     raw[y * stride] = 0 // filter: none
-    for (let x = 0; x < size; x += 1) {
+    for (let x = 0; x < width; x += 1) {
       const [r, g, b, a] = pixel(x + 0.5, y + 0.5, size)
       const at = y * stride + 1 + x * 4
       raw[at] = r
@@ -28,8 +38,8 @@ export function png(size, pixel) {
   }
 
   const ihdr = Buffer.alloc(13)
-  ihdr.writeUInt32BE(size, 0)
-  ihdr.writeUInt32BE(size, 4)
+  ihdr.writeUInt32BE(width, 0)
+  ihdr.writeUInt32BE(height, 4)
   ihdr[8] = 8 // bit depth
   ihdr[9] = 6 // colour type: RGBA
 

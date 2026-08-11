@@ -69,30 +69,53 @@ function card(body: unknown[], actions?: unknown[]): AdaptiveCard {
 }
 
 /**
- * The tinted strip across the top of a card.
+ * The branded band across the top of a card.
  *
- * `bleed` is what takes it edge to edge — without it the strip floats inside the
- * card's padding and reads as a box someone forgot to align.
+ * `backgroundImage` is the only way to get a gradient — Adaptive Cards has no gradient
+ * of its own — and `bleed` is what takes it edge to edge. Without bleed the band
+ * floats inside the card's padding and reads as a box someone forgot to align.
+ *
+ * Text is `Light` because it sits on the dark end of that gradient. If the image ever
+ * fails to load the container falls back to the card background, which is why the
+ * eyebrow keeps `isSubtle` off — light-on-light would vanish, dark-on-light will not.
  */
 function header(eyebrow: string, title: string, subtitle?: string): unknown {
   return {
     type: 'Container',
-    style: 'emphasis',
     bleed: true,
     spacing: 'None',
+    backgroundImage: { url: `${ICON_BASE}/header.png`, fillMode: 'Cover' },
     items: [
       {
         type: 'TextBlock',
         text: eyebrow.toUpperCase(),
         size: 'Small',
         weight: 'Bolder',
+        color: 'Light',
         isSubtle: true,
         spacing: 'None',
         wrap: true,
       },
-      { type: 'TextBlock', text: title, size: 'Large', weight: 'Bolder', wrap: true, spacing: 'None' },
+      {
+        type: 'TextBlock',
+        text: title,
+        size: 'Large',
+        weight: 'Bolder',
+        color: 'Light',
+        wrap: true,
+        spacing: 'None',
+      },
       ...(subtitle
-        ? [{ type: 'TextBlock', text: subtitle, wrap: true, isSubtle: true, spacing: 'Small' }]
+        ? [
+            {
+              type: 'TextBlock',
+              text: subtitle,
+              wrap: true,
+              color: 'Light',
+              isSubtle: true,
+              spacing: 'Small',
+            },
+          ]
         : []),
     ],
   }
@@ -129,7 +152,9 @@ const ICON_BASE = 'https://praveenreddy69.github.io/il-hr-genie/icons'
 function tile(icon: string, label: string, data: CardAction, caption?: string): unknown {
   return {
     type: 'Container',
-    // No `style` — see [body]. A tile only needs to be tappable, not painted.
+    // `emphasis` is what makes a tile read as a tile rather than a row of text — it is
+    // the only surface Adaptive Cards will give a container without an image.
+    style: 'emphasis',
     selectAction: { type: 'Action.Submit', data },
     spacing: 'Small',
     items: [
