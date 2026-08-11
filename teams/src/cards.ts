@@ -128,7 +128,7 @@ function header(eyebrow: string, title: string, subtitle?: string): unknown {
  * which is what "no styling" actually means here.
  */
 function body(items: unknown[]): unknown {
-  return { type: 'Container', spacing: 'None', items }
+  return { type: 'Container', spacing: 'Medium', items }
 }
 
 /**
@@ -238,11 +238,11 @@ export function welcomeCard(firstName: string): AdaptiveCard {
         spacing: 'Medium',
       },
       ...grid([
-        tile('ticket', 'Raise a ticket', { kind: 'startTicket' }, 'File something with HR'),
-        tile('list', 'My tickets', { kind: 'myTickets' }, 'See what HR has done'),
+        tile('ticket', 'Raise a ticket', { kind: 'startTicket' }, 'File with HR'),
+        tile('list', 'My tickets', { kind: 'myTickets' }, 'See replies'),
       ]),
       ...grid([
-        tile('mood', 'How are you today?', { kind: 'checkIn' }, 'Takes ten seconds'),
+        tile('mood', 'How are you today?', { kind: 'checkIn' }, 'Ten seconds'),
         tile('pulse', 'Monthly pulse', { kind: 'startPulse' }, 'Four questions'),
       ]),
     ]),
