@@ -75,9 +75,9 @@ function card(body: unknown[], actions?: unknown[]): AdaptiveCard {
  * of its own — and `bleed` is what takes it edge to edge. Without bleed the band
  * floats inside the card's padding and reads as a box someone forgot to align.
  *
- * Text is `Light` because it sits on the dark end of that gradient. If the image ever
- * fails to load the container falls back to the card background, which is why the
- * eyebrow keeps `isSubtle` off — light-on-light would vanish, dark-on-light will not.
+ * All three lines are `Light` and none are `isSubtle`: subtle renders white text at
+ * partial opacity, which on a gradient is illegible rather than quiet. Hierarchy comes
+ * from size and weight instead.
  */
 function header(eyebrow: string, title: string, subtitle?: string): unknown {
   return {
@@ -92,7 +92,6 @@ function header(eyebrow: string, title: string, subtitle?: string): unknown {
         size: 'Small',
         weight: 'Bolder',
         color: 'Light',
-        isSubtle: true,
         spacing: 'None',
         wrap: true,
       },
@@ -112,7 +111,6 @@ function header(eyebrow: string, title: string, subtitle?: string): unknown {
               text: subtitle,
               wrap: true,
               color: 'Light',
-              isSubtle: true,
               spacing: 'Small',
             },
           ]

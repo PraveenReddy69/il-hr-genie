@@ -20,9 +20,15 @@ const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'web', 'pu
 const WIDTH = 1200
 const HEIGHT = 240
 
-/** The app's header gradient: brand blue into the deep navy the phone header uses. */
-const FROM = [0x2b, 0x8c, 0xff]
-const TO = [0x12, 0x30, 0x6e]
+/**
+ * Deep blue into navy.
+ *
+ * Both ends are dark enough to carry white text: the first attempt started at the
+ * brand blue and the eyebrow sat on the lightest part of it, which is exactly where
+ * small text needs the most contrast.
+ */
+const FROM = [0x1a, 0x6f, 0xd6]
+const TO = [0x0a, 0x14, 0x30]
 
 mkdirSync(OUT, { recursive: true })
 writeFileSync(
