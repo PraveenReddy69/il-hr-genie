@@ -37,6 +37,7 @@ const ICONS = {
   'something-else': [SLATE, dots],
   ticket: [BLUE, ticket],
   list: [SLATE, list],
+  mood: [GREEN, smile],
 }
 
 mkdirSync(OUT, { recursive: true })
@@ -140,6 +141,18 @@ function ticket(x, y, s) {
     perforation = Math.max(perforation, rect(x, y, s * 0.48, s * py, s * 0.52, s * (py + 0.05), s * 0.01))
   }
   return Math.max(Math.max(0, body - notch), perforation)
+}
+
+/** A face, for the daily check-in. */
+function smile(x, y, s) {
+  const face = ringDisc(x, y, s / 2, s / 2, s * 0.32, s * 0.07)
+  const eyes = Math.max(
+    disc(x, y, s * 0.4, s * 0.44, s * 0.045),
+    disc(x, y, s * 0.6, s * 0.44, s * 0.045),
+  )
+  // The smile: the lower half of a ring, clipped above the mouth line.
+  const arc = y > s * 0.55 ? ringDisc(x, y, s / 2, s * 0.5, s * 0.16, s * 0.055) : 0
+  return Math.max(face, eyes, arc)
 }
 
 /** Lines with bullets — a list. */

@@ -8,10 +8,14 @@
  */
 
 import * as api from './api.js'
+import type { Mood } from './api.js'
 import {
   answerCard,
   categoryCard,
   draftCard,
+  moodCard,
+  moodDetailCard,
+  moodDoneCard,
   receiptCard,
   ticketsCard,
   welcomeCard,
@@ -21,9 +25,11 @@ import {
 
 /** Where a conversation is in the ticket flow. Nothing else needs remembering. */
 export interface ConversationState {
-  stage: 'idle' | 'awaitingCategory' | 'awaitingSubject' | 'awaitingConfirm'
+  stage: 'idle' | 'awaitingCategory' | 'awaitingSubject' | 'awaitingConfirm' | 'awaitingMoodDetail'
   category?: string
   subject?: string
+  /** The face picked, waiting on reasons and a note. */
+  mood?: Mood
   /** True while a raise is in flight. See the note in [handle]. */
   raising?: boolean
 }
@@ -78,6 +84,11 @@ export async function handle(state: ConversationState, input: Input): Promise<Re
       // silently ignoring what they wrote.
       return takeSubject(state, text)
 
+    case 'awaitingMoodDetail':
+      // Typing here is taken as the note, since that is the only free-text field on
+      // the card they are looking at.
+      return saveMood(state, [], text)
+
     case 'idle':
       return askKnowledgeBase(text)
   }
@@ -110,6 +121,63 @@ async function handleAction(state: ConversationState, action: CardAction): Promi
 
     case 'raise':
       return raise(state)
+
+    case 'checkIn':
+      return startCheckIn(state)
+
+    case 'pickMood': {
+      state.stage = 'awaitingMoodDetail'
+      state.mood = action.mood
+      return [{ card: moodDetailCard(action.mood) }]
+    }
+
+    case 'saveMood': {
+      // A multi-select ChoiceSet arrives as one comma-separated string.
+      const reasons = (action.reasons ?? '')
+        .split(',')
+        .map((reason) => reason.trim())
+        .filter(Boolean)
+      return saveMood(state, reasons, action.note?.trim() || null)
+    }
+
+    case 'skipMoodDetail':
+      return saveMood(state, [], null)
+  }
+}
+
+async function startCheckIn(state: ConversationState): Promise<Reply[]> {
+  reset(state)
+  try {
+    return [{ card: moodCard(await api.todaysMood()) }]
+  } catch (error) {
+    // Not being able to read today's answer is no reason to block a new one.
+    return [{ card: moodCard(null) }, { text: `(Couldn't check today's answer: ${message(error)})` }]
+  }
+}
+
+async function saveMood(
+  state: ConversationState,
+  reasons: string[],
+  note: string | null,
+): Promise<Reply[]> {
+  const mood = state.mood
+  if (!mood) {
+    return [{ text: 'Pick a face first — say "check in" and I will show them.' }]
+  }
+
+  try {
+    await api.saveMood(mood, reasons, note)
+    reset(state)
+    return [{ card: moodDoneCard(mood, reasons, note) }]
+  } catch (error) {
+    // The face is kept, so Save can be pressed again without starting over.
+    return [
+      {
+        text:
+          'I could not save that just then, so nothing was recorded. Press Save again in a ' +
+          `moment. (${message(error)})`,
+      },
+    ]
   }
 }
 
@@ -213,6 +281,7 @@ function reset(state: ConversationState): void {
   state.stage = 'idle'
   state.category = undefined
   state.subject = undefined
+  state.mood = undefined
   state.raising = false
 }
 

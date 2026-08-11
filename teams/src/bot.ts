@@ -85,9 +85,20 @@ function actionFrom(activity: Partial<Activity>): CardAction | undefined {
     case 'myTickets':
     case 'raise':
     case 'cancel':
+    case 'checkIn':
+    case 'skipMoodDetail':
       return { kind: value.kind } as CardAction
     case 'pickCategory':
       return { kind: 'pickCategory', category: String(value.category ?? '') }
+    case 'pickMood':
+      return { kind: 'pickMood', mood: String(value.mood ?? 'OKAY') as never }
+    case 'saveMood':
+      // Input values ride along with the action's own data on submit.
+      return {
+        kind: 'saveMood',
+        reasons: value.reasons === undefined ? undefined : String(value.reasons),
+        note: value.note === undefined ? undefined : String(value.note),
+      }
     default:
       return undefined
   }

@@ -20,7 +20,7 @@
  * cards nearly unstyled, while Teams applies its own theme on top.
  */
 
-import type { Ticket } from './api.js'
+import { MOOD_REASONS, type Mood, type MoodCheckIn, type Ticket } from './api.js'
 
 const SCHEMA = 'http://adaptivecards.io/schemas/adaptive-card.json'
 const VERSION = '1.5'
@@ -28,6 +28,10 @@ const VERSION = '1.5'
 /** Every card action carries one of these, so the flow can tell them apart. */
 export type CardAction =
   | { kind: 'pickCategory'; category: string }
+  | { kind: 'checkIn' }
+  | { kind: 'pickMood'; mood: Mood }
+  | { kind: 'saveMood'; reasons?: string; note?: string }
+  | { kind: 'skipMoodDetail' }
   | { kind: 'raise' }
   | { kind: 'cancel' }
   | { kind: 'myTickets' }
@@ -191,10 +195,11 @@ export function welcomeCard(firstName: string): AdaptiveCard {
       wrap: true,
       spacing: 'Medium',
     },
-    ...grid([
-      tile('ticket', 'Raise a ticket', { kind: 'startTicket' }, 'File something with HR'),
-      tile('list', 'My tickets', { kind: 'myTickets' }, 'See what HR has done'),
-    ]),
+      ...grid([
+        tile('ticket', 'Raise a ticket', { kind: 'startTicket' }, 'File something with HR'),
+        tile('list', 'My tickets', { kind: 'myTickets' }, 'See what HR has done'),
+      ]),
+      ...grid([tile('mood', 'How are you today?', { kind: 'checkIn' }, 'Takes ten seconds')]),
   ])
 }
 
@@ -412,6 +417,136 @@ export function ticketsCard(tickets: Ticket[]): AdaptiveCard {
         },
       ],
     }))),
+  ])
+}
+
+/**
+ * The five faces, best to worst.
+ *
+ * Emoji rather than drawn glyphs: a face is the one thing every platform already
+ * renders well, and the Android check-in uses the same five. Anything hand-drawn at
+ * 32px would read as a worse version of what the reader already knows.
+ */
+const MOOD_FACE: Record<Mood, { face: string; label: string }> = {
+  GREAT: { face: '😄', label: 'Great' },
+  GOOD: { face: '🙂', label: 'Good' },
+  OKAY: { face: '😐', label: 'Okay' },
+  STRESSED: { face: '😟', label: 'Stressed' },
+  BURNT_OUT: { face: '😩', label: 'Burnt out' },
+}
+
+export function moodLabel(mood: Mood): string {
+  return MOOD_FACE[mood].label
+}
+
+/**
+ * The check-in itself.
+ *
+ * Says what HR sees before anything is picked, not after. Someone deciding whether to
+ * answer honestly needs that before they answer, not on the confirmation.
+ */
+export function moodCard(existing: MoodCheckIn | null): AdaptiveCard {
+  return card([
+    header(
+      'Check-in',
+      'How are you today?',
+      existing
+        ? `You said ${MOOD_FACE[existing.mood].label.toLowerCase()} earlier — pick again to change it.`
+        : 'Your HRBP sees the check-in as part of a team trend. Your note stays with you.',
+    ),
+    body([
+      {
+        type: 'ColumnSet',
+        spacing: 'Medium',
+        columns: (Object.keys(MOOD_FACE) as Mood[]).map((mood) => ({
+          type: 'Column',
+          width: 'stretch',
+          selectAction: { type: 'Action.Submit', data: { kind: 'pickMood', mood } },
+          items: [
+            {
+              type: 'TextBlock',
+              text: MOOD_FACE[mood].face,
+              size: 'ExtraLarge',
+              horizontalAlignment: 'Center',
+              spacing: 'None',
+            },
+            {
+              type: 'TextBlock',
+              text: MOOD_FACE[mood].label,
+              size: 'Small',
+              weight: 'Bolder',
+              wrap: true,
+              horizontalAlignment: 'Center',
+              spacing: 'None',
+            },
+          ],
+        })),
+      },
+    ]),
+  ])
+}
+
+/**
+ * Reasons and a note, both optional.
+ *
+ * One card rather than two more steps: the check-in is meant to take seconds, and
+ * every extra card is another chance to abandon it. Save works with nothing filled in.
+ */
+export function moodDetailCard(mood: Mood): AdaptiveCard {
+  return card(
+    [
+      header('Check-in', `${MOOD_FACE[mood].face} ${MOOD_FACE[mood].label}`, 'Anything behind it?'),
+      body([
+        {
+          type: 'Input.ChoiceSet',
+          id: 'reasons',
+          isMultiSelect: true,
+          style: 'expanded',
+          spacing: 'Medium',
+          choices: MOOD_REASONS.map((reason) => ({ title: reason, value: reason })),
+        },
+        {
+          type: 'Input.Text',
+          id: 'note',
+          isMultiline: true,
+          placeholder: 'Anything you want to add? Only you will see this.',
+          spacing: 'Medium',
+        },
+        {
+          type: 'TextBlock',
+          text: 'HR sees the face, never the note.',
+          size: 'Small',
+          isSubtle: true,
+          wrap: true,
+          spacing: 'Small',
+        },
+      ]),
+    ],
+    [
+      { type: 'Action.Submit', title: 'Save', style: 'positive', data: { kind: 'saveMood' } },
+      { type: 'Action.Submit', title: 'Just the face', data: { kind: 'skipMoodDetail' } },
+    ],
+  )
+}
+
+export function moodDoneCard(mood: Mood, reasons: string[], note: string | null): AdaptiveCard {
+  return card([
+    header('Checked in', `${MOOD_FACE[mood].face} ${MOOD_FACE[mood].label}`, 'Thanks — that helps.'),
+    body([
+      ...(reasons.length > 0
+        ? [{ type: 'TextBlock', text: reasons.join(' · '), wrap: true, spacing: 'Medium' }]
+        : []),
+      {
+        type: 'TextBlock',
+        text: note
+          ? 'Your note is saved and stays with you.'
+          : 'You can check in again any time — the latest answer replaces the last.',
+        wrap: true,
+        isSubtle: true,
+        size: 'Small',
+        spacing: 'Small',
+      },
+    ]),
   ])
 }
 

@@ -18,6 +18,29 @@ export interface Ticket {
   createdAtMillis: number
 }
 
+/** The five the server accepts, worst to best is not the order they are offered in. */
+export type Mood = 'GREAT' | 'GOOD' | 'OKAY' | 'STRESSED' | 'BURNT_OUT'
+
+/** What the server will accept as a reason. Anything else is rejected. */
+export const MOOD_REASONS = [
+  'Workload',
+  'Deadlines',
+  'My manager',
+  'My team',
+  'Recognition',
+  'Clarity on goals',
+  'Work–life balance',
+  'Something outside work',
+] as const
+
+export interface MoodCheckIn {
+  mood: Mood
+  reasons: string[]
+  /** Private to the employee. HR never receives it — see the note on [saveMood]. */
+  note: string | null
+  dateIso: string
+}
+
 export interface KbAnswer {
   text: string
   source: string | null
@@ -83,6 +106,67 @@ export async function askKnowledgeBase(question: string): Promise<KbAnswer> {
   const text = String(body.answer ?? body.text ?? '').trim()
   if (!text) throw new ApiError('The knowledge base returned nothing usable.')
   return { text, source: firstSourceTitle(body.sources) }
+}
+
+/**
+ * Today's check-in, or null if there is not one yet.
+ *
+ * The endpoint answers 404 when none exists, which is a normal state rather than a
+ * failure — most of the day, for most people, there is nothing there.
+ */
+export async function todaysMood(): Promise<MoodCheckIn | null> {
+  const session = await signIn()
+  try {
+    const raw = await request<Record<string, unknown>>(
+      `/api/mood?employeeId=${encodeURIComponent(session.employeeId)}&date=${today()}`,
+      { token: session.token },
+    )
+    return {
+      mood: String(raw.mood ?? 'OKAY') as Mood,
+      reasons: Array.isArray(raw.reasons) ? raw.reasons.map(String) : [],
+      note: raw.note ? String(raw.note) : null,
+      dateIso: String(raw.dateIso ?? today()),
+    }
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null
+    throw error
+  }
+}
+
+/**
+ * Records how someone is doing today.
+ *
+ * An upsert, so checking in twice corrects the first answer rather than stacking a
+ * second — which is what lets the bot offer to change it.
+ *
+ * The note is private. HR sees the check-in in aggregate and never the note, and the
+ * card says so: a wellbeing prompt that quietly shows your words to your manager is
+ * one people learn to lie to.
+ */
+export async function saveMood(
+  mood: Mood,
+  reasons: string[],
+  note: string | null,
+): Promise<void> {
+  const session = await signIn()
+  await request('/api/mood', {
+    method: 'POST',
+    body: JSON.stringify({
+      employeeId: session.employeeId,
+      mood,
+      ...(reasons.length > 0 ? { reasons } : {}),
+      ...(note ? { note } : {}),
+    }),
+    token: session.token,
+  })
+}
+
+/** The server defaults to its own today; this keeps the read on the same day. */
+function today(): string {
+  const now = new Date()
+  const month = `${now.getMonth() + 1}`.padStart(2, '0')
+  const day = `${now.getDate()}`.padStart(2, '0')
+  return `${now.getFullYear()}-${month}-${day}`
 }
 
 export async function raiseTicket(subject: string, category: string): Promise<Ticket> {
