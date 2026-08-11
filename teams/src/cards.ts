@@ -496,23 +496,31 @@ export function moodCard(existing: MoodCheckIn | null): AdaptiveCard {
         columns: (Object.keys(MOOD_FACE) as Mood[]).map((mood) => ({
           type: 'Column',
           width: 'stretch',
-          selectAction: { type: 'Action.Submit', data: { kind: 'pickMood', mood } },
           items: [
             {
-              type: 'TextBlock',
-              text: MOOD_FACE[mood].face,
-              size: 'ExtraLarge',
-              horizontalAlignment: 'Center',
-              spacing: 'None',
-            },
-            {
-              type: 'TextBlock',
-              text: MOOD_FACE[mood].label,
-              size: 'Small',
-              weight: 'Bolder',
-              wrap: true,
-              horizontalAlignment: 'Center',
-              spacing: 'None',
+              // A surface each, so five faces read as five buttons rather than a row
+              // of emoji with words under them.
+              type: 'Container',
+              style: 'emphasis',
+              selectAction: { type: 'Action.Submit', data: { kind: 'pickMood', mood } },
+              items: [
+                {
+                  type: 'TextBlock',
+                  text: MOOD_FACE[mood].face,
+                  size: 'ExtraLarge',
+                  horizontalAlignment: 'Center',
+                  spacing: 'None',
+                },
+                {
+                  type: 'TextBlock',
+                  text: MOOD_FACE[mood].label,
+                  size: 'Small',
+                  weight: 'Bolder',
+                  wrap: true,
+                  horizontalAlignment: 'Center',
+                  spacing: 'None',
+                },
+              ],
             },
           ],
         })),
@@ -533,12 +541,20 @@ export function moodDetailCard(mood: Mood): AdaptiveCard {
       header('Check-in', `${MOOD_FACE[mood].face} ${MOOD_FACE[mood].label}`, 'Anything behind it?'),
       body([
         {
-          type: 'Input.ChoiceSet',
-          id: 'reasons',
-          isMultiSelect: true,
-          style: 'expanded',
+          type: 'Container',
+          style: 'emphasis',
           spacing: 'Medium',
-          choices: MOOD_REASONS.map((reason) => ({ title: reason, value: reason })),
+          items: [
+            { type: 'TextBlock', text: 'What is behind it?', weight: 'Bolder', wrap: true, spacing: 'None' },
+            {
+              type: 'Input.ChoiceSet',
+              id: 'reasons',
+              isMultiSelect: true,
+              style: 'expanded',
+              spacing: 'Small',
+              choices: MOOD_REASONS.map((reason) => ({ title: reason, value: reason })),
+            },
+          ],
         },
         {
           type: 'Input.Text',
@@ -654,34 +670,35 @@ export function pulseCard(questions: PulseQuestion[]): AdaptiveCard {
     [
       header('Monthly pulse', 'Four questions', 'Answers roll up to a department average.'),
       body(
-        questions.flatMap((question, index) => [
-          {
-            type: 'TextBlock',
-            text: question.text,
-            wrap: true,
-            weight: 'Bolder',
-            spacing: index === 0 ? 'Medium' : 'Large',
-          },
-          ...(question.hint
-            ? [
-                {
-                  type: 'TextBlock',
-                  text: question.hint,
-                  wrap: true,
-                  isSubtle: true,
-                  size: 'Small',
-                  spacing: 'None',
-                },
-              ]
-            : []),
-          {
-            type: 'Input.ChoiceSet',
-            id: question.id,
-            style: 'expanded',
-            spacing: 'Small',
-            choices: question.options.map((option) => ({ title: option, value: option })),
-          },
-        ]),
+        // One block per question, so four questions read as four things to answer
+        // rather than one long column of radio buttons.
+        questions.map((question, index) => ({
+          type: 'Container',
+          style: 'emphasis',
+          spacing: index === 0 ? 'Medium' : 'Small',
+          items: [
+            { type: 'TextBlock', text: question.text, wrap: true, weight: 'Bolder', spacing: 'None' },
+            ...(question.hint
+              ? [
+                  {
+                    type: 'TextBlock',
+                    text: question.hint,
+                    wrap: true,
+                    isSubtle: true,
+                    size: 'Small',
+                    spacing: 'None',
+                  },
+                ]
+              : []),
+            {
+              type: 'Input.ChoiceSet',
+              id: question.id,
+              style: 'expanded',
+              spacing: 'Small',
+              choices: question.options.map((option) => ({ title: option, value: option })),
+            },
+          ],
+        })),
       ),
     ],
     [{ type: 'Action.Submit', title: 'Send', style: 'positive', data: { kind: 'savePulse' } }],
