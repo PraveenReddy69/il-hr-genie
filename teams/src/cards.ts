@@ -196,14 +196,13 @@ function grid(tiles: unknown[]): unknown[] {
 export function welcomeCard(firstName: string): AdaptiveCard {
   return card([
     header('Infinity Learn', `Hi ${firstName} 👋`, 'HR Genie · always on'),
-    {
-      type: 'TextBlock',
-      text:
-        'Ask me about leave, insurance, payroll or policy — or raise a ticket and I\'ll file ' +
-        'it with HR for you.',
-      wrap: true,
-      spacing: 'Medium',
-    },
+    body([
+      {
+        type: 'TextBlock',
+        text: 'Ask me about leave, insurance, payroll or policy — or pick one of these.',
+        wrap: true,
+        spacing: 'Medium',
+      },
       ...grid([
         tile('ticket', 'Raise a ticket', { kind: 'startTicket' }, 'File something with HR'),
         tile('list', 'My tickets', { kind: 'myTickets' }, 'See what HR has done'),
@@ -212,6 +211,7 @@ export function welcomeCard(firstName: string): AdaptiveCard {
         tile('mood', 'How are you today?', { kind: 'checkIn' }, 'Takes ten seconds'),
         tile('pulse', 'Monthly pulse', { kind: 'startPulse' }, 'Four questions'),
       ]),
+    ]),
   ])
 }
 
