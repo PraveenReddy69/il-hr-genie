@@ -500,7 +500,14 @@ export function moodCard(existing: MoodCheckIn | null): AdaptiveCard {
         : 'Your HRBP sees the check-in as part of a team trend. Your note stays with you.',
     ),
     body([
-      {
+      faceRow(),
+    ]),
+  ])
+}
+
+/** The five faces, as a row of tiles. Shared by the check-in and the reminder. */
+function faceRow(): unknown {
+  return {
         type: 'ColumnSet',
         spacing: 'Default',
         columns: (Object.keys(MOOD_FACE) as Mood[]).map((mood) => ({
@@ -534,6 +541,30 @@ export function moodCard(existing: MoodCheckIn | null): AdaptiveCard {
             },
           ],
         })),
+  }
+}
+
+/**
+ * The check-in, arriving unasked.
+ *
+ * Carries the faces rather than a button that opens them: this interrupts someone, so
+ * it should cost one tap to answer, not two. The line about what HR sees is here for
+ * the same reason it is on the check-in — somebody deciding whether to answer
+ * honestly needs it before they answer, and a pushed card may be the first thing they
+ * have ever seen from this bot.
+ */
+export function checkInReminderCard(firstName: string): AdaptiveCard {
+  return card([
+    header('Check-in', `How are you today, ${firstName}?`, 'One tap. Your note stays with you.'),
+    body([
+      faceRow(),
+      {
+        type: 'TextBlock',
+        text: 'Your HRBP sees the check-in as part of a team trend. Your manager never sees it.',
+        wrap: true,
+        isSubtle: true,
+        size: 'Small',
+        spacing: 'Default',
       },
     ]),
   ])

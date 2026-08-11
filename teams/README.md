@@ -112,6 +112,34 @@ Content-Type: application/json
 `employeeId`, `ticketId` and `status` are required; the rest improve the card.
 `status` is case-insensitive.
 
+### The daily check-in reminder
+
+Same endpoint, different `type`. Teams gives no way to interrupt someone with a dialog
+when they open the app — a pushed message is the closest thing, and it arrives as a
+desktop toast, a badge on the app, and an Activity feed entry.
+
+```
+POST https://<bot-host>/notify
+x-notify-secret: <the shared secret>
+
+{ "type": "checkInReminder", "employeeId": "EMP3801", "firstName": "Praveen" }
+```
+
+The card carries the five faces, so answering is one tap rather than two.
+
+**Your cron decides who to remind.** The bot does not check whether someone has
+already checked in — the backend has everyone's mood data and the bot, until SSO,
+does not. Send it only for people with no check-in today.
+
+**The bot will not send twice in one day** regardless. A cron misconfigured to run
+hourly would otherwise ask someone about their wellbeing twelve times, which is how an
+app gets muted. A repeat answers `200` with `{"delivered": false, "reason": "already
+reminded today"}` — nothing went wrong, and there is nothing to retry. A *failed*
+delivery does not count, so a genuine retry still gets through.
+
+Around 10am local is the sensible slot. Launch-triggered would be worse: you would be
+pestering whoever opened Teams at 11pm.
+
 | Response | Meaning | What to do |
 |---|---|---|
 | `200` | Delivered to their Teams chat | Nothing |

@@ -12,7 +12,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, describe, it } from 'node:test'
-import { References, handleNotify, type TicketMoved } from '../notify.js'
+import { References, handleNotify, type Notification } from '../notify.js'
 
 const SECRET = 'shared-secret'
 const REFERENCE = { conversation: { id: 'conv-1' } } as never
@@ -32,10 +32,10 @@ function withReference(): References {
 
 /** Records what was asked of the transport. */
 function spy() {
-  const sent: TicketMoved[] = []
+  const sent: Notification[] = []
   return {
     sent,
-    send: async (_reference: unknown, one: TicketMoved) => {
+    send: async (_reference: unknown, one: Notification) => {
       sent.push(one)
     },
   }
@@ -51,7 +51,7 @@ describe('the notify endpoint', () => {
     })
     assert.equal(result.status, 200)
     assert.equal(transport.sent.length, 1)
-    assert.equal(transport.sent[0].comment, 'Deduction reversed.')
+    assert.equal((transport.sent[0] as { comment?: string }).comment, 'Deduction reversed.')
   })
 
   it('refuses a bad secret', async () => {
@@ -124,7 +124,87 @@ describe('the notify endpoint', () => {
       secret: SECRET,
     })
     assert.equal(result.status, 200)
-    assert.equal(transport.sent[0].status, 'IN_PROGRESS')
+    assert.equal((transport.sent[0] as { status?: string }).status, 'IN_PROGRESS')
+  })
+})
+
+describe('the daily check-in reminder', () => {
+  const reminder = { type: 'checkInReminder', employeeId: 'EMP1', firstName: 'Test' }
+
+  it('delivers to someone who has used the bot', async () => {
+    const transport = spy()
+    const result = await handleNotify(reminder, SECRET, {
+      references: withReference(),
+      send: transport.send,
+      secret: SECRET,
+      today: () => '2026-08-12',
+    })
+    assert.equal(result.status, 200)
+    assert.equal(transport.sent[0].type, 'checkInReminder')
+  })
+
+  it('sends once a day, however often the cron runs', async () => {
+    // A cron misconfigured to run hourly would otherwise ask someone about their
+    // wellbeing twelve times, which is how an app gets muted.
+    const transport = spy()
+    const references = withReference()
+    const deps = { references, send: transport.send, secret: SECRET, today: () => '2026-08-12' }
+
+    const first = await handleNotify(reminder, SECRET, deps)
+    const second = await handleNotify(reminder, SECRET, deps)
+    const third = await handleNotify(reminder, SECRET, deps)
+
+    assert.equal(first.status, 200)
+    assert.deepEqual(first.body, { delivered: true })
+    assert.deepEqual(second.body, { delivered: false, reason: 'already reminded today' })
+    assert.equal(third.status, 200, 'a repeat is not the caller doing anything wrong')
+    assert.equal(transport.sent.length, 1)
+  })
+
+  it('sends again the next day', async () => {
+    const transport = spy()
+    const references = withReference()
+    let day = '2026-08-12'
+    const deps = { references, send: transport.send, secret: SECRET, today: () => day }
+
+    await handleNotify(reminder, SECRET, deps)
+    day = '2026-08-13'
+    await handleNotify(reminder, SECRET, deps)
+    assert.equal(transport.sent.length, 2)
+  })
+
+  it('does not count as reminded when delivery failed', async () => {
+    const references = withReference()
+    const failing = {
+      references,
+      secret: SECRET,
+      today: () => '2026-08-12',
+      send: async () => {
+        throw new Error('Bot Connector said no')
+      },
+    }
+    const failed = await handleNotify(reminder, SECRET, failing)
+    assert.equal(failed.status, 503)
+
+    // The retry must get through, not be swallowed by the once-a-day rule.
+    const transport = spy()
+    const retry = await handleNotify(reminder, SECRET, {
+      references,
+      send: transport.send,
+      secret: SECRET,
+      today: () => '2026-08-12',
+    })
+    assert.deepEqual(retry.body, { delivered: true })
+    assert.equal(transport.sent.length, 1)
+  })
+
+  it('still refuses someone who has never opened the bot', async () => {
+    const result = await handleNotify({ ...reminder, employeeId: 'EMP-NOBODY' }, SECRET, {
+      references: withReference(),
+      send: spy().send,
+      secret: SECRET,
+    })
+    assert.equal(result.status, 404)
   })
 })
 

@@ -15,7 +15,7 @@ import {
 } from 'botbuilder'
 import express from 'express'
 import { HrGenieBot } from './bot.js'
-import { ticketMovedCard } from './cards.js'
+import { checkInReminderCard, ticketMovedCard } from './cards.js'
 import { DEV_CHAT_HTML, devTurn } from './devChat.js'
 import { References, handleNotify } from './notify.js'
 
@@ -82,14 +82,16 @@ server.post('/notify', async (request, response) => {
   const result = await handleNotify(request.body, request.header('x-notify-secret'), {
     references,
     secret: process.env.NOTIFY_SECRET,
-    send: async (reference, moved) => {
+    send: async (reference, what) => {
+      const card =
+        what.type === 'checkInReminder'
+          ? checkInReminderCard(what.firstName ?? 'there')
+          : ticketMovedCard(what)
       await adapter.continueConversationAsync(
         process.env.MICROSOFT_APP_ID ?? '',
         reference,
         async (context) => {
-          await context.sendActivity(
-            MessageFactory.attachment(CardFactory.adaptiveCard(ticketMovedCard(moved))),
-          )
+          await context.sendActivity(MessageFactory.attachment(CardFactory.adaptiveCard(card)))
         },
       )
     },
