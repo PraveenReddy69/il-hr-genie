@@ -340,23 +340,19 @@ export function draftCard(subject: string, category: string, raisedBy: string): 
 
 export function receiptCard(ticket: Ticket): AdaptiveCard {
   return card([
-    {
-      type: 'Container',
-      style: 'good',
-      bleed: true,
-      spacing: 'None',
-      items: [
-        {
-          type: 'TextBlock',
-          text: `✅ Raised as ${ticket.id}`,
-          size: 'Large',
-          weight: 'Bolder',
-          wrap: true,
-          spacing: 'None',
-        },
-      ],
-    },
+    header('Ticket raised', ticket.id, 'Your HRBP sees it straight away.'),
     body([
+      {
+        // Green is kept for the one line reporting the outcome rather than the whole
+        // header — every card wears the same band now, and success is the exception
+        // worth colouring.
+        type: 'Container',
+        style: 'good',
+        spacing: 'Medium',
+        items: [
+          { type: 'TextBlock', text: '✅ Filed with HR', weight: 'Bolder', wrap: true, spacing: 'None' },
+        ],
+      },
       { type: 'TextBlock', text: ticket.subject, wrap: true, spacing: 'Medium' },
       {
         type: 'FactSet',
@@ -364,13 +360,6 @@ export function receiptCard(ticket: Ticket): AdaptiveCard {
           { title: 'Category', value: ticket.category },
           { title: 'Status', value: statusLabel(ticket.status) },
         ],
-      },
-      {
-        type: 'TextBlock',
-        text: 'Your HRBP sees it on their dashboard straight away.',
-        wrap: true,
-        isSubtle: true,
-        size: 'Small',
       },
     ]),
   ])
@@ -399,11 +388,17 @@ export function ticketsCard(tickets: Ticket[]): AdaptiveCard {
       `${tickets.length} with HR`,
       `${open} still open · newest first`,
     ),
-    body(tickets.slice(0, 10).map((ticket) => ({
-      type: 'ColumnSet',
-      separator: true,
-      spacing: 'Small',
-      columns: [
+    body(
+      tickets.slice(0, 10).map((ticket) => ({
+        // A tile each, like the Android list. Separators alone leave ten tickets
+        // reading as one block of text.
+        type: 'Container',
+        style: 'emphasis',
+        spacing: 'Small',
+        items: [
+          {
+            type: 'ColumnSet',
+            columns: [
         {
           type: 'Column',
           width: 'auto',
@@ -434,24 +429,27 @@ export function ticketsCard(tickets: Ticket[]): AdaptiveCard {
             },
           ],
         },
-        {
-          type: 'Column',
-          width: 'auto',
-          verticalContentAlignment: 'Center',
-          items: [
-            {
-              type: 'TextBlock',
-              text: statusLabel(ticket.status),
-              size: 'Small',
-              weight: 'Bolder',
-              color: statusColour(ticket.status),
-              wrap: false,
-              spacing: 'None',
-            },
-          ],
-        },
-      ],
-    }))),
+              {
+                type: 'Column',
+                width: 'auto',
+                verticalContentAlignment: 'Center',
+                items: [
+                  {
+                    type: 'TextBlock',
+                    text: statusLabel(ticket.status),
+                    size: 'Small',
+                    weight: 'Bolder',
+                    color: statusColour(ticket.status),
+                    wrap: false,
+                    spacing: 'None',
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      })),
+    ),
   ])
 }
 
