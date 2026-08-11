@@ -44,6 +44,14 @@
             {
               "title": "My tickets",
               "description": "See what HR has done with them"
+            },
+            {
+              "title": "Check in",
+              "description": "How are you today? Takes ten seconds"
+            },
+            {
+              "title": "Pulse",
+              "description": "This month's four questions"
             }
           ]
         }
