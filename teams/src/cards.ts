@@ -128,7 +128,7 @@ function header(eyebrow: string, title: string, subtitle?: string): unknown {
  * which is what "no styling" actually means here.
  */
 function body(items: unknown[]): unknown {
-  return { type: 'Container', spacing: 'Medium', items }
+  return { type: 'Container', spacing: 'Default', items }
 }
 
 /**
@@ -165,7 +165,7 @@ function tile(icon: string, label: string, data: CardAction, caption?: string): 
     type: 'Container',
     ...TILE_SURFACE,
     selectAction: { type: 'Action.Submit', data },
-    spacing: 'Medium',
+    spacing: 'Default',
     items: [
       {
         type: 'ColumnSet',
@@ -218,7 +218,7 @@ function grid(tiles: unknown[]): unknown[] {
   for (let index = 0; index < tiles.length; index += 2) {
     rows.push({
       type: 'ColumnSet',
-      spacing: 'Medium',
+      spacing: 'Default',
       columns: [tiles[index], tiles[index + 1]]
         .filter(Boolean)
         .map((item) => ({ type: 'Column', width: 'stretch', items: [item] })),
@@ -235,14 +235,14 @@ export function welcomeCard(firstName: string): AdaptiveCard {
         type: 'TextBlock',
         text: 'Ask me about leave, insurance, payroll or policy — or pick one of these.',
         wrap: true,
-        spacing: 'Medium',
+        spacing: 'Default',
       },
       ...grid([
         tile('ticket', 'Raise a ticket', { kind: 'startTicket' }, 'File with HR'),
         tile('list', 'My tickets', { kind: 'myTickets' }, 'See replies'),
       ]),
       ...grid([
-        tile('mood', 'How are you today?', { kind: 'checkIn' }, 'Ten seconds'),
+        tile('mood', 'Check in', { kind: 'checkIn' }, 'Ten seconds'),
         tile('pulse', 'Monthly pulse', { kind: 'startPulse' }, 'Four questions'),
       ]),
     ]),
@@ -321,7 +321,7 @@ export function draftCard(subject: string, category: string, raisedBy: string): 
     [
       header('Ticket preview', subject),
       body([
-        { ...(withIcon(category, `**${category}**`) as object), spacing: 'Medium' },
+        { ...(withIcon(category, `**${category}**`) as object), spacing: 'Default' },
         {
           type: 'FactSet',
           spacing: 'Small',
@@ -330,7 +330,7 @@ export function draftCard(subject: string, category: string, raisedBy: string): 
         {
           type: 'Container',
           style: 'warning',
-          spacing: 'Medium',
+          spacing: 'Default',
           items: [
             {
               type: 'TextBlock',
@@ -359,12 +359,12 @@ export function receiptCard(ticket: Ticket): AdaptiveCard {
         // worth colouring.
         type: 'Container',
         style: 'good',
-        spacing: 'Medium',
+        spacing: 'Default',
         items: [
           { type: 'TextBlock', text: '✅ Filed with HR', weight: 'Bolder', wrap: true, spacing: 'None' },
         ],
       },
-      { type: 'TextBlock', text: ticket.subject, wrap: true, spacing: 'Medium' },
+      { type: 'TextBlock', text: ticket.subject, wrap: true, spacing: 'Default' },
       {
         type: 'FactSet',
         facts: [
@@ -386,7 +386,7 @@ export function ticketsCard(tickets: Ticket[]): AdaptiveCard {
           text: 'When you raise a ticket it will show here, with whatever HR has done to it.',
           wrap: true,
           isSubtle: true,
-          spacing: 'Medium',
+          spacing: 'Default',
         },
       ]),
     ])
@@ -405,7 +405,7 @@ export function ticketsCard(tickets: Ticket[]): AdaptiveCard {
         // reading as one block of text.
         type: 'Container',
         ...TILE_SURFACE,
-        spacing: 'Medium',
+        spacing: 'Default',
         items: [
           {
             type: 'ColumnSet',
@@ -501,7 +501,7 @@ export function moodCard(existing: MoodCheckIn | null): AdaptiveCard {
     body([
       {
         type: 'ColumnSet',
-        spacing: 'Medium',
+        spacing: 'Default',
         columns: (Object.keys(MOOD_FACE) as Mood[]).map((mood) => ({
           type: 'Column',
           width: 'stretch',
@@ -552,7 +552,7 @@ export function moodDetailCard(mood: Mood): AdaptiveCard {
         {
           type: 'Container',
           ...TILE_SURFACE,
-          spacing: 'Medium',
+          spacing: 'Default',
           items: [
             { type: 'TextBlock', text: 'What is behind it?', weight: 'Bolder', wrap: true, spacing: 'None' },
             {
@@ -570,7 +570,7 @@ export function moodDetailCard(mood: Mood): AdaptiveCard {
           id: 'note',
           isMultiline: true,
           placeholder: 'Anything you want to add? Only you will see this.',
-          spacing: 'Medium',
+          spacing: 'Default',
         },
         {
           type: 'TextBlock',
@@ -594,7 +594,7 @@ export function moodDoneCard(mood: Mood, reasons: string[], note: string | null)
     header('Checked in', `${MOOD_FACE[mood].face} ${MOOD_FACE[mood].label}`, 'Thanks — that helps.'),
     body([
       ...(reasons.length > 0
-        ? [{ type: 'TextBlock', text: reasons.join(' · '), wrap: true, spacing: 'Medium' }]
+        ? [{ type: 'TextBlock', text: reasons.join(' · '), wrap: true, spacing: 'Default' }]
         : []),
       {
         type: 'TextBlock',
@@ -637,7 +637,7 @@ export function nudgeCard(
     [
       header('HR Genie', title, 'Infinity Learn'),
       body([
-        { type: 'TextBlock', text: line, wrap: true, spacing: 'Medium' },
+        { type: 'TextBlock', text: line, wrap: true, spacing: 'Default' },
         {
           type: 'TextBlock',
           text: 'Your HRBP sees trends, never your note. Your manager never sees any of it.',
@@ -681,10 +681,10 @@ export function pulseCard(questions: PulseQuestion[]): AdaptiveCard {
       body(
         // One block per question, so four questions read as four things to answer
         // rather than one long column of radio buttons.
-        questions.map((question, index) => ({
+        questions.map((question) => ({
           type: 'Container',
           ...TILE_SURFACE,
-          spacing: index === 0 ? 'Medium' : 'Medium',
+          spacing: 'Default',
           items: [
             { type: 'TextBlock', text: question.text, wrap: true, weight: 'Bolder', spacing: 'None' },
             ...(question.hint
@@ -726,7 +726,7 @@ export function pulseDoneCard(answered: number, total: number): AdaptiveCard {
         wrap: true,
         isSubtle: true,
         size: 'Small',
-        spacing: 'Medium',
+        spacing: 'Default',
       },
     ]),
   ])
@@ -745,7 +745,7 @@ export function answerCard(text: string, source: string | null): AdaptiveCard {
     body.push({
       type: 'Container',
       style: 'accent',
-      spacing: 'Medium',
+      spacing: 'Default',
       items: [
         {
           type: 'TextBlock',
