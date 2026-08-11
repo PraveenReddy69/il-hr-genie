@@ -22,6 +22,7 @@
 
 import {
   MOOD_REASONS,
+  type Celebrations,
   type Mood,
   type MoodCheckIn,
   type PulseQuestion,
@@ -729,6 +730,149 @@ export function pulseDoneCard(answered: number, total: number): AdaptiveCard {
         spacing: 'Default',
       },
     ]),
+  ])
+}
+
+/**
+ * What HR has done since the employee last looked.
+ *
+ * Leads with HR's own words rather than the status word. "Resolved" tells someone
+ * nothing; "Deduction reversed in the August run" is the thing they raised the ticket
+ * to find out, and it is why this card exists at all — the bot cannot push a
+ * notification, so this is where the answer reaches them.
+ */
+export function updatesCard(tickets: Ticket[]): AdaptiveCard {
+  const one = tickets.length === 1
+  return card([
+    header(
+      'While you were away',
+      one ? 'HR moved your ticket' : `HR moved ${tickets.length} of your tickets`,
+      one ? undefined : 'Newest first',
+    ),
+    body(
+      tickets.map((ticket) => {
+        // The comment attached to the move that was made, not the oldest one.
+        const latest = [...ticket.comments].sort((a, b) => b.atMillis - a.atMillis)[0]
+        return {
+          type: 'Container',
+          ...TILE_SURFACE,
+          spacing: 'Default',
+          items: [
+            {
+              type: 'ColumnSet',
+              columns: [
+                {
+                  type: 'Column',
+                  width: 'stretch',
+                  items: [
+                    {
+                      type: 'TextBlock',
+                      text: ticket.subject,
+                      wrap: true,
+                      weight: 'Bolder',
+                      spacing: 'None',
+                    },
+                    {
+                      type: 'TextBlock',
+                      text: `${ticket.id} · ${ticket.category}`,
+                      wrap: true,
+                      isSubtle: true,
+                      size: 'Small',
+                      spacing: 'None',
+                    },
+                  ],
+                },
+                {
+                  type: 'Column',
+                  width: 'auto',
+                  verticalContentAlignment: 'Center',
+                  items: [
+                    {
+                      type: 'TextBlock',
+                      text: statusLabel(ticket.status),
+                      size: 'Small',
+                      weight: 'Bolder',
+                      color: statusColour(ticket.status),
+                      wrap: false,
+                      spacing: 'None',
+                    },
+                  ],
+                },
+              ],
+            },
+            ...(latest?.text
+              ? [
+                  {
+                    type: 'TextBlock',
+                    text: `“${latest.text}”`,
+                    wrap: true,
+                    spacing: 'Small',
+                  },
+                ]
+              : []),
+          ],
+        }
+      }),
+    ),
+  ])
+}
+
+/**
+ * Birthdays, anniversaries and new joiners.
+ *
+ * Returns null when there is nothing today rather than a card saying so — an empty
+ * "nobody is celebrating" card is noise every single day it is not someone's birthday.
+ */
+export function celebrationsCard(celebrations: Celebrations): AdaptiveCard | null {
+  // Weight rather than markdown asterisks: TextBlock weight renders the same
+  // everywhere, and a renderer with markdown switched off shows the asterisks raw.
+  const groups: { emoji: string; label: string; names: string }[] = []
+  if (celebrations.birthdays.length > 0) {
+    groups.push({ emoji: '🎂', label: 'Birthdays', names: celebrations.birthdays.join(', ') })
+  }
+  for (const one of celebrations.anniversaries) {
+    groups.push({
+      emoji: '🎉',
+      label: `${one.years} ${one.years === 1 ? 'year' : 'years'} at Infinity Learn`,
+      names: one.name,
+    })
+  }
+  if (celebrations.newJoiners.length > 0) {
+    groups.push({ emoji: '👋', label: 'Just joined', names: celebrations.newJoiners.join(', ') })
+  }
+  if (groups.length === 0) return null
+
+  return card([
+    header('Around the team', 'Today at Infinity Learn'),
+    body(
+      groups.map((group) => ({
+        type: 'ColumnSet',
+        spacing: 'Default',
+        columns: [
+          {
+            type: 'Column',
+            width: 'auto',
+            items: [{ type: 'TextBlock', text: group.emoji, size: 'Large', spacing: 'None' }],
+          },
+          {
+            type: 'Column',
+            width: 'stretch',
+            items: [
+              {
+                type: 'TextBlock',
+                text: group.label,
+                size: 'Small',
+                weight: 'Bolder',
+                isSubtle: true,
+                wrap: true,
+                spacing: 'None',
+              },
+              { type: 'TextBlock', text: group.names, wrap: true, spacing: 'None' },
+            ],
+          },
+        ],
+      })),
+    ),
   ])
 }
 

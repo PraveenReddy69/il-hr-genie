@@ -12,7 +12,9 @@ import type { Mood } from './api.js'
 import {
   answerCard,
   categoryCard,
+  celebrationsCard,
   draftCard,
+  updatesCard,
   moodCard,
   nudgeCard,
   pulseCard,
@@ -66,19 +68,35 @@ export async function greet(): Promise<Reply[]> {
   const session = await api.signIn().catch(() => null)
   const firstName = session?.name?.split(' ')[0] ?? 'there'
 
-  const [mood, pulse] = await Promise.all([
+  const [mood, pulse, unseen, party] = await Promise.all([
     api.todaysMood().catch(() => undefined),
     api.thisCyclesPulse().catch(() => undefined),
+    api.unseenTickets().catch(() => []),
+    api.celebrations().catch(() => null),
   ])
+
+  const replies: Reply[] = []
+
+  // What HR did comes first. It is the only thing here the employee is owed an
+  // answer to, and it is answering a question they already asked.
+  if (unseen.length > 0) {
+    replies.push({ card: updatesCard(unseen) })
+    // Only after it has been shown — see markTicketsSeen.
+    await api.markTicketsSeen().catch(() => undefined)
+  }
 
   // `undefined` means the question could not be asked. Nudging on a failed read
   // would tell people to do something they may already have done.
-  const nudge = nudgeCard(firstName, {
-    mood: mood === null,
-    pulse: pulse === null,
-  })
+  const nudge = nudgeCard(firstName, { mood: mood === null, pulse: pulse === null })
+  if (nudge) replies.push({ card: nudge })
 
-  return nudge ? [{ card: nudge }, { card: welcomeCard(firstName) }] : [{ card: welcomeCard(firstName) }]
+  replies.push({ card: welcomeCard(firstName) })
+
+  // Last, and only when there is something: it is the pleasant part, not the point.
+  const celebrating = party ? celebrationsCard(party) : null
+  if (celebrating) replies.push({ card: celebrating })
+
+  return replies
 }
 
 export async function handle(state: ConversationState, input: Input): Promise<Reply[]> {

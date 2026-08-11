@@ -72,6 +72,9 @@ export class HrGenieBot extends ActivityHandler {
 /**
  * The payload of an Adaptive Card button press.
  *
+ * Ticket updates and celebrations need nothing here — they are produced by the
+ * greeting rather than by anything anyone presses.
+ *
  * Teams delivers it as `activity.value` on a message with no text. Anything without a
  * recognised `kind` is ignored rather than guessed at — a stray submit from an old
  * card should do nothing, not something surprising.

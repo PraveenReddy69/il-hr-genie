@@ -10,12 +10,27 @@ const BASE_URL = (
   process.env.HRGENIE_BASE_URL ?? 'https://hrgenie-api.devinfinitylearn.in'
 ).replace(/\/$/, '')
 
+export interface TicketComment {
+  status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED'
+  text: string
+  authorId: string
+  atMillis: number
+}
+
 export interface Ticket {
   id: string
   subject: string
   category: string
   status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED'
   createdAtMillis: number
+  /** What HR wrote when they moved it. Resolving requires one. */
+  comments: TicketComment[]
+}
+
+export interface Celebrations {
+  birthdays: string[]
+  anniversaries: { name: string; years: number }[]
+  newJoiners: string[]
 }
 
 /** The five the server accepts, worst to best is not the order they are offered in. */
@@ -279,6 +294,60 @@ export async function myTickets(): Promise<Ticket[]> {
     .sort((a, b) => b.createdAtMillis - a.createdAtMillis)
 }
 
+/**
+ * Tickets HR has moved since this employee last looked.
+ *
+ * The other half of the ticket loop. Without it someone can raise a ticket and never
+ * learn what happened to it — the bot cannot push a notification, so this is the only
+ * way the answer gets back to them.
+ */
+export async function unseenTickets(): Promise<Ticket[]> {
+  const session = await signIn()
+  const raw = await request<unknown>(
+    `/api/tickets/unseen?employeeId=${encodeURIComponent(session.employeeId)}`,
+    { token: session.token },
+  )
+  const rows = Array.isArray(raw) ? raw : ((raw as { items?: unknown[] }).items ?? [])
+  return rows.map((row) => toTicket(row as Record<string, unknown>))
+}
+
+/**
+ * Marks everything currently visible as seen.
+ *
+ * Called only after the update has actually been shown. Marking first would lose an
+ * update for good if the send failed — an employee would never learn HR had replied.
+ */
+export async function markTicketsSeen(): Promise<void> {
+  const session = await signIn()
+  await request('/api/tickets/seen', {
+    method: 'POST',
+    body: JSON.stringify({ employeeId: session.employeeId }),
+    token: session.token,
+  })
+}
+
+/** Birthdays, work anniversaries and recent joiners. */
+export async function celebrations(): Promise<Celebrations> {
+  const session = await signIn()
+  const raw = await request<Record<string, unknown>>('/api/employees/celebrations', {
+    token: session.token,
+  })
+  const names = (value: unknown): string[] =>
+    Array.isArray(value)
+      ? value.map((row) => (typeof row === 'string' ? row : String((row as { name?: string }).name ?? ''))).filter(Boolean)
+      : []
+  return {
+    birthdays: names(raw.birthdays),
+    anniversaries: Array.isArray(raw.anniversaries)
+      ? raw.anniversaries.map((row) => {
+          const a = row as Record<string, unknown>
+          return { name: String(a.name ?? ''), years: Number(a.years ?? 0) }
+        }).filter((a) => a.name)
+      : [],
+    newJoiners: names(raw.newJoiners ?? raw.joiners),
+  }
+}
+
 export async function categories(): Promise<string[]> {
   const session = await signIn()
   const raw = await request<unknown>('/api/tickets/categories', { token: session.token })
@@ -307,6 +376,17 @@ function toTicket(raw: Record<string, unknown>): Ticket {
     category: String(raw.category ?? ''),
     status: (String(raw.status ?? 'OPEN').toUpperCase() as Ticket['status']) ?? 'OPEN',
     createdAtMillis: created ? Date.parse(String(created)) || Date.now() : Date.now(),
+    comments: Array.isArray(raw.comments)
+      ? raw.comments.map((row) => {
+          const c = row as Record<string, unknown>
+          return {
+            status: String(c.status ?? 'OPEN').toUpperCase() as Ticket['status'],
+            text: String(c.text ?? ''),
+            authorId: String(c.authorId ?? ''),
+            atMillis: Number(c.atMillis ?? 0),
+          }
+        })
+      : [],
   }
 }
 
