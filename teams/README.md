@@ -67,6 +67,12 @@ makes this work. This is the first point at which you see the cards render.
 
 ## Put it in Teams
 
+**This app is for one organisation.** It goes in the tenant's own app catalog, not
+the public Teams store — never listed publicly, never installable by another company,
+no Microsoft review. Partner Center and the store are for apps you want the world to
+have. The Azure Bot is registered **SingleTenant** for the same reason: it is bound to
+one Entra tenant and will not authenticate anywhere else.
+
 Three things are needed, in order:
 
 1. **An Azure Bot registration.** Free tier is enough. Set its messaging endpoint to

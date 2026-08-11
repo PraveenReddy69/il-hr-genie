@@ -15,7 +15,8 @@ import { DEV_CHAT_HTML, devTurn } from './devChat.js'
 const auth = new ConfigurationBotFrameworkAuthentication({
   MicrosoftAppId: process.env.MICROSOFT_APP_ID,
   MicrosoftAppPassword: process.env.MICROSOFT_APP_PASSWORD,
-  MicrosoftAppType: process.env.MICROSOFT_APP_TYPE ?? 'MultiTenant',
+  // Defaults to SingleTenant: this bot serves one organisation. See .env.example.
+  MicrosoftAppType: process.env.MICROSOFT_APP_TYPE ?? 'SingleTenant',
   MicrosoftAppTenantId: process.env.MICROSOFT_APP_TENANT_ID,
 })
 
