@@ -50,7 +50,7 @@ Not "Deploy from a branch" — the workflow uploads an artifact instead.
 
 | Name | Value |
 |---|---|
-| `VITE_API_BASE_URL` | `https://35-161-200-62.sslip.io` |
+| `VITE_API_BASE_URL` | `https://hrgenie-api.devinfinitylearn.in` |
 
 A **variable**, not a secret: it is compiled into the bundle and visible to anyone
 who opens the page, so treating it as secret would be pretending. The build fails
@@ -79,9 +79,9 @@ not let an HTTPS page call a plain-HTTP API — the requests are blocked as mixe
 content, with no override. The Android app has no such restriction, which is why the
 two could briefly disagree; they should not be allowed to drift apart again.
 
-The current host, `35-161-200-62.sslip.io`, is sslip.io resolving a dashed IP back to
-that address with a valid certificate for it. It is stable as long as the EC2 address
-is, and needs no DNS of our own.
+The address moved several times before landing on a real one. It **must** be HTTPS:
+the console is served over HTTPS from Pages, and a browser will not let an HTTPS page
+call a plain-HTTP API at all.
 
 ---
 
@@ -103,7 +103,7 @@ expected and browsers render it normally.
 
 ```bash
 cd web
-VITE_BASE_PATH=/your-repo/ VITE_API_BASE_URL=https://35-161-200-62.sslip.io npm run build
+VITE_BASE_PATH=/your-repo/ VITE_API_BASE_URL=https://hrgenie-api.devinfinitylearn.in npm run build
 ```
 
 Serve `dist/` from a `your-repo/` subdirectory. Note that `npx http-server` does **not**

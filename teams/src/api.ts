@@ -7,7 +7,7 @@
  */
 
 const BASE_URL = (
-  process.env.HRGENIE_BASE_URL ?? 'https://b9e4-103-161-31-154.ngrok-free.app'
+  process.env.HRGENIE_BASE_URL ?? 'https://hrgenie-api.devinfinitylearn.in'
 ).replace(/\/$/, '')
 
 export interface Ticket {

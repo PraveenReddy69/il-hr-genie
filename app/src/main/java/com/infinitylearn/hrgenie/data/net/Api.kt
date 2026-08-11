@@ -22,12 +22,11 @@ import org.json.JSONObject
  * No trailing slash: paths are concatenated raw and every one of them starts with a
  * slash of its own.
  *
- * HTTPS via sslip.io, which resolves a dashed IP to that address and carries a valid
- * certificate for it — so the same host works for the app and for the browser console,
- * which cannot call plain HTTP from an HTTPS page at all.
+ * HTTPS, which is not optional: the browser console shares this address, and a page
+ * served over HTTPS cannot call a plain-HTTP API at all.
  */
 object ApiConfig {
-    const val BASE_URL = "https://35-161-200-62.sslip.io"
+    const val BASE_URL = "https://hrgenie-api.devinfinitylearn.in"
 }
 
 /**
