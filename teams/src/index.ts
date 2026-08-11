@@ -7,10 +7,17 @@
  */
 
 import 'dotenv/config'
-import { CloudAdapter, ConfigurationBotFrameworkAuthentication } from 'botbuilder'
+import {
+  CardFactory,
+  CloudAdapter,
+  ConfigurationBotFrameworkAuthentication,
+  MessageFactory,
+} from 'botbuilder'
 import express from 'express'
 import { HrGenieBot } from './bot.js'
+import { ticketMovedCard } from './cards.js'
 import { DEV_CHAT_HTML, devTurn } from './devChat.js'
+import { References, handleNotify } from './notify.js'
 
 const auth = new ConfigurationBotFrameworkAuthentication({
   MicrosoftAppId: process.env.MICROSOFT_APP_ID,
@@ -31,7 +38,15 @@ adapter.onTurnError = async (context, error) => {
   )
 }
 
-const bot = new HrGenieBot()
+/**
+ * Where conversations are kept between restarts.
+ *
+ * A reference is only handed over when someone talks to the bot, so losing them on
+ * restart would mean nobody gets a notification until they next open the chat — the
+ * exact thing notifications exist to avoid.
+ */
+const references = new References(process.env.REFERENCES_FILE ?? 'data/references.json')
+const bot = new HrGenieBot(references)
 
 // Express rather than restify: restify still calls process.binding('http_parser'),
 // which modern Node removed, so it will not even load.
@@ -55,6 +70,34 @@ server.post('/dev/turn', async (request, response) => {
     console.error('[HrGenieBot] dev turn failed', error)
     response.status(500).json([{ text: 'Something went wrong at my end.' }])
   }
+})
+
+/**
+ * Where the backend tells us a ticket moved.
+ *
+ * Same hook as the FCM push in the Android app: called after the status write
+ * commits, and never allowed to fail the write. See teams/README.md for the contract.
+ */
+server.post('/notify', async (request, response) => {
+  const result = await handleNotify(request.body, request.header('x-notify-secret'), {
+    references,
+    secret: process.env.NOTIFY_SECRET,
+    send: async (reference, moved) => {
+      await adapter.continueConversationAsync(
+        process.env.MICROSOFT_APP_ID ?? '',
+        reference,
+        async (context) => {
+          await context.sendActivity(
+            MessageFactory.attachment(CardFactory.adaptiveCard(ticketMovedCard(moved))),
+          )
+        },
+      )
+    },
+  })
+  if (result.status !== 200) {
+    console.warn('[HrGenieBot] notify refused', result.status, result.body)
+  }
+  response.status(result.status).json(result.body)
 })
 
 /** So a tunnel or a health check can tell the process is up without posting an activity. */

@@ -818,6 +818,58 @@ export function updatesCard(tickets: Ticket[]): AdaptiveCard {
 }
 
 /**
+ * One ticket moving, pushed into the chat unprompted.
+ *
+ * Separate from [updatesCard] because the situations differ: that one catches someone
+ * up on what they missed, this one interrupts them. So it leads with HR's words and
+ * offers the list, rather than reciting several tickets they did not ask about.
+ */
+export function ticketMovedCard(moved: {
+  ticketId: string
+  status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED'
+  comment?: string
+  subject?: string
+  category?: string
+}): AdaptiveCard {
+  const headline =
+    moved.status === 'RESOLVED'
+      ? `HR closed ${moved.ticketId}`
+      : moved.status === 'IN_PROGRESS'
+        ? `HR picked up ${moved.ticketId}`
+        : `${moved.ticketId} is back with HR`
+
+  return card(
+    [
+      header('Ticket update', headline, moved.subject),
+      body([
+        ...(moved.comment
+          ? [
+              {
+                type: 'Container',
+                ...TILE_SURFACE,
+                spacing: 'Default',
+                items: [
+                  { type: 'TextBlock', text: `“${moved.comment}”`, wrap: true, spacing: 'None' },
+                ],
+              },
+            ]
+          : []),
+        {
+          type: 'TextBlock',
+          text: `${moved.category ? `${moved.category} · ` : ''}${statusLabel(moved.status)}`,
+          size: 'Small',
+          weight: 'Bolder',
+          color: statusColour(moved.status),
+          wrap: true,
+          spacing: 'Default',
+        },
+      ]),
+    ],
+    [{ type: 'Action.Submit', title: 'My tickets', data: { kind: 'myTickets' } }],
+  )
+}
+
+/**
  * Birthdays, anniversaries and new joiners.
  *
  * Returns null when there is nothing today rather than a card saying so — an empty

@@ -89,15 +89,53 @@ and 2 needs corporate IT.
 
 ---
 
+## Notifications — the contract for the backend
+
+When HR moves a ticket, call this. It is the Teams equivalent of the FCM push the
+Android app already receives, and it hangs off the same hook.
+
+```
+POST https://<bot-host>/notify
+x-notify-secret: <the shared secret>
+Content-Type: application/json
+
+{
+  "employeeId": "EMP3801",
+  "ticketId": "HRG-0011",
+  "status": "IN_PROGRESS",
+  "comment": "Picked this up, chasing payroll today.",
+  "subject": "My July payslip is missing",
+  "category": "Payroll"
+}
+```
+
+`employeeId`, `ticketId` and `status` are required; the rest improve the card.
+`status` is case-insensitive.
+
+| Response | Meaning | What to do |
+|---|---|---|
+| `200` | Delivered to their Teams chat | Nothing |
+| `401` | Bad or missing `x-notify-secret` | Fix the secret |
+| `404` | That employee has never opened HR Genie in Teams | Nothing — not fixable from your side. Teams forbids messaging someone before they install the app. |
+| `422` | Body missing a required field | A bug in the call |
+| `503` | Secret not configured, or the Bot Connector refused | Retry; log if it persists |
+
+**Call it after the status write commits, and never fail the write on it.** A ticket
+that HR has been told was updated must stay updated even if Teams is unreachable —
+the employee still sees it in the app and in chat.
+
+---
+
 ## What this is not, yet
 
 - **No SSO.** The bot calls the API as one configured employee, set in `.env`. Teams
   SSO through Entra replaces it: the real app reads the caller's identity from their
   token and never sees a password. Until then, **every user of this POC appears to the
   backend as that one account** — fine for a demo, wrong for anyone else.
-- **No proactive messages.** When HR resolves a ticket, the Android app gets a push;
-  here nothing arrives until you ask. Sending it needs the conversation reference
-  stored per user at install, and the backend calling the bot when a ticket changes.
+- **Proactive messages are built but unverified.** `POST /notify` and the conversation
+  store are done and tested offline; delivery itself goes through the Bot Connector,
+  which needs a real Azure Bot registration. Until then the endpoint answers `404` for
+  everyone, because no conversation has ever been recorded.
 - **State is in memory.** A restart forgets half-finished drafts.
 - **Placeholder icons.** `appPackage/*.png` are drawn by `scripts/make-icons.mjs`
   because there was no image tooling to hand. Replace them with the real brand assets.

@@ -4,3 +4,4 @@ dist/
 
 # The sideload package, rebuilt from appPackage/ whenever it is needed.
 hr-genie-teams.zip
+data/

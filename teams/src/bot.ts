@@ -12,6 +12,8 @@ import {
   TurnContext,
   type Activity,
 } from 'botbuilder'
+import * as api from './api.js'
+import type { References } from './notify.js'
 import { greet, handle, newState, type ConversationState, type Reply } from './conversation.js'
 import type { CardAction } from './cards.js'
 
@@ -25,10 +27,11 @@ export class HrGenieBot extends ActivityHandler {
    */
   private readonly states = new Map<string, ConversationState>()
 
-  constructor() {
+  constructor(private readonly references?: References) {
     super()
 
     this.onMessage(async (context, next) => {
+      await this.remember(context)
       const state = this.stateFor(context)
       const replies = await handle(state, {
         text: context.activity.text ?? undefined,
@@ -40,11 +43,35 @@ export class HrGenieBot extends ActivityHandler {
 
     // Teams sends this when the app is installed or the conversation starts.
     this.onMembersAdded(async (context, next) => {
+      await this.remember(context)
       const botId = context.activity.recipient?.id
       const joined = (context.activity.membersAdded ?? []).filter((member) => member.id !== botId)
       if (joined.length > 0) await this.send(context, await greet())
       await next()
     })
+  }
+
+  /**
+   * Keeps the conversation so HR can be pushed into it later.
+   *
+   * Written on every turn rather than only on install: a reference goes stale when
+   * Teams moves a conversation, and the cheapest way to hold a current one is to
+   * refresh it whenever the person speaks.
+   *
+   * The employee id comes from the configured account until SSO exists, at which
+   * point it becomes the caller's own — see the note in api.ts.
+   */
+  private async remember(context: TurnContext): Promise<void> {
+    if (!this.references) return
+    try {
+      const session = await api.gateway.signIn()
+      this.references.save(
+        session.employeeId,
+        TurnContext.getConversationReference(context.activity),
+      )
+    } catch {
+      // Not being able to name the employee is no reason to drop their message.
+    }
   }
 
   private stateFor(context: TurnContext): ConversationState {
