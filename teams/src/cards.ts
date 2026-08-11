@@ -6,11 +6,15 @@
  * here talks to Teams or to the backend, so the shapes can be checked in the Adaptive
  * Cards Designer or asserted in a test.
  *
- * On making these look like something: Adaptive Cards give you far less than CSS, and
- * four levers do most of the work — `ColumnSet` for grids, `Container.style` for
- * tinted panels, `Container.selectAction` to make a whole tile tappable rather than
- * settling for stock buttons, and `bleed` for edge-to-edge header strips. Everything
- * below is built from those.
+ * On making these look like something: Adaptive Cards give you far less than CSS.
+ * `ColumnSet` for grids and `Container.selectAction` to make a whole tile tappable —
+ * rather than settling for full-width stock buttons — do most of the work here.
+ *
+ * A note for anyone who sees a card turn mustard in the Bot Framework Emulator: that
+ * is the Emulator's **selection highlight**, not styling. Clicking a card selects it
+ * so its JSON shows in the inspector, and the highlight follows the click. Rendering
+ * the same JSON with the standard Adaptive Cards renderer shows it clean. Do not go
+ * pulling styles out to chase it.
  *
  * Judge the result in Teams, not the Bot Framework Emulator: the Emulator renders
  * cards nearly unstyled, while Teams applies its own theme on top.
@@ -82,6 +86,18 @@ function header(eyebrow: string, title: string, subtitle?: string): unknown {
 }
 
 /**
+ * Everything below the heading.
+ *
+ * Note the absence of `style`. Setting it — even to `"default"` — makes the renderer
+ * paint that style's background from its host config, and the Bot Framework Emulator's
+ * default is a strong mustard. Omitting the property leaves the container transparent,
+ * which is what "no styling" actually means here.
+ */
+function body(items: unknown[]): unknown {
+  return { type: 'Container', spacing: 'None', items }
+}
+
+/**
  * Where the card artwork lives.
  *
  * Adaptive Cards will only load an image over https, so the glyphs ride along with
@@ -100,7 +116,7 @@ const ICON_BASE = 'https://praveenreddy69.github.io/il-hr-genie/icons'
 function tile(icon: string, label: string, data: CardAction, caption?: string): unknown {
   return {
     type: 'Container',
-    style: 'default',
+    // No `style` — see [body]. A tile only needs to be tappable, not painted.
     selectAction: { type: 'Action.Submit', data },
     spacing: 'Small',
     items: [
@@ -253,25 +269,27 @@ export function draftCard(subject: string, category: string, raisedBy: string): 
   return card(
     [
       header('Ticket preview', subject),
-      { ...(withIcon(category, `**${category}**`) as object), spacing: 'Medium' },
-      {
-        type: 'FactSet',
-        spacing: 'Small',
-        facts: [{ title: 'Raised by', value: raisedBy }],
-      },
-      {
-        type: 'Container',
-        style: 'warning',
-        spacing: 'Medium',
-        items: [
-          {
-            type: 'TextBlock',
-            text: '**Nothing has gone to HR yet.** Choose Raise it and it goes straight over.',
-            wrap: true,
-            size: 'Small',
-          },
-        ],
-      },
+      body([
+        { ...(withIcon(category, `**${category}**`) as object), spacing: 'Medium' },
+        {
+          type: 'FactSet',
+          spacing: 'Small',
+          facts: [{ title: 'Raised by', value: raisedBy }],
+        },
+        {
+          type: 'Container',
+          style: 'warning',
+          spacing: 'Medium',
+          items: [
+            {
+              type: 'TextBlock',
+              text: '**Nothing has gone to HR yet.** Choose Raise it and it goes straight over.',
+              wrap: true,
+              size: 'Small',
+            },
+          ],
+        },
+      ]),
     ],
     [
       { type: 'Action.Submit', title: 'Raise it', style: 'positive', data: { kind: 'raise' } },
@@ -298,21 +316,23 @@ export function receiptCard(ticket: Ticket): AdaptiveCard {
         },
       ],
     },
-    { type: 'TextBlock', text: ticket.subject, wrap: true, spacing: 'Medium' },
-    {
-      type: 'FactSet',
-      facts: [
-        { title: 'Category', value: ticket.category },
-        { title: 'Status', value: statusLabel(ticket.status) },
-      ],
-    },
-    {
-      type: 'TextBlock',
-      text: 'Your HRBP sees it on their dashboard straight away.',
-      wrap: true,
-      isSubtle: true,
-      size: 'Small',
-    },
+    body([
+      { type: 'TextBlock', text: ticket.subject, wrap: true, spacing: 'Medium' },
+      {
+        type: 'FactSet',
+        facts: [
+          { title: 'Category', value: ticket.category },
+          { title: 'Status', value: statusLabel(ticket.status) },
+        ],
+      },
+      {
+        type: 'TextBlock',
+        text: 'Your HRBP sees it on their dashboard straight away.',
+        wrap: true,
+        isSubtle: true,
+        size: 'Small',
+      },
+    ]),
   ])
 }
 
@@ -320,13 +340,15 @@ export function ticketsCard(tickets: Ticket[]): AdaptiveCard {
   if (tickets.length === 0) {
     return card([
       header('My tickets', 'Nothing with HR right now'),
-      {
-        type: 'TextBlock',
-        text: 'When you raise a ticket it will show here, with whatever HR has done to it.',
-        wrap: true,
-        isSubtle: true,
-        spacing: 'Medium',
-      },
+      body([
+        {
+          type: 'TextBlock',
+          text: 'When you raise a ticket it will show here, with whatever HR has done to it.',
+          wrap: true,
+          isSubtle: true,
+          spacing: 'Medium',
+        },
+      ]),
     ])
   }
 
@@ -337,7 +359,7 @@ export function ticketsCard(tickets: Ticket[]): AdaptiveCard {
       `${tickets.length} with HR`,
       `${open} still open · newest first`,
     ),
-    ...tickets.slice(0, 10).map((ticket) => ({
+    body(tickets.slice(0, 10).map((ticket) => ({
       type: 'ColumnSet',
       separator: true,
       spacing: 'Small',
@@ -389,7 +411,7 @@ export function ticketsCard(tickets: Ticket[]): AdaptiveCard {
           ],
         },
       ],
-    })),
+    }))),
   ])
 }
 
