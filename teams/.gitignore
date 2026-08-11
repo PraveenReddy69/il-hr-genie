@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.env
+
+# The sideload package, rebuilt from appPackage/ whenever it is needed.
+hr-genie-teams.zip

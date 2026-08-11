@@ -1,0 +1,62 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.17",
+  "version": "0.1.0",
+  "id": "f24f1b34-dda0-47d8-a6ff-80932b1cb1d2",
+  "packageName": "com.infinitylearn.hrgenie.teams",
+  "developer": {
+    "name": "Infinity Learn",
+    "websiteUrl": "https://www.infinitylearn.com",
+    "privacyUrl": "https://www.infinitylearn.com/privacy",
+    "termsOfUseUrl": "https://www.infinitylearn.com/terms"
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "name": {
+    "short": "HR Genie",
+    "full": "HR Genie \u2014 Infinity Learn"
+  },
+  "description": {
+    "short": "Ask HR anything, and raise tickets without leaving Teams.",
+    "full": "HR Genie answers questions about leave, payroll, insurance and policy from Infinity Learn's own policy library, and files tickets straight to your HRBP. Ticket updates come back to you here."
+  },
+  "accentColor": "#2B8CFF",
+  "bots": [
+    {
+      "botId": "f24f1b34-dda0-47d8-a6ff-80932b1cb1d2",
+      "scopes": [
+        "personal"
+      ],
+      "isNotificationOnly": false,
+      "supportsFiles": false,
+      "commandLists": [
+        {
+          "scopes": [
+            "personal"
+          ],
+          "commands": [
+            {
+              "title": "Raise a ticket",
+              "description": "File something with HR"
+            },
+            {
+              "title": "My tickets",
+              "description": "See what HR has done with them"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "permissions": [
+    "identity",
+    "messageTeamMembers"
+  ],
+  "validDomains": [
+    "35-161-200-62.sslip.io",
+    "b9e4-103-161-31-154.ngrok-free.app",
+    "praveenreddy69.github.io"
+  ]
+}
