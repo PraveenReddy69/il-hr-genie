@@ -76,6 +76,16 @@ export function rect(x, y, left, top, right, bottom, radius = 0) {
   return Math.min(inside, clamp(radius + 0.5 - distance))
 }
 
+/** Antialiased coverage for a thick line segment, so glyphs can have strokes. */
+export function segment(x, y, x1, y1, x2, y2, width) {
+  const dx = x2 - x1
+  const dy = y2 - y1
+  const lengthSquared = dx * dx + dy * dy
+  const t = lengthSquared === 0 ? 0 : Math.min(1, Math.max(0, ((x - x1) * dx + (y - y1) * dy) / lengthSquared))
+  const distance = Math.hypot(x - (x1 + t * dx), y - (y1 + t * dy))
+  return clamp(width / 2 + 0.5 - distance)
+}
+
 function clamp(value) {
   return Math.min(1, Math.max(0, value))
 }

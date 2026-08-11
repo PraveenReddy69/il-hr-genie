@@ -87,7 +87,12 @@ function actionFrom(activity: Partial<Activity>): CardAction | undefined {
     case 'cancel':
     case 'checkIn':
     case 'skipMoodDetail':
+    case 'startPulse':
+    case 'dismissNudge':
       return { kind: value.kind } as CardAction
+    case 'savePulse':
+      // Every other key is a question id — see savePulse in conversation.ts.
+      return value as unknown as CardAction
     case 'pickCategory':
       return { kind: 'pickCategory', category: String(value.category ?? '') }
     case 'pickMood':

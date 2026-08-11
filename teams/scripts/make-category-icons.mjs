@@ -15,7 +15,7 @@
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { png, blend, disc, rect } from './png.mjs'
+import { png, blend, disc, rect, segment } from './png.mjs'
 
 const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'web', 'public', 'icons')
 const SIZE = 64
@@ -38,6 +38,7 @@ const ICONS = {
   ticket: [BLUE, ticket],
   list: [SLATE, list],
   mood: [GREEN, smile],
+  pulse: [PURPLE, heartbeat],
 }
 
 mkdirSync(OUT, { recursive: true })
@@ -141,6 +142,27 @@ function ticket(x, y, s) {
     perforation = Math.max(perforation, rect(x, y, s * 0.48, s * py, s * 0.52, s * (py + 0.05), s * 0.01))
   }
   return Math.max(Math.max(0, body - notch), perforation)
+}
+
+/** A heartbeat trace, for the monthly pulse. */
+function heartbeat(x, y, s) {
+  const w = s * 0.09
+  const points = [
+    [0.14, 0.5],
+    [0.32, 0.5],
+    [0.4, 0.3],
+    [0.5, 0.7],
+    [0.6, 0.42],
+    [0.68, 0.5],
+    [0.86, 0.5],
+  ]
+  let out = 0
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const [ax, ay] = points[i]
+    const [bx, by] = points[i + 1]
+    out = Math.max(out, segment(x, y, s * ax, s * ay, s * bx, s * by, w))
+  }
+  return out
 }
 
 /** A face, for the daily check-in. */

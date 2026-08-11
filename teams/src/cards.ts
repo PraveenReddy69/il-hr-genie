@@ -20,7 +20,13 @@
  * cards nearly unstyled, while Teams applies its own theme on top.
  */
 
-import { MOOD_REASONS, type Mood, type MoodCheckIn, type Ticket } from './api.js'
+import {
+  MOOD_REASONS,
+  type Mood,
+  type MoodCheckIn,
+  type PulseQuestion,
+  type Ticket,
+} from './api.js'
 
 const SCHEMA = 'http://adaptivecards.io/schemas/adaptive-card.json'
 const VERSION = '1.5'
@@ -32,6 +38,9 @@ export type CardAction =
   | { kind: 'pickMood'; mood: Mood }
   | { kind: 'saveMood'; reasons?: string; note?: string }
   | { kind: 'skipMoodDetail' }
+  | { kind: 'startPulse' }
+  | { kind: 'savePulse'; [answer: string]: string }
+  | { kind: 'dismissNudge' }
   | { kind: 'raise' }
   | { kind: 'cancel' }
   | { kind: 'myTickets' }
@@ -199,7 +208,10 @@ export function welcomeCard(firstName: string): AdaptiveCard {
         tile('ticket', 'Raise a ticket', { kind: 'startTicket' }, 'File something with HR'),
         tile('list', 'My tickets', { kind: 'myTickets' }, 'See what HR has done'),
       ]),
-      ...grid([tile('mood', 'How are you today?', { kind: 'checkIn' }, 'Takes ten seconds')]),
+      ...grid([
+        tile('mood', 'How are you today?', { kind: 'checkIn' }, 'Takes ten seconds'),
+        tile('pulse', 'Monthly pulse', { kind: 'startPulse' }, 'Four questions'),
+      ]),
   ])
 }
 
@@ -545,6 +557,127 @@ export function moodDoneCard(mood: Mood, reasons: string[], note: string | null)
         isSubtle: true,
         size: 'Small',
         spacing: 'Small',
+      },
+    ]),
+  ])
+}
+
+/**
+ * The nudge that opens a conversation when something is outstanding.
+ *
+ * Modelled on how the other employee-experience bots in the tenant do it: say what is
+ * being asked, say who sees it, and give one button. What is deliberately *not*
+ * copied is the pressure — no "waiting to hear from you", no chasing. One ask, and
+ * **Not today** dismisses it without argument. A wellbeing prompt that nags is one
+ * people answer to make it stop, which is worse than no data.
+ */
+export function nudgeCard(
+  firstName: string,
+  outstanding: { mood: boolean; pulse: boolean },
+): AdaptiveCard | null {
+  if (!outstanding.mood && !outstanding.pulse) return null
+
+  const both = outstanding.mood && outstanding.pulse
+  const title = outstanding.mood ? `Hi ${firstName} — how are you today?` : `Hi ${firstName} 👋`
+  const line = both
+    ? `Two things open: today’s check-in, and this month’s pulse. Neither takes long.`
+    : outstanding.mood
+      ? `You haven’t checked in today. It takes ten seconds, and the check-in is the only thing your HRBP sees from you.`
+      : `This month’s pulse is still open — four questions, and answers roll up to a department average.`
+
+  return card(
+    [
+      header('HR Genie', title, 'Infinity Learn'),
+      body([
+        { type: 'TextBlock', text: line, wrap: true, spacing: 'Medium' },
+        {
+          type: 'TextBlock',
+          text: 'Your HRBP sees trends, never your note. Your manager never sees any of it.',
+          wrap: true,
+          isSubtle: true,
+          size: 'Small',
+          spacing: 'Small',
+        },
+      ]),
+    ],
+    [
+      ...(outstanding.mood
+        ? [{ type: 'Action.Submit', title: 'Check in', style: 'positive', data: { kind: 'checkIn' } }]
+        : []),
+      ...(outstanding.pulse
+        ? [
+            {
+              type: 'Action.Submit',
+              title: 'Take the pulse',
+              ...(outstanding.mood ? {} : { style: 'positive' }),
+              data: { kind: 'startPulse' },
+            },
+          ]
+        : []),
+      { type: 'Action.Submit', title: 'Not today', data: { kind: 'dismissNudge' } },
+    ],
+  )
+}
+
+/**
+ * All four pulse questions on one card.
+ *
+ * One card, not four: the monthly pulse is already the longer of the two asks, and a
+ * four-step wizard is where people give up. Every question can be left blank — the
+ * server takes a partial answer, and a partial pulse beats an abandoned one.
+ */
+export function pulseCard(questions: PulseQuestion[]): AdaptiveCard {
+  return card(
+    [
+      header('Monthly pulse', 'Four questions', 'Answers roll up to a department average.'),
+      body(
+        questions.flatMap((question, index) => [
+          {
+            type: 'TextBlock',
+            text: question.text,
+            wrap: true,
+            weight: 'Bolder',
+            spacing: index === 0 ? 'Medium' : 'Large',
+          },
+          ...(question.hint
+            ? [
+                {
+                  type: 'TextBlock',
+                  text: question.hint,
+                  wrap: true,
+                  isSubtle: true,
+                  size: 'Small',
+                  spacing: 'None',
+                },
+              ]
+            : []),
+          {
+            type: 'Input.ChoiceSet',
+            id: question.id,
+            style: 'expanded',
+            spacing: 'Small',
+            choices: question.options.map((option) => ({ title: option, value: option })),
+          },
+        ]),
+      ),
+    ],
+    [{ type: 'Action.Submit', title: 'Send', style: 'positive', data: { kind: 'savePulse' } }],
+  )
+}
+
+export function pulseDoneCard(answered: number, total: number): AdaptiveCard {
+  return card([
+    header('Pulse sent', 'Thanks — that helps', `${answered} of ${total} answered`),
+    body([
+      {
+        type: 'TextBlock',
+        text:
+          `It goes into this month’s department averages. Nothing here is attributed to ` +
+          `you by name.`,
+        wrap: true,
+        isSubtle: true,
+        size: 'Small',
+        spacing: 'Medium',
       },
     ]),
   ])

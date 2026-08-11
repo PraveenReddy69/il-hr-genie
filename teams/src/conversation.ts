@@ -14,6 +14,9 @@ import {
   categoryCard,
   draftCard,
   moodCard,
+  nudgeCard,
+  pulseCard,
+  pulseDoneCard,
   moodDetailCard,
   moodDoneCard,
   receiptCard,
@@ -47,10 +50,35 @@ export interface Input {
   action?: CardAction
 }
 
+/**
+ * Opens the conversation, leading with whatever is outstanding.
+ *
+ * The nudge comes first and the menu second: someone who has not checked in today
+ * should meet the ask, not a list of things they could do. When nothing is
+ * outstanding there is no nudge at all — the point is to ask once, not to greet
+ * everyone with a chore.
+ *
+ * This runs when the conversation is opened. Sending it unprompted, the way an
+ * always-on assistant would, needs proactive messaging — a stored conversation
+ * reference and a real bot registration. See the README.
+ */
 export async function greet(): Promise<Reply[]> {
   const session = await api.signIn().catch(() => null)
   const firstName = session?.name?.split(' ')[0] ?? 'there'
-  return [{ card: welcomeCard(firstName) }]
+
+  const [mood, pulse] = await Promise.all([
+    api.todaysMood().catch(() => undefined),
+    api.thisCyclesPulse().catch(() => undefined),
+  ])
+
+  // `undefined` means the question could not be asked. Nudging on a failed read
+  // would tell people to do something they may already have done.
+  const nudge = nudgeCard(firstName, {
+    mood: mood === null,
+    pulse: pulse === null,
+  })
+
+  return nudge ? [{ card: nudge }, { card: welcomeCard(firstName) }] : [{ card: welcomeCard(firstName) }]
 }
 
 export async function handle(state: ConversationState, input: Input): Promise<Reply[]> {
@@ -67,6 +95,12 @@ export async function handle(state: ConversationState, input: Input): Promise<Re
     }
     if (/^my tickets$/i.test(text) || /\bmy tickets\b/i.test(text)) {
       return listTickets()
+    }
+    if (/\bcheck ?-?in\b/i.test(text) || /^mood$/i.test(text) || /how am i\b/i.test(text)) {
+      return startCheckIn(state)
+    }
+    if (/\bpulse\b/i.test(text) || /\bsurvey\b/i.test(text)) {
+      return startPulse()
     }
   }
 
@@ -142,6 +176,48 @@ async function handleAction(state: ConversationState, action: CardAction): Promi
 
     case 'skipMoodDetail':
       return saveMood(state, [], null)
+
+    case 'startPulse':
+      return startPulse()
+
+    case 'savePulse':
+      return savePulse(action)
+
+    case 'dismissNudge':
+      return [{ text: 'No problem. Say “check in” whenever you want to.' }]
+  }
+}
+
+async function startPulse(): Promise<Reply[]> {
+  try {
+    return [{ card: pulseCard(await api.pulseQuestions()) }]
+  } catch (error) {
+    return [{ text: `I couldn’t load this month’s questions just then. (${message(error)})` }]
+  }
+}
+
+/**
+ * Sends whatever was answered.
+ *
+ * Everything on the card except `kind` is an answer, keyed by question id — which is
+ * how the card is built, so a question added server-side needs no change here.
+ */
+async function savePulse(action: { kind: string; [id: string]: string }): Promise<Reply[]> {
+  const answers: Record<string, string> = {}
+  for (const [id, value] of Object.entries(action)) {
+    if (id !== 'kind' && typeof value === 'string' && value.trim()) answers[id] = value
+  }
+
+  const total = Object.keys(action).length - 1
+  if (Object.keys(answers).length === 0) {
+    return [{ text: 'Nothing was answered, so nothing was sent. Pick at least one and send again.' }]
+  }
+
+  try {
+    await api.savePulse(answers)
+    return [{ card: pulseDoneCard(Object.keys(answers).length, Math.max(total, 1)) }]
+  } catch (error) {
+    return [{ text: `I couldn’t send that just then, so nothing was recorded. (${message(error)})` }]
   }
 }
 

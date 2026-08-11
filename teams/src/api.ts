@@ -169,6 +169,94 @@ function today(): string {
   return `${now.getFullYear()}-${month}-${day}`
 }
 
+export interface PulseQuestion {
+  id: string
+  text: string
+  hint: string
+  options: string[]
+}
+
+/** The pulse for the current cycle, or null when it has not been answered. */
+export async function thisCyclesPulse(): Promise<Record<string, string> | null> {
+  const session = await signIn()
+  try {
+    const raw = await request<Record<string, unknown>>(
+      `/api/pulse?employeeId=${encodeURIComponent(session.employeeId)}&cycle=${cycle()}`,
+      { token: session.token },
+    )
+    return (raw.answers as Record<string, string>) ?? {}
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null
+    throw error
+  }
+}
+
+export async function pulseQuestions(): Promise<PulseQuestion[]> {
+  const session = await signIn()
+  const raw = await request<unknown>('/api/pulse/questions', { token: session.token })
+  const rows = Array.isArray(raw) ? raw : ((raw as { items?: unknown[] }).items ?? [])
+  const mapped = rows.map((row) => {
+    const q = row as Record<string, unknown>
+    return {
+      id: String(q.id ?? q.questionId ?? ''),
+      text: String(q.text ?? q.question ?? ''),
+      hint: String(q.hint ?? ''),
+      options: Array.isArray(q.options) ? q.options.map(String) : [],
+    }
+  })
+  const usable = mapped.filter((q) => q.id && q.text && q.options.length > 0)
+  return usable.length > 0 ? usable : FALLBACK_PULSE
+}
+
+/**
+ * The Android app's questions, for when the server has none.
+ *
+ * A pulse with no questions is worse than no pulse, and these are the same four the
+ * mobile app has been asking — so an answer given here still lands in the same
+ * question ids the analytics already group by.
+ */
+const FALLBACK_PULSE: PulseQuestion[] = [
+  {
+    id: 'experience',
+    text: 'How has your work experience been this month?',
+    hint: 'Gut feel is fine — no one is scoring you.',
+    options: ['Genuinely good', 'Mostly fine', 'Up and down', 'Rough, honestly'],
+  },
+  {
+    id: 'workload',
+    text: 'Is your workload manageable right now?',
+    hint: '',
+    options: ['Comfortable', 'Busy but okay', 'Stretched', 'Not sustainable'],
+  },
+  {
+    id: 'manager',
+    text: 'Do you feel supported by your manager?',
+    hint: 'Answers roll up to a department average only.',
+    options: ['Always', 'Usually', 'Sometimes', 'Rarely'],
+  },
+  {
+    id: 'attrition',
+    text: 'Have you thought about looking elsewhere recently?',
+    hint: 'Honest answers here are what make this useful.',
+    options: ['Not at all', 'Passing thought', 'Somewhat', 'Actively looking'],
+  },
+]
+
+export async function savePulse(answers: Record<string, string>): Promise<void> {
+  const session = await signIn()
+  await request('/api/pulse', {
+    method: 'POST',
+    body: JSON.stringify({ employeeId: session.employeeId, answers }),
+    token: session.token,
+  })
+}
+
+/** yyyy-MM, the cycle the server groups a pulse under. */
+function cycle(): string {
+  const now = new Date()
+  return `${now.getFullYear()}-${`${now.getMonth() + 1}`.padStart(2, '0')}`
+}
+
 export async function raiseTicket(subject: string, category: string): Promise<Ticket> {
   const session = await signIn()
   const raw = await request<Record<string, unknown>>('/api/tickets', {
