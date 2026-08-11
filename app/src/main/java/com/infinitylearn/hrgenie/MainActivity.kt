@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -22,6 +23,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
+import com.infinitylearn.hrgenie.push.NotificationAccess
 import com.infinitylearn.hrgenie.push.PushRegistration
 import com.infinitylearn.hrgenie.ui.common.navigateSafely
 import com.infinitylearn.hrgenie.data.EmployeeDirectory
@@ -49,11 +51,10 @@ class MainActivity : AppCompatActivity() {
     private val notificationPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (!granted) {
-            android.widget.Toast
-                .makeText(this, R.string.notifications_denied, android.widget.Toast.LENGTH_LONG)
-                .show()
-        }
+        // Nothing is said on refusal. Ticket updates still land in chat and on My
+        // tickets, so there is nothing the employee needs to do about it — and the
+        // ticket flow explains what they are missing at the point it matters.
+        if (granted) Log.i("HrGeniePush", "Notifications allowed")
     }
 
     /** Screens that own the full height and hide the bottom navigation. */
@@ -138,7 +139,6 @@ class MainActivity : AppCompatActivity() {
         // The token is minted per install, so it is fetched whether or not anyone is
         // signed in yet; pairing it to an employee happens at sign-in.
         PushTokenStore(this).refresh()
-        askForNotificationsIfSignedIn()
 
         // A cold start from a notification arrives on the launch intent.
         openTicketFrom(intent)
@@ -178,14 +178,25 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    private fun askForNotificationsIfSignedIn() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
-        if (session.signedInEmployee == null) return
+    /**
+     * Asks for notifications, once, from whichever screen is ready to ask.
+     *
+     * Home calls this rather than `onCreate` doing it: on a fresh install nobody is
+     * signed in when the activity is created, so the old check returned early and the
+     * dialog never appeared again until the next cold start. That is why the prompt
+     * was never seen.
+     *
+     * Returns false when there is nothing to show — already granted, or the platform
+     * has stopped offering the dialog — so a caller can explain itself instead.
+     */
+    fun askForNotifications(): Boolean {
+        if (session.signedInEmployee == null) return false
+        if (NotificationAccess.isGranted(this)) return false
+        if (NotificationAccess.needsSettings(this)) return false
 
-        val granted = ContextCompat.checkSelfPermission(
-            this, Manifest.permission.POST_NOTIFICATIONS,
-        ) == PackageManager.PERMISSION_GRANTED
-        if (!granted) notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        PushTokenStore(this).markAskedForNotifications()
+        notificationPermission.launch(NotificationAccess.PERMISSION)
+        return true
     }
 
     companion object {

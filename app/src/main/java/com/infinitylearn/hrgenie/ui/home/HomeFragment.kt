@@ -21,6 +21,7 @@ import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.tabs.TabLayout
+import com.infinitylearn.hrgenie.MainActivity
 import com.infinitylearn.hrgenie.push.PushRegistration
 import com.infinitylearn.hrgenie.ui.common.navigateSafely
 import com.infinitylearn.hrgenie.R
@@ -79,6 +80,8 @@ class HomeFragment : Fragment() {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
         return binding.root
     }
+
+    private var askedThisSession = false
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         binding.headerContent.applyTopInsetPadding()
@@ -441,6 +444,21 @@ class HomeFragment : Fragment() {
         popup.showAsDropDown(anchor, 0, 8.dp(anchor), Gravity.END)
     }
 
+    /**
+     * The first sight of Home is where the notification prompt belongs.
+     *
+     * It cannot go in [MainActivity.onCreate]: on a fresh install nobody is signed in
+     * at that point, so the ask was skipped and never came back until the next cold
+     * start — which is why it was never seen. Guarded so a return to Home does not
+     * ask again; a refusal is picked up later by the ticket flow, where there is
+     * something concrete to explain.
+     */
+    private fun askForNotificationsOnce() {
+        if (askedThisSession) return
+        askedThisSession = true
+        (activity as? MainActivity)?.askForNotifications()
+    }
+
     private fun logOut() {
         // Before the session is cleared — the call needs its bearer.
         PushRegistration.unpairOnSignOut(requireContext(), SessionStore(requireContext()).token())
@@ -490,6 +508,7 @@ class HomeFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
+        askForNotificationsOnce()
         refreshFromServer()
         applyStatusScrim(R.color.ink, lightIcons = true)
         // Resume the clock, and pick up a day that rolled over while we were away.

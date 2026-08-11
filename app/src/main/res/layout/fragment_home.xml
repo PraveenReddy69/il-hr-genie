@@ -69,32 +69,9 @@
                         android:contentDescription="@string/brand" />
 
                     <FrameLayout
-                        android:id="@+id/bell"
-                        android:layout_width="38dp"
-                        android:layout_height="38dp"
-                        android:background="@drawable/bg_tile_glass">
-
-                        <ImageView
-                            android:layout_width="19dp"
-                            android:layout_height="19dp"
-                            android:layout_gravity="center"
-                            android:contentDescription="@string/cd_notifications"
-                            android:src="@drawable/ic_bell" />
-
-                        <View
-                            android:layout_width="8dp"
-                            android:layout_height="8dp"
-                            android:layout_gravity="top|end"
-                            android:layout_margin="7dp"
-                            android:background="@drawable/bg_badge_dot"
-                            android:importantForAccessibility="no" />
-                    </FrameLayout>
-
-                    <FrameLayout
                         android:id="@+id/avatar"
                         android:layout_width="38dp"
                         android:layout_height="38dp"
-                        android:layout_marginStart="10dp"
                         android:background="@drawable/bg_avatar_user"
                         android:clickable="true"
                         android:contentDescription="@string/cd_avatar"

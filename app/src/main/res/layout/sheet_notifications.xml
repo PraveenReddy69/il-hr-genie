@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Offered after a ticket is raised, when notifications have been refused. That is
+     the moment the benefit is concrete: there is now a specific reply to wait for. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_sheet_top"
+    android:orientation="vertical"
+    android:paddingStart="@dimen/space_screen"
+    android:paddingTop="10dp"
+    android:paddingEnd="@dimen/space_screen"
+    android:paddingBottom="@dimen/space_l">
+
+    <View
+        android:layout_width="38dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:background="@drawable/bg_sheet_grabber"
+        android:importantForAccessibility="no" />
+
+    <ImageView
+        android:layout_width="52dp"
+        android:layout_height="52dp"
+        android:layout_marginTop="@dimen/space_l"
+        android:background="@drawable/bg_category_glyph"
+        android:backgroundTint="@color/blue_tint_12"
+        android:contentDescription="@null"
+        android:padding="13dp"
+        android:src="@drawable/ic_bell"
+        app:tint="@color/blue_deep" />
+
+    <TextView
+        android:id="@+id/notifyTitle"
+        style="@style/HG.H3"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_m"
+        tools:text="Know the moment HR replies" />
+
+    <TextView
+        android:id="@+id/notifyBody"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:lineSpacingMultiplier="1.45"
+        android:textColor="@color/text_slate"
+        android:textSize="@dimen/text_body"
+        tools:text="HRG-0011 is with HR now. Turn on notifications and we'll tell you as soon as they pick it up or close it — otherwise you'll need to check back yourself." />
+
+    <TextView
+        android:id="@+id/notifyAllow"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/height_button"
+        android:layout_marginTop="@dimen/space_l"
+        android:background="@drawable/bg_button_gradient_blue"
+        android:gravity="center"
+        android:text="@string/notify_allow"
+        android:textColor="@color/white"
+        android:textSize="@dimen/text_body"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/notifyLater"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/height_button"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/bg_button_ghost"
+        android:gravity="center"
+        android:text="@string/notify_later"
+        android:textColor="@color/text_slate"
+        android:textSize="@dimen/text_body"
+        android:textStyle="bold" />
+</LinearLayout>

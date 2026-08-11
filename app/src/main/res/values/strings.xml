@@ -410,7 +410,6 @@
 
     <!-- Content descriptions -->
     <string name="cd_back">Back</string>
-    <string name="cd_notifications">Notifications</string>
     <string name="cd_voice_input">Voice input</string>
     <string name="cd_send">Send</string>
     <string name="voice_slide_to_cancel">‹ Slide to cancel</string>
@@ -426,6 +425,14 @@
     <string name="voice_read_on">Spoken answers on — ask out loud and I\'ll reply out loud.</string>
     <string name="voice_read_off">Spoken answers off. Tap the speaker on any reply to hear it.</string>
     <string name="cd_read_aloud">Read this answer aloud</string>
+    <!-- The notification sheet offered after a ticket is raised. -->
+    <string name="notify_title">Know the moment HR replies</string>
+    <string name="notify_body">%1$s is with HR now. Turn on notifications and we\'ll tell you the moment they pick it up or close it — otherwise you\'ll need to check back yourself.</string>
+    <string name="notify_body_settings">%1$s is with HR now. Notifications are switched off for HR Genie, so we can\'t tell you when they reply. You can turn them back on in settings.</string>
+    <string name="notify_allow">Turn on notifications</string>
+    <string name="notify_open_settings">Open settings</string>
+    <string name="notify_later">Not now</string>
+
     <!-- Header on the ticket category picker. -->
     <string name="chat_pick_category">Pick a category</string>
     <string name="cd_auto_speak">Spoken answers</string>

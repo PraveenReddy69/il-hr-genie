@@ -33,6 +33,8 @@ import com.infinitylearn.hrgenie.data.KbAnswer
 import com.infinitylearn.hrgenie.data.VoicePrefs
 import com.infinitylearn.hrgenie.databinding.FragmentChatBinding
 import com.infinitylearn.hrgenie.databinding.ItemSuggestionChipBinding
+import com.infinitylearn.hrgenie.push.NotificationAccess
+import com.infinitylearn.hrgenie.push.PushTokenStore
 import com.infinitylearn.hrgenie.ui.common.SessionViewModel
 import com.infinitylearn.hrgenie.ui.common.Speaker
 import com.infinitylearn.hrgenie.ui.common.VoiceError
@@ -157,6 +159,9 @@ class ChatFragment : Fragment() {
 
     // ----------------------------------------------------------------- tickets
 
+    /** True while a raise is in flight. See [raiseTicket]. */
+    private var raising = false
+
     /**
      * The only place a ticket is raised.
      *
@@ -165,19 +170,54 @@ class ChatFragment : Fragment() {
      * draft is left intact so they can try again rather than retyping it.
      */
     private fun raiseTicket() {
+        // One ticket per press. The draft card stays on screen for as long as the
+        // request is in flight, so a second tap in that window used to file a second
+        // ticket — and the server mints a fresh id each time, so HR saw duplicates
+        // with no way to tell they were the same request.
+        if (raising) return
         val draft = viewModel.draft ?: return
         val employee = session.signedInEmployee ?: return
 
+        raising = true
         viewLifecycleOwner.lifecycleScope.launch {
-            ticketRepository(session)
-                .raise(employee.employeeId, draft.subject, draft.category)
-                .onSuccess { if (_binding != null) viewModel.onTicketRaised(it) }
-                .onFailure {
-                    if (_binding == null) return@onFailure
-                    Log.w(TAG, "Could not raise ticket", it)
-                    viewModel.onTicketFailed()
-                }
+            try {
+                ticketRepository(session)
+                    .raise(employee.employeeId, draft.subject, draft.category)
+                    .onSuccess {
+                        if (_binding == null) return@onSuccess
+                        viewModel.onTicketRaised(it)
+                        offerNotifications(it.id)
+                    }
+                    .onFailure {
+                        if (_binding == null) return@onFailure
+                        Log.w(TAG, "Could not raise ticket", it)
+                        viewModel.onTicketFailed()
+                    }
+            } finally {
+                // Also runs if the scope is cancelled with the view, which would
+                // otherwise leave the flag set and the button dead for good.
+                raising = false
+            }
         }
+    }
+
+    /**
+     * Offers notifications once the ticket exists, never before.
+     *
+     * Asking up front would interrupt the thing the employee came to do, and the
+     * benefit would be abstract. Here there is a specific ticket waiting on a specific
+     * reply, and the ticket is already filed — so declining costs them nothing.
+     *
+     * Only when the platform prompt has already been refused: if it has never been
+     * shown, Home shows it plainly rather than wrapping it in a sales pitch.
+     */
+    private fun offerNotifications(ticketId: String) {
+        val context = context ?: return
+        if (NotificationAccess.isGranted(context)) return
+        if (!PushTokenStore(context).hasAskedForNotifications()) return
+        if (parentFragmentManager.findFragmentByTag(NOTIFY_SHEET) != null) return
+
+        NotificationsSheet.of(ticketId).show(parentFragmentManager, NOTIFY_SHEET)
     }
 
     /**
@@ -583,6 +623,8 @@ class ChatFragment : Fragment() {
         /** Timer resolution while holding the mic. */
         const val TICK_MS = 200L
         const val TAG = "HrGenieTickets"
+
+        const val NOTIFY_SHEET = "notifications-sheet"
 
         /** How much of the drag past the cancel point still moves the button. */
         const val RUBBER_BAND = 0.25f

@@ -48,6 +48,19 @@ class PushTokenStore(context: Context) {
             .commit()
     }
 
+    /**
+     * Whether the notification permission dialog has ever been shown.
+     *
+     * The platform gives no way to tell "never asked" from "asked and refused for the
+     * last time" — `shouldShowRequestPermissionRationale` is false in both — so the
+     * first ask has to be remembered here.
+     */
+    fun hasAskedForNotifications(): Boolean = prefs.getBoolean(KEY_ASKED_NOTIFICATIONS, false)
+
+    fun markAskedForNotifications() {
+        prefs.edit().putBoolean(KEY_ASKED_NOTIFICATIONS, true).commit()
+    }
+
     /** Forgets who this token was paired for, so the next sign-in registers again. */
     fun clearRegistration() {
         prefs.edit().remove(KEY_REGISTERED_FOR).commit()
@@ -80,6 +93,7 @@ class PushTokenStore(context: Context) {
         const val KEY_TOKEN = "fcm_token"
         const val KEY_REGISTERED_FOR = "registered_for"
         const val KEY_SCHEMA = "registered_schema"
+        const val KEY_ASKED_NOTIFICATIONS = "asked_notifications"
 
         /** Bump when a stored "registered" flag can no longer be trusted. */
         const val SCHEMA = 1
