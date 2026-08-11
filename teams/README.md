@@ -28,6 +28,32 @@ answer, which is the same thing an employee would see if the service were down.
 
 ---
 
+## Tests
+
+```bash
+npm test          # 110 tests, no network, no accounts
+npm run test:images   # checks every card image actually loads
+```
+
+Three layers, and the split matters:
+
+- **`conversation.test.ts`** — the flow, against a fake gateway. This is where the
+  decisions live: one press files one ticket, a failed raise keeps what was typed,
+  nothing is marked seen before it has been shown, the knowledge base never invents
+  an answer.
+- **`cards.test.ts`** — every card the bot can send, checked structurally. No blank
+  text, no submit action carrying a `kind` the adapter cannot map, no image over
+  plain http, every input has an id. Both bugs this layer exists for got past a human
+  reading the code.
+- **`images.test.ts`** — kept out of the default run because it needs the network.
+  The artwork is served by the console's Pages site, so a bad deploy shows up here
+  rather than as a card with holes in it in front of an employee.
+
+What none of them cover: how the cards *look*, and whether the backend still returns
+the shapes `api.ts` expects. The first needs eyes, the second needs a live account.
+
+---
+
 ## Try it as a chat, still with no Teams
 
 1. Install the **Bot Framework Emulator**.

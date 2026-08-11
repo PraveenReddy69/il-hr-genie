@@ -428,3 +428,29 @@ async function request<T>(
 
   return (text ? JSON.parse(text) : {}) as T
 }
+
+/**
+ * Every call the conversation makes, in one swappable object.
+ *
+ * The same seam the Android app uses for its gateways, and for the same reason: the
+ * flow logic is where the bugs live, and it should be testable without a network, a
+ * backend or an account. Production never reassigns this — tests do.
+ */
+export const gateway = {
+  signIn,
+  askKnowledgeBase,
+  raiseTicket,
+  myTickets,
+  categories,
+  todaysMood,
+  saveMood,
+  thisCyclesPulse,
+  pulseQuestions,
+  savePulse,
+  unseenTickets,
+  markTicketsSeen,
+  celebrations,
+}
+
+/** Restores the real implementations. Call it after a test that swapped any. */
+export const liveGateway = { ...gateway }

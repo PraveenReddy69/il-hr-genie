@@ -65,14 +65,14 @@ export interface Input {
  * reference and a real bot registration. See the README.
  */
 export async function greet(): Promise<Reply[]> {
-  const session = await api.signIn().catch(() => null)
+  const session = await api.gateway.signIn().catch(() => null)
   const firstName = session?.name?.split(' ')[0] ?? 'there'
 
   const [mood, pulse, unseen, party] = await Promise.all([
-    api.todaysMood().catch(() => undefined),
-    api.thisCyclesPulse().catch(() => undefined),
-    api.unseenTickets().catch(() => []),
-    api.celebrations().catch(() => null),
+    api.gateway.todaysMood().catch(() => undefined),
+    api.gateway.thisCyclesPulse().catch(() => undefined),
+    api.gateway.unseenTickets().catch(() => []),
+    api.gateway.celebrations().catch(() => null),
   ])
 
   const replies: Reply[] = []
@@ -82,7 +82,7 @@ export async function greet(): Promise<Reply[]> {
   if (unseen.length > 0) {
     replies.push({ card: updatesCard(unseen) })
     // Only after it has been shown — see markTicketsSeen.
-    await api.markTicketsSeen().catch(() => undefined)
+    await api.gateway.markTicketsSeen().catch(() => undefined)
   }
 
   // `undefined` means the question could not be asked. Nudging on a failed read
@@ -208,7 +208,7 @@ async function handleAction(state: ConversationState, action: CardAction): Promi
 
 async function startPulse(): Promise<Reply[]> {
   try {
-    return [{ card: pulseCard(await api.pulseQuestions()) }]
+    return [{ card: pulseCard(await api.gateway.pulseQuestions()) }]
   } catch (error) {
     return [{ text: `I couldn’t load this month’s questions just then. (${message(error)})` }]
   }
@@ -232,7 +232,7 @@ async function savePulse(action: { kind: string; [id: string]: string }): Promis
   }
 
   try {
-    await api.savePulse(answers)
+    await api.gateway.savePulse(answers)
     return [{ card: pulseDoneCard(Object.keys(answers).length, Math.max(total, 1)) }]
   } catch (error) {
     return [{ text: `I couldn’t send that just then, so nothing was recorded. (${message(error)})` }]
@@ -242,7 +242,7 @@ async function savePulse(action: { kind: string; [id: string]: string }): Promis
 async function startCheckIn(state: ConversationState): Promise<Reply[]> {
   reset(state)
   try {
-    return [{ card: moodCard(await api.todaysMood()) }]
+    return [{ card: moodCard(await api.gateway.todaysMood()) }]
   } catch (error) {
     // Not being able to read today's answer is no reason to block a new one.
     return [{ card: moodCard(null) }, { text: `(Couldn't check today's answer: ${message(error)})` }]
@@ -260,7 +260,7 @@ async function saveMood(
   }
 
   try {
-    await api.saveMood(mood, reasons, note)
+    await api.gateway.saveMood(mood, reasons, note)
     reset(state)
     return [{ card: moodDoneCard(mood, reasons, note) }]
   } catch (error) {
@@ -278,7 +278,7 @@ async function saveMood(
 async function startTicket(state: ConversationState): Promise<Reply[]> {
   reset(state)
   state.stage = 'awaitingCategory'
-  const names = await api.categories().catch(() => [
+  const names = await api.gateway.categories().catch(() => [
     'Payroll',
     'Leave',
     'IT & access',
@@ -296,7 +296,7 @@ async function takeSubject(state: ConversationState, subject: string): Promise<R
     return [{ text: 'Give me a little more to go on — a sentence is plenty.' }]
   }
 
-  const session = await api.signIn().catch(() => null)
+  const session = await api.gateway.signIn().catch(() => null)
   state.subject = subject
   state.stage = 'awaitingConfirm'
   return [
@@ -323,7 +323,7 @@ async function raise(state: ConversationState): Promise<Reply[]> {
   state.raising = true
 
   try {
-    const ticket = await api.raiseTicket(state.subject, state.category ?? 'Something else')
+    const ticket = await api.gateway.raiseTicket(state.subject, state.category ?? 'Something else')
     reset(state)
     return [{ card: receiptCard(ticket) }]
   } catch (error) {
@@ -343,7 +343,7 @@ async function raise(state: ConversationState): Promise<Reply[]> {
 
 async function listTickets(): Promise<Reply[]> {
   try {
-    return [{ card: ticketsCard(await api.myTickets()) }]
+    return [{ card: ticketsCard(await api.gateway.myTickets()) }]
   } catch (error) {
     return [{ text: `I couldn't fetch your tickets just then. (${message(error)})` }]
   }
@@ -358,7 +358,7 @@ async function listTickets(): Promise<Reply[]> {
  */
 async function askKnowledgeBase(question: string): Promise<Reply[]> {
   try {
-    const answer = await api.askKnowledgeBase(question)
+    const answer = await api.gateway.askKnowledgeBase(question)
     return [{ card: answerCard(answer.text, answer.source) }]
   } catch (error) {
     return [
