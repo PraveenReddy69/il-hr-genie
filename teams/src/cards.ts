@@ -141,6 +141,19 @@ function body(items: unknown[]): unknown {
 const ICON_BASE = 'https://praveenreddy69.github.io/il-hr-genie/icons'
 
 /**
+ * What every tile sits on.
+ *
+ * `style: 'emphasis'` is kept for the padding Teams gives a styled container — there
+ * is no padding property in this schema version — and the image paints over its grey
+ * with the app's own wash. Colour and breathing room, neither of which the style
+ * alone provides.
+ */
+const TILE_SURFACE = {
+  style: 'emphasis',
+  backgroundImage: { url: `${ICON_BASE}/tile.png`, fillMode: 'Cover' },
+} as const
+
+/**
  * A tappable tile: icon, label, and the whole thing is the button.
  *
  * `selectAction` is the trick. A stock `Action.Submit` renders as a full-width bar
@@ -150,11 +163,9 @@ const ICON_BASE = 'https://praveenreddy69.github.io/il-hr-genie/icons'
 function tile(icon: string, label: string, data: CardAction, caption?: string): unknown {
   return {
     type: 'Container',
-    // `emphasis` is what makes a tile read as a tile rather than a row of text — it is
-    // the only surface Adaptive Cards will give a container without an image.
-    style: 'emphasis',
+    ...TILE_SURFACE,
     selectAction: { type: 'Action.Submit', data },
-    spacing: 'Small',
+    spacing: 'Medium',
     items: [
       {
         type: 'ColumnSet',
@@ -207,7 +218,7 @@ function grid(tiles: unknown[]): unknown[] {
   for (let index = 0; index < tiles.length; index += 2) {
     rows.push({
       type: 'ColumnSet',
-      spacing: 'Small',
+      spacing: 'Medium',
       columns: [tiles[index], tiles[index + 1]]
         .filter(Boolean)
         .map((item) => ({ type: 'Column', width: 'stretch', items: [item] })),
@@ -393,8 +404,8 @@ export function ticketsCard(tickets: Ticket[]): AdaptiveCard {
         // A tile each, like the Android list. Separators alone leave ten tickets
         // reading as one block of text.
         type: 'Container',
-        style: 'emphasis',
-        spacing: 'Small',
+        ...TILE_SURFACE,
+        spacing: 'Medium',
         items: [
           {
             type: 'ColumnSet',
@@ -499,7 +510,7 @@ export function moodCard(existing: MoodCheckIn | null): AdaptiveCard {
               // A surface each, so five faces read as five buttons rather than a row
               // of emoji with words under them.
               type: 'Container',
-              style: 'emphasis',
+              ...TILE_SURFACE,
               selectAction: { type: 'Action.Submit', data: { kind: 'pickMood', mood } },
               items: [
                 {
@@ -540,7 +551,7 @@ export function moodDetailCard(mood: Mood): AdaptiveCard {
       body([
         {
           type: 'Container',
-          style: 'emphasis',
+          ...TILE_SURFACE,
           spacing: 'Medium',
           items: [
             { type: 'TextBlock', text: 'What is behind it?', weight: 'Bolder', wrap: true, spacing: 'None' },
@@ -672,8 +683,8 @@ export function pulseCard(questions: PulseQuestion[]): AdaptiveCard {
         // rather than one long column of radio buttons.
         questions.map((question, index) => ({
           type: 'Container',
-          style: 'emphasis',
-          spacing: index === 0 ? 'Medium' : 'Small',
+          ...TILE_SURFACE,
+          spacing: index === 0 ? 'Medium' : 'Medium',
           items: [
             { type: 'TextBlock', text: question.text, wrap: true, weight: 'Bolder', spacing: 'None' },
             ...(question.hint

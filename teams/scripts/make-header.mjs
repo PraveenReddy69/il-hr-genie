@@ -45,3 +45,28 @@ writeFileSync(
   }),
 )
 console.log(`wrote header.png (${WIDTH}x${HEIGHT})`)
+
+/**
+ * The tile fill.
+ *
+ * Teams decides what `Container.style` looks like and will not take an override, so a
+ * background image is the only way to colour a tile. A soft blue wash rather than the
+ * host's flat grey, with a barely-there vertical gradient so a tile has some depth
+ * instead of reading as a printed box.
+ */
+const TILE_TOP = [0xf7, 0xfa, 0xff]
+const TILE_BOTTOM = [0xea, 0xf2, 0xff]
+
+writeFileSync(
+  join(OUT, 'tile.png'),
+  pngRect(8, 96, (_x, y) => {
+    const t = y / 96
+    return [
+      Math.round(TILE_TOP[0] + (TILE_BOTTOM[0] - TILE_TOP[0]) * t),
+      Math.round(TILE_TOP[1] + (TILE_BOTTOM[1] - TILE_TOP[1]) * t),
+      Math.round(TILE_TOP[2] + (TILE_BOTTOM[2] - TILE_TOP[2]) * t),
+      255,
+    ]
+  }),
+)
+console.log('wrote tile.png (8x96)')
