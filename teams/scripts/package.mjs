@@ -73,6 +73,42 @@ if (leftover) {
   process.exit(1)
 }
 
+/**
+ * The v1.17 manifest schema, as far as the top level goes.
+ *
+ * Taken from the schema `$schema` pins, which is why hard-coding it is safe: the
+ * version cannot drift without someone editing that line. `additionalProperties` is
+ * `false` there, so an unrecognised key is fatal rather than ignored — `packageName`
+ * was carried over from an older manifest and failed the upload with "we couldn't
+ * parse the app manifest", which names neither the field nor the reason.
+ *
+ * Catching it here costs nothing. Catching it in Teams costs a round trip through an
+ * admin.
+ */
+const ALLOWED = new Set([
+  '$schema', 'accentColor', 'activities', 'authorization', 'bots', 'composeExtensions',
+  'configurableProperties', 'configurableTabs', 'connectors', 'dashboardCards',
+  'defaultBlockUntilAdminAction', 'defaultGroupCapability', 'defaultInstallScope',
+  'description', 'developer', 'devicePermissions', 'extensions', 'graphConnector',
+  'icons', 'id', 'isFullScreen', 'localizationInfo', 'manifestVersion',
+  'meetingExtensionDefinition', 'name', 'permissions', 'publisherDocsUrl',
+  'showLoadingIndicator', 'staticTabs', 'subscriptionOffer', 'supportedChannelTypes',
+  'validDomains', 'version', 'webApplicationInfo',
+])
+const REQUIRED = ['accentColor', 'description', 'developer', 'icons', 'id',
+  'manifestVersion', 'name', 'version']
+
+const unknown = Object.keys(manifest).filter((key) => !ALLOWED.has(key))
+const missing = REQUIRED.filter((key) => manifest[key] === undefined)
+if (unknown.length || missing.length) {
+  if (unknown.length) {
+    console.error(`Not allowed by the v${manifest.manifestVersion} schema: ${unknown.join(', ')}`)
+  }
+  if (missing.length) console.error(`Required and missing: ${missing.join(', ')}`)
+  console.error('\nTeams rejects the whole package for either, without naming the field.')
+  process.exit(1)
+}
+
 const files = [
   ['manifest.json', Buffer.from(JSON.stringify(manifest, null, 2))],
   ['color.png', readFileSync(join(root, 'appPackage/color.png'))],
