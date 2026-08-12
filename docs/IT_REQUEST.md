@@ -34,10 +34,16 @@ standard channels including Teams. No paid Azure service is required.
 
 ## What we have already confirmed ourselves
 
-- **Custom app upload is already enabled** for this account — item 1 below may need
-  nothing. Verified: *Upload a custom app* appears in Teams → Apps → Manage your apps.
-- The account signs into the Azure portal in the correct directory, but the portal
-  reports **no subscription available**. That is the live blocker.
+- **Custom app upload is NOT enabled.** Teams → Apps → Manage your apps → Upload an
+  app offers only *"Submit an app to your org"*. There is no *Upload a custom app*
+  option, which is the setting in item 1. This is the blocker.
+- **Item 2 (Azure) is no longer needed.** The bot registration was created through the
+  Teams Developer Portal instead, so no Azure subscription and no Azure portal access
+  is required. Bot id `7c9867c8-3ab2-49c0-99e7-6794fea7ee9d`, endpoint configured,
+  Teams channel enabled, and the registration authenticates correctly.
+- **Item 3 (Entra app registration) is no longer needed** for testing — the Developer
+  Portal created one. It is *multi-tenant*, so a single-tenant registration is still
+  wanted before a real rollout, but nothing is blocked on it today.
 - The Teams Developer Portal signs in correctly as this account under Varsity
   Education Management Pvt Ltd, so the tenant and identity are not in question.
 
