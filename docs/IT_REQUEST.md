@@ -1,7 +1,7 @@
 # HR Genie for Microsoft Teams — access request
 
-**Requested by:** `<your.name>@infinitylearn.com` — fill this in once; it is referenced
-throughout as *the developer account*.
+**Requested by:** `Praveen.Reddy@infinitylearn.com` — referenced throughout as
+*the developer account*.
 
 ---
 
@@ -32,11 +32,14 @@ standard channels including Teams. No paid Azure service is required.
 
 ---
 
-## Where we are blocked
+## What we have already confirmed ourselves
 
-The developer account signs into the Azure portal successfully, in the correct
-directory, but the portal reports **no subscription available**. Creating the bot
-cannot start until that is resolved.
+- **Custom app upload is already enabled** for this account — item 1 below may need
+  nothing. Verified: *Upload a custom app* appears in Teams → Apps → Manage your apps.
+- The account signs into the Azure portal in the correct directory, but the portal
+  reports **no subscription available**. That is the live blocker.
+- The Teams Developer Portal signs in correctly as this account under Varsity
+  Education Management Pvt Ltd, so the tenant and identity are not in question.
 
 ---
 
