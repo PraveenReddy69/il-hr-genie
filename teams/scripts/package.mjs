@@ -33,7 +33,9 @@ function fromEnvFile(key) {
   }
 }
 
-const appId = process.argv[2] ?? process.env.MICROSOFT_APP_ID ?? fromEnvFile('MICROSOFT_APP_ID')
+// Flags are filtered out, so `--bump` is not mistaken for an app id.
+const positional = process.argv.slice(2).filter((arg) => !arg.startsWith('--'))
+const appId = positional[0] ?? process.env.MICROSOFT_APP_ID ?? fromEnvFile('MICROSOFT_APP_ID')
 const ssoConnection = process.env.SSO_CONNECTION_NAME ?? fromEnvFile('SSO_CONNECTION_NAME')
 
 if (!appId || !GUID.test(appId)) {
@@ -47,7 +49,25 @@ if (!appId || !GUID.test(appId)) {
   process.exit(1)
 }
 
-const manifest = JSON.parse(readFileSync(join(root, 'appPackage/manifest.json'), 'utf8'))
+const manifestPath = join(root, 'appPackage/manifest.json')
+const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
+
+/**
+ * `--bump` raises the patch version and writes it back.
+ *
+ * Teams will not accept an update that carries the same version as the one already
+ * installed — and it does not say so. It reports success and keeps serving the old
+ * package, which looks exactly like a change that did not take effect.
+ */
+if (process.argv.includes('--bump')) {
+  const parts = String(manifest.version).split('.').map(Number)
+  while (parts.length < 3) parts.push(0)
+  parts[2] += 1
+  manifest.version = parts.join('.')
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`)
+  console.log(`version -> ${manifest.version}`)
+}
+
 manifest.id = appId
 manifest.bots[0].botId = appId
 
@@ -106,6 +126,19 @@ if (unknown.length || missing.length) {
   }
   if (missing.length) console.error(`Required and missing: ${missing.join(', ')}`)
   console.error('\nTeams rejects the whole package for either, without naming the field.')
+  process.exit(1)
+}
+
+/**
+ * Rules Teams enforces that the JSON schema does not.
+ *
+ * The schema calls `version` a string and is satisfied; Teams then refuses `0.1.0`
+ * on upload because a leading zero reads as pre-release. Schema-valid is not the same
+ * as acceptable, so anything learned from a rejection belongs here.
+ */
+if (/^0\./.test(String(manifest.version))) {
+  console.error(`version is ${manifest.version}. Teams rejects anything starting with 0.`)
+  console.error('Use 1.0.0 or higher, and increment it on every re-upload.')
   process.exit(1)
 }
 

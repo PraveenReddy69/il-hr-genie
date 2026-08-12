@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "test": "tsc && node --test \"dist/tests/conversation.test.js\" \"dist/tests/cards.test.js\" \"dist/tests/notify.test.js\" \"dist/tests/sso.test.js\"",
     "test:images": "tsc && node --test \"dist/tests/images.test.js\"",
-    "package": "node scripts/package.mjs"
+    "package": "node scripts/package.mjs",
+    "package:bump": "node scripts/package.mjs --bump"
   },
   "dependencies": {
     "botbuilder": "^4.23.1",
