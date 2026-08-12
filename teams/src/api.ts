@@ -6,6 +6,8 @@
  * from a test script with no Microsoft account involved.
  */
 
+import { AsyncLocalStorage } from 'node:async_hooks'
+
 const BASE_URL = (
   process.env.HRGENIE_BASE_URL ?? 'https://hrgenie-api.devinfinitylearn.in'
 ).replace(/\/$/, '')
@@ -70,23 +72,71 @@ export class ApiError extends Error {
   }
 }
 
-/**
- * A signed-in employee.
- *
- * **Proof of concept only.** Teams SSO replaces every part of this: the real app reads
- * the caller's identity from the Entra token and never sees a password. Until then a
- * single demo account is configured through the environment so the bot has a bearer to
- * call with — which is exactly why this file must not outlive the POC.
- */
+/** A signed-in employee. */
 export interface Session {
   employeeId: string
   name: string
   token: string
 }
 
+/**
+ * Whose data the current call is about.
+ *
+ * Every function below asks [signIn] for a bearer, and until SSO that answered with
+ * one configured account for everybody. Now it answers with whoever this turn belongs
+ * to — without threading a session parameter through every call site, and through
+ * `conversation.ts`, which has no business knowing about identity at all.
+ *
+ * `AsyncLocalStorage` rather than a module-level "current user": two people's turns
+ * interleave at every `await`, so a plain variable would hand one employee's bearer to
+ * another employee's request. That is the exact bug this whole change exists to
+ * prevent, and it would be invisible in testing with one user.
+ */
+const caller = new AsyncLocalStorage<Session>()
+
+/** Runs `work` with `session` as the caller for every API call it makes. */
+export function asEmployee<T>(session: Session, work: () => Promise<T>): Promise<T> {
+  return caller.run(session, work)
+}
+
+/** The session in scope, if the caller is running inside [asEmployee]. */
+export function currentSession(): Session | undefined {
+  return caller.getStore()
+}
+
+/**
+ * Trades a Teams SSO token for an HR Genie session.
+ *
+ * The bot receives an Entra token proving who the user is; the backend verifies it and
+ * answers with its own bearer for that employee. No password is involved at any point.
+ * See docs/TEAMS_SSO_BACKEND.md for what the server has to check.
+ */
+export async function exchangeTeamsToken(entraToken: string): Promise<Session> {
+  const body = await request<{ token: string; employee: Record<string, unknown> }>(
+    '/api/auth/teams',
+    { method: 'POST', body: JSON.stringify({ token: entraToken }) },
+  )
+
+  const employee = body.employee ?? {}
+  const employeeId = String(employee.employeeId ?? '')
+  if (!employeeId || !body.token) {
+    throw new ApiError('The server accepted the Teams token but returned no employee.')
+  }
+  return { employeeId, name: String(employee.name ?? employeeId), token: body.token }
+}
+
+/**
+ * The shared account, for when there is no SSO session.
+ *
+ * **Proof of concept only**, and the reason the app must stay sideloaded to one
+ * person: everyone who opens it reads this employee's records. Kept as a fallback so
+ * the Emulator and `npm run try` still work without a bot registration.
+ */
 let cached: Session | null = null
 
 export async function signIn(): Promise<Session> {
+  const scoped = caller.getStore()
+  if (scoped) return scoped
   if (cached) return cached
 
   const employeeId = process.env.HRGENIE_EMPLOYEE_ID
@@ -109,6 +159,11 @@ export async function signIn(): Promise<Session> {
     token: body.token,
   }
   return cached
+}
+
+/** Drops the shared-account cache. For tests, and for sign-out. */
+export function forgetSharedSession(): void {
+  cached = null
 }
 
 export async function askKnowledgeBase(question: string): Promise<KbAnswer> {
@@ -438,6 +493,7 @@ async function request<T>(
  */
 export const gateway = {
   signIn,
+  exchangeTeamsToken,
   askKnowledgeBase,
   raiseTicket,
   myTickets,

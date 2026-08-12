@@ -240,6 +240,8 @@ button {
 
 .card__action {
   margin-left: auto;
+  /* Two words on two lines reads as two actions. */
+  white-space: nowrap;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -1483,4 +1485,257 @@ textarea:focus {
 .note--left {
   text-align: left;
   margin-top: 12px;
+}
+
+/* ---------------------------------------------------------- pulse authoring */
+
+/*
+ * A question in the bank.
+ *
+ * The order controls sit outside the text rather than under it: the number is the
+ * only thing an employee's experience of the pulse depends on, so it reads as the
+ * row's handle rather than as an afterthought.
+ */
+.qrow {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--ink-06);
+}
+
+.qrow:last-of-type {
+  border-bottom: 0;
+}
+
+.qrow__ord {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding-top: 2px;
+}
+
+.qrow__num {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--blue-deep);
+  min-width: 18px;
+  text-align: center;
+}
+
+/* Sized to be hit, not to be seen — at 8px the arrow was a 10px target. */
+.qrow__move {
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font-size: 9px;
+  line-height: 1;
+  width: 26px;
+  height: 20px;
+  border-radius: 7px;
+}
+
+.qrow__move:hover:not(:disabled) {
+  color: var(--blue-primary);
+  background: var(--blue-tint-07);
+}
+
+.qrow__move:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+.qrow__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.qrow__text {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+}
+
+.qrow__hint {
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  margin-top: 3px;
+}
+
+.qrow__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.qrow__option {
+  background: var(--bg-canvas);
+  border: 1px solid var(--ink-06);
+  border-radius: 20px;
+  padding: 3px 9px;
+  font-size: 10.5px;
+  color: var(--text-slate);
+}
+
+.qrow__foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.qrow__acts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.qrow__confirm {
+  display: flex;
+  gap: 6px;
+}
+
+.qrow__act {
+  border: 1px solid var(--ink-08);
+  background: var(--surface);
+  border-radius: 9px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-slate);
+}
+
+.qrow__act:hover {
+  border-color: var(--ink-12);
+  color: var(--ink);
+}
+
+.qrow__act--danger {
+  border-color: var(--red-risk);
+  color: var(--red-risk);
+}
+
+.tag--all {
+  background: var(--blue-tint-12);
+  color: var(--blue-deep);
+}
+
+.tag--dept {
+  background: var(--purple-tint-12);
+  color: var(--purple);
+}
+
+.tag--live {
+  background: var(--green-tint-14);
+  color: var(--green-ok);
+}
+
+.tile__value small {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+/* Two banners that are not good news; the base one is green. */
+.banner--info {
+  background: var(--blue-tint-07);
+}
+
+.banner--info .banner__title {
+  color: var(--blue-deep);
+}
+
+.banner--warn {
+  background: var(--orange-tint-14);
+}
+
+.banner--warn .banner__title {
+  color: var(--orange-warn);
+}
+
+/* An action inside a sentence, styled as the link it reads as. */
+.linkish {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--blue-deep);
+  text-decoration: underline;
+}
+
+.field-foot {
+  text-align: right;
+  font-size: 10.5px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.opt-edit {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 8px;
+}
+
+.opt-edit__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ink-12);
+  flex-shrink: 0;
+}
+
+.opt-edit .search {
+  padding: 9px 13px;
+}
+
+.opt-edit__remove {
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 4px;
+  flex-shrink: 0;
+}
+
+.opt-edit__remove:hover:not(:disabled) {
+  color: var(--red-risk);
+}
+
+.opt-edit__remove:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+/* The employee's view, so the wording is judged where it lands. */
+.qpreview {
+  border: 1px solid var(--ink-08);
+  border-radius: var(--radius-tile);
+  background: var(--bg-cell);
+  padding: 14px;
+}
+
+.qpreview__text {
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.qpreview__hint {
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  margin-top: 3px;
+}
+
+.qpreview__option {
+  border: 1px solid var(--ink-08);
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 9px 12px;
+  margin-top: 7px;
+  font-size: 12.5px;
 }

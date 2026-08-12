@@ -64,6 +64,11 @@
   ],
   "validDomains": [
     "hrgenie-api.devinfinitylearn.in",
-    "praveenreddy69.github.io"
-  ]
+    "praveenreddy69.github.io",
+    "token.botframework.com"
+  ],
+  "webApplicationInfo": {
+    "id": "${{AAD_APP_CLIENT_ID}}",
+    "resource": "api://botid-${{AAD_APP_CLIENT_ID}}"
+  }
 }

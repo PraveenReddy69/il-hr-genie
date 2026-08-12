@@ -5,6 +5,7 @@ import { Attendance } from './pages/Attendance'
 import { Dashboard } from './pages/Dashboard'
 import { Holidays } from './pages/Holidays'
 import { People } from './pages/People'
+import { PulseQuestions } from './pages/PulseQuestions'
 import { SalesInsights } from './pages/SalesInsights'
 import { Tickets } from './pages/Tickets'
 import { Trends } from './pages/Trends'
@@ -15,6 +16,7 @@ import {
   HistoryIcon,
   HolidaysIcon,
   PeopleIcon,
+  PulseIcon,
   SalesIcon,
   TicketsIcon,
 } from './components/Icons'
@@ -29,6 +31,7 @@ const NAV = [
   { to: '/people', label: 'People', Icon: PeopleIcon },
   { to: '/attendance', label: 'Attendance', Icon: AttendanceIcon },
   { to: '/sales', label: 'Sales Insights', Icon: SalesIcon },
+  { to: '/pulse', label: 'Pulse questions', Icon: PulseIcon },
   { to: '/analytics', label: 'Analytics', Icon: AnalyticsIcon },
   { to: '/trends', label: 'History', Icon: HistoryIcon },
   { to: '/holidays', label: 'Holidays', Icon: HolidaysIcon },
@@ -133,6 +136,7 @@ export default function App() {
           <Route path="/people" element={<People />} />
           <Route path="/attendance" element={<Attendance />} />
           <Route path="/sales" element={<SalesInsights />} />
+          <Route path="/pulse" element={<PulseQuestions />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/trends" element={<Trends />} />
           <Route path="/holidays" element={<Holidays />} />

@@ -10,7 +10,7 @@
     "start": "node dist/index.js",
     "try": "node dist/scripts/try.js",
     "typecheck": "tsc --noEmit",
-    "test": "tsc && node --test \"dist/tests/conversation.test.js\" \"dist/tests/cards.test.js\" \"dist/tests/notify.test.js\"",
+    "test": "tsc && node --test \"dist/tests/conversation.test.js\" \"dist/tests/cards.test.js\" \"dist/tests/notify.test.js\" \"dist/tests/sso.test.js\"",
     "test:images": "tsc && node --test \"dist/tests/images.test.js\""
   },
   "dependencies": {

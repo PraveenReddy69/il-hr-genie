@@ -15,6 +15,7 @@ import {
 } from 'botbuilder'
 import express from 'express'
 import { HrGenieBot } from './bot.js'
+import { BotFrameworkTokens, Sso } from './sso.js'
 import { checkInReminderCard, ticketMovedCard } from './cards.js'
 import { DEV_CHAT_HTML, devTurn } from './devChat.js'
 import { References, handleNotify } from './notify.js'
@@ -46,7 +47,24 @@ adapter.onTurnError = async (context, error) => {
  * exact thing notifications exist to avoid.
  */
 const references = new References(process.env.REFERENCES_FILE ?? 'data/references.json')
-const bot = new HrGenieBot(references)
+
+/**
+ * SSO is on only when an OAuth connection is named.
+ *
+ * Unset — the Emulator, `npm run try`, any run without a bot registration — the bot
+ * falls back to the single account in `.env`, which is why it must stay sideloaded to
+ * one person until this is configured. See docs/TEAMS_SSO_BACKEND.md.
+ */
+const ssoConnection = process.env.SSO_CONNECTION_NAME
+const sso = ssoConnection ? new Sso(new BotFrameworkTokens(ssoConnection)) : undefined
+if (!sso) {
+  console.warn(
+    '[HrGenieBot] SSO_CONNECTION_NAME is not set — every user will be treated as ' +
+      `${process.env.HRGENIE_EMPLOYEE_ID ?? 'the configured account'}. Do not share this bot.`,
+  )
+}
+
+const bot = new HrGenieBot(references, sso, ssoConnection)
 
 // Express rather than restify: restify still calls process.binding('http_parser'),
 // which modern Node removed, so it will not even load.

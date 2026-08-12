@@ -31,7 +31,7 @@ answer, which is the same thing an employee would see if the service were down.
 ## Tests
 
 ```bash
-npm test          # 110 tests, no network, no accounts
+npm test          # 137 tests, no network, no accounts
 npm run test:images   # checks every card image actually loads
 ```
 
@@ -154,12 +154,36 @@ the employee still sees it in the app and in chat.
 
 ---
 
-## What this is not, yet
+## SSO — built, waiting on two things
 
-- **No SSO.** The bot calls the API as one configured employee, set in `.env`. Teams
-  SSO through Entra replaces it: the real app reads the caller's identity from their
-  token and never sees a password. Until then, **every user of this POC appears to the
-  backend as that one account** — fine for a demo, wrong for anyone else.
+The bot no longer assumes one identity. Every turn runs inside `api.asEmployee(...)`,
+so each person's calls carry their own bearer, and `conversation.ts` never learns that
+identity exists. Turn it on by naming the Azure Bot's OAuth connection:
+
+```bash
+SSO_CONNECTION_NAME=hrgenie-sso
+```
+
+Leave it unset and the bot falls back to the single account in `.env`, which is what
+keeps the Emulator and `npm run try` working with no registration. It logs a warning
+when it does, because a shared identity is not something to discover later.
+
+Two things are still needed, neither of them code:
+
+1. **`POST /api/auth/teams` on the backend** — trades a verified Entra token for an HR
+   Genie session. Contract in [docs/TEAMS_SSO_BACKEND.md](../docs/TEAMS_SSO_BACKEND.md).
+2. **The Entra configuration** — App ID URI, scope, pre-authorised Teams client ids,
+   OAuth connection. All in [docs/IT_REQUEST.md](../docs/IT_REQUEST.md).
+
+**What is verified and what is not.** The identity scoping, the token exchange, the
+per-user cache and its expiry, and the refusal to fall back to the shared account are
+covered by `sso.test.ts` — including the case that matters most, two users' turns
+interleaving without leaking a bearer between them. The Teams handshake itself
+(`getUserToken`, the OAuth card, `signin/tokenExchange`) talks to Microsoft on every
+call and has never been run; it is isolated behind `TokenSource` for exactly that
+reason. Expect to debug that half on first contact with a real registration.
+
+## What this is not, yet
 - **Proactive messages are built but unverified.** `POST /notify` and the conversation
   store are done and tested offline; delivery itself goes through the Bot Connector,
   which needs a real Azure Bot registration. Until then the endpoint answers `404` for

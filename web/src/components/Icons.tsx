@@ -103,3 +103,11 @@ export const HolidaysIcon = (props: IconProps) => (
     <circle cx="12" cy="15.5" r="1.6" fill="currentColor" stroke="none" />
   </Svg>
 )
+
+/** A pulse trace over a rounded card — the monthly check, not a heartbeat monitor. */
+export const PulseIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <rect x="3" y="4.5" width="18" height="15" rx="2.6" />
+    <path d="M6.5 12.5h2.2l1.6-3.4 2.4 6 1.6-2.6h2.8" />
+  </Svg>
+)
