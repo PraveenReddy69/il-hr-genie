@@ -30,6 +30,7 @@ import {
   savePulseJson,
 } from './tab.js'
 import { References, handleNotify } from './notify.js'
+import * as api from './api.js'
 
 const auth = new ConfigurationBotFrameworkAuthentication({
   MicrosoftAppId: process.env.MICROSOFT_APP_ID,
@@ -70,8 +71,8 @@ const ssoConnection = process.env.SSO_CONNECTION_NAME
 const sso = ssoConnection ? new Sso(new BotFrameworkTokens(ssoConnection)) : undefined
 if (!sso) {
   console.warn(
-    '[HrGenieBot] SSO_CONNECTION_NAME is not set — every user will be treated as ' +
-      `${process.env.HRGENIE_EMPLOYEE_ID ?? 'the configured account'}. Do not share this bot.`,
+    '[HrGenieBot] SSO_CONNECTION_NAME is not set — there is no way to tell who is ' +
+      'talking, and no shared account to fall back to, so every turn will refuse.',
   )
 }
 
@@ -120,14 +121,49 @@ server.get('/tab/:page', (request, response) => {
   response.type('html').send(html)
 })
 
+/**
+ * The identity behind a tab request.
+ *
+ * A tab is an ordinary web page, so it cannot use the bot's turn context. It asks
+ * Teams for a token of its own — the same Entra token, obtained the same way — and
+ * sends it here. Trading it for a session is what makes a tab show *your* records
+ * rather than a shared account's, which is the whole reason the shared account could
+ * be removed.
+ *
+ * Sessions are cached by token: a page makes several calls, and each one would
+ * otherwise be a round trip to the backend. The token's own expiry bounds the cache.
+ */
+const tabSessions = new Map<string, { session: api.Session; atMillis: number }>()
+const TAB_SESSION_TTL_MILLIS = 30 * 60_000
+
+async function tabCaller(request: express.Request): Promise<api.Session> {
+  const header = request.header('authorization') ?? ''
+  const token = header.toLowerCase().startsWith('bearer ') ? header.slice(7).trim() : ''
+  if (!token) throw new api.ApiError('This page needs to be opened inside Teams.', 401)
+
+  const cached = tabSessions.get(token)
+  if (cached && Date.now() - cached.atMillis < TAB_SESSION_TTL_MILLIS) return cached.session
+
+  const session = await api.gateway.exchangeTeamsToken(token)
+  tabSessions.set(token, { session, atMillis: Date.now() })
+  return session
+}
+
 /** Wraps a tab's data call so a backend outage is a message, not a blank page. */
 const tabData = (name: string, load: () => Promise<unknown> | unknown) =>
-  async (_request: express.Request, response: express.Response) => {
+  async (request: express.Request, response: express.Response) => {
     try {
-      response.json(await load())
+      const session = await tabCaller(request)
+      response.json(await api.asEmployee(session, async () => load()))
     } catch (error) {
+      const status = error instanceof api.ApiError && error.status === 401 ? 401 : 502
       console.warn(`[HrGenieBot] tab ${name} failed`, error)
-      response.status(502).json({ error: 'Could not reach the HR service.' })
+      response.status(status).json({
+        error:
+          status === 401
+            ? 'Could not confirm who you are. Open this from Teams.'
+            : 'Could not reach the HR service.',
+      })
     }
   }
 
@@ -138,10 +174,18 @@ server.get('/tab/api/tickets', tabData('tickets', ticketsJson))
 
 server.post('/tab/api/pulse', async (request, response) => {
   try {
-    response.json(await savePulseJson(request.body as Record<string, string>))
+    const session = await tabCaller(request)
+    const answers = request.body as Record<string, string>
+    response.json(await api.asEmployee(session, () => savePulseJson(answers)))
   } catch (error) {
+    const status = error instanceof api.ApiError && error.status === 401 ? 401 : 502
     console.warn('[HrGenieBot] tab could not save the pulse', error)
-    response.status(502).json({ error: 'Could not save that.' })
+    response.status(status).json({
+      error:
+        status === 401
+          ? 'Could not confirm who you are. Open this from Teams.'
+          : 'Could not save that.',
+    })
   }
 })
 

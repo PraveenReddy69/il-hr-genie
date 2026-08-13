@@ -16,7 +16,7 @@ driven from a terminal:
 ```bash
 cd teams
 npm install
-cp .env.example .env    # fill in HRGENIE_EMPLOYEE_ID and HRGENIE_PASSWORD
+cp .env.example .env    # set HRGENIE_DEV_TOKEN to a bearer you already hold
 npm run build && npm run try
 ```
 

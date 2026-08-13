@@ -183,27 +183,34 @@ function iconUrl(name: string): string {
 const TILE_SURFACE = { style: 'default', showBorder: true, roundedCorners: true } as const
 
 /**
- * The picker tiles, pinned to white.
+ * The white fill for a picker tile.
  *
  * There is no white container style — `default` inherits the card surface, and the
- * Teams client draws that as a light grey. An image is the only way to fix the fill,
- * and it earns its keep here because the failure mode is now mild: if it does not
- * load the tile keeps its border and rounded corners and merely falls back to the
- * grey, rather than collapsing to unstyled text the way the old image-backed tiles
- * did on mobile.
+ * Teams client draws that as a light grey. An image is the only way to fix the fill.
+ * It earns its keep here because the failure mode is mild: if it does not load the
+ * tile keeps its border and rounded corners and merely falls back to the grey, rather
+ * than collapsing to unstyled text the way the old image-backed tiles did on mobile.
  *
- * The catch is that an image does not follow the theme. Teams draws default text
- * white in dark mode, which on a pinned-white tile would be invisible, so the labels
- * opt out of the theme too — see [TILE_TEXT]. That pairing is why this is a separate
- * token and not a change to [TILE_SURFACE]: every other tiled surface carries text
- * this function does not own, and would need the same treatment to stay readable.
+ * This goes on a container *inside* the bordered one rather than on the bordered one
+ * itself. Checked in the real client against four other arrangements: a background
+ * image paints over the stroke `showBorder` draws, so a tile that asks for both on
+ * the same container gets the fill and loses the outline. Nesting keeps them off each
+ * other's edges.
  */
-const WHITE_TILE = {
-  ...TILE_SURFACE,
+const WHITE_FILL = {
   backgroundImage: { url: `${ICON_BASE}/tile-white.png?v=${ICON_VERSION}`, fillMode: 'Cover' },
+  roundedCorners: true,
 } as const
 
-/** Pinned dark, because [WHITE_TILE] pins the background it sits on. */
+/**
+ * Pinned dark, because [WHITE_FILL] pins the background it sits on.
+ *
+ * An image does not follow the theme. Teams draws default text white in dark mode,
+ * which on a pinned-white tile would be invisible. This is also why the white is
+ * confined to the picker tiles and is not part of [TILE_SURFACE]: every other tiled
+ * surface carries text this function does not own, and each would need the same
+ * treatment to stay readable.
+ */
 const TILE_TEXT = { color: 'Dark' } as const
 
 /**
@@ -216,47 +223,56 @@ const TILE_TEXT = { color: 'Dark' } as const
 function tile(icon: string, label: string, data: CardAction, caption?: string): unknown {
   return {
     type: 'Container',
-    ...WHITE_TILE,
+    ...TILE_SURFACE,
+    // The stroke is drawn out here and the white filled inside, because one container
+    // cannot do both — see [WHITE_FILL]. `selectAction` stays on the outer one so the
+    // whole tile, border included, is the button.
     selectAction: { type: 'Action.Submit', data },
     spacing: 'Default',
     items: [
-      // Stacked and centred, two to a row. A horizontal version was tried against a
-      // design mockup and looked worse: the polish in that mockup comes from
-      // gradients, shadows and soft washes, and Adaptive Cards has none of them —
-      // what survives is a wide grey box with a stray pill in it.
       {
-        type: 'Image',
-        url: iconUrl(icon),
-        width: '40px',
-        height: '40px',
-        altText: label,
-        horizontalAlignment: 'Center',
-        spacing: 'Small',
+        type: 'Container',
+        ...WHITE_FILL,
+        items: [
+          // Stacked and centred, two to a row. A horizontal version was tried against
+          // a design mockup and looked worse: the polish in that mockup comes from
+          // gradients, shadows and soft washes, and Adaptive Cards has none of them —
+          // what survives is a wide grey box with a stray pill in it.
+          {
+            type: 'Image',
+            url: iconUrl(icon),
+            width: '40px',
+            height: '40px',
+            altText: label,
+            horizontalAlignment: 'Center',
+            spacing: 'Small',
+          },
+          {
+            type: 'TextBlock',
+            text: label,
+            size: 'Medium',
+            weight: 'Bolder',
+            wrap: true,
+            horizontalAlignment: 'Center',
+            spacing: 'Small',
+            ...TILE_TEXT,
+          },
+          ...(caption
+            ? [
+                {
+                  type: 'TextBlock',
+                  text: caption,
+                  size: 'Small',
+                  isSubtle: true,
+                  wrap: true,
+                  horizontalAlignment: 'Center',
+                  spacing: 'None',
+                  ...TILE_TEXT,
+                },
+              ]
+            : []),
+        ],
       },
-      {
-        type: 'TextBlock',
-        text: label,
-        size: 'Medium',
-        weight: 'Bolder',
-        wrap: true,
-        horizontalAlignment: 'Center',
-        spacing: 'Small',
-        ...TILE_TEXT,
-      },
-      ...(caption
-        ? [
-            {
-              type: 'TextBlock',
-              text: caption,
-              size: 'Small',
-              isSubtle: true,
-              wrap: true,
-              horizontalAlignment: 'Center',
-              spacing: 'None',
-              ...TILE_TEXT,
-            },
-          ]
-        : []),
     ],
   }
 }

@@ -11,7 +11,13 @@
 
 import { strict as assert } from 'node:assert'
 import { describe, it } from 'node:test'
-import { asEmployee, currentSession, gateway, type Session } from '../api.js'
+import {
+  asEmployee,
+  currentSession,
+  forgetSharedSession,
+  gateway,
+  type Session,
+} from '../api.js'
 import { Sso, type TokenSource } from '../sso.js'
 
 const ALICE: Session = { employeeId: 'EMP1', name: 'Alice', token: 'token-alice' }
@@ -66,11 +72,23 @@ describe('the identity in scope', () => {
   })
 
   it('gives the scoped session to signIn, without any password', async () => {
-    // No HRGENIE_PASSWORD is set in this process; the shared path would throw.
     await asEmployee(ALICE, async () => {
       const session = await gateway.signIn()
       assert.equal(session.token, 'token-alice')
     })
+  })
+
+  it('refuses to sign in at all when no identity is in scope', async () => {
+    // The security property the shared account used to break. Outside asEmployee
+    // there is nobody to act as, and inventing one would serve a colleague's HR
+    // record to whoever happened to be asking. Failing is the correct outcome.
+    delete process.env.HRGENIE_DEV_TOKEN
+    forgetSharedSession()
+
+    await assert.rejects(
+      () => gateway.signIn(),
+      (error: Error) => /no signed-in employee/i.test(error.message),
+    )
   })
 })
 

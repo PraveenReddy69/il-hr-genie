@@ -92,12 +92,12 @@ export class HrGenieBot extends ActivityHandler {
    *
    * With SSO configured, the Entra token is exchanged for an HR Genie session and
    * every API call inside `work` uses it. Without it, `work` runs unscoped and
-   * `api.signIn()` falls back to the shared account — which is what keeps the
-   * Emulator and `npm run try` working with no bot registration.
+   * `api.signIn()` has nothing to return, so the turn fails loudly rather than
+   * quietly acting as somebody else.
    *
-   * A failed exchange is not fatal here. Falling through to the shared account would
-   * be far worse than an error: the person would silently be shown a colleague's
-   * tickets. So a failure is reported and the turn is refused.
+   * A failed exchange is not fatal here, but it does end the turn. There is no shared
+   * account to fall through to any more — that was removed with SSO — and inventing
+   * one would silently show a colleague's tickets.
    */
   private async asCaller(context: TurnContext, work: () => Promise<void>): Promise<void> {
     if (!this.sso) return work()
@@ -106,6 +106,16 @@ export class HrGenieBot extends ActivityHandler {
     try {
       session = await this.sso.sessionFor(context)
     } catch (error) {
+      // A 404 means Teams proved who you are and our own backend has not been taught
+      // to accept it yet — a different problem from a failed sign-in, and worth saying
+      // so plainly. Remove once /api/auth/teams ships; see docs/TEAMS_SSO_BACKEND.md.
+      if (error instanceof api.ApiError && error.status === 404) {
+        await context.sendActivity(
+          'Teams confirmed who you are, but the HR service cannot accept that yet — ' +
+            'the sign-in endpoint is still being built. Nothing was opened.',
+        )
+        return
+      }
       const why = error instanceof Error ? error.message : String(error)
       await context.sendActivity(
         `I could not confirm who you are, so I have not opened anything. ${why}`,
@@ -134,12 +144,12 @@ export class HrGenieBot extends ActivityHandler {
   private async remember(context: TurnContext): Promise<void> {
     if (!this.references) return
 
-    // Falls back to the configured account when the backend cannot be reached, so a
-    // notification can still be delivered to whoever is testing.
+    // No fallback: a reference saved under a guessed employee id would deliver one
+    // person's ticket updates into another person's chat.
     const employeeId = await api.gateway
       .signIn()
       .then((session) => session.employeeId)
-      .catch(() => process.env.HRGENIE_EMPLOYEE_ID)
+      .catch(() => undefined)
 
     if (!employeeId) return
     this.references.save(employeeId, TurnContext.getConversationReference(context.activity))

@@ -153,44 +153,66 @@ export async function exchangeTeamsToken(entraToken: string): Promise<Session> {
 }
 
 /**
- * The shared account, for when there is no SSO session.
+ * The session for the person this turn belongs to.
  *
- * **Proof of concept only**, and the reason the app must stay sideloaded to one
- * person: everyone who opens it reads this employee's records. Kept as a fallback so
- * the Emulator and `npm run try` still work without a bot registration.
+ * There is no fallback, and that is the point. This used to log in with a shared
+ * employee id and password from `.env`, which meant everyone who opened HR Genie read
+ * and wrote that one person's records — the single reason the app could not be
+ * published. Teams SSO replaced it on 13 August 2026, so identity now only ever
+ * arrives from [asEmployee], scoped to one turn.
+ *
+ * Throwing here is the safe failure. Anything else would serve a colleague's HR
+ * record to whoever happened to be asking.
  */
-let cached: Session | null = null
-
 export async function signIn(): Promise<Session> {
   const scoped = caller.getStore()
   if (scoped) return scoped
-  if (cached) return cached
 
-  const employeeId = process.env.HRGENIE_EMPLOYEE_ID
-  const password = process.env.HRGENIE_PASSWORD
-  if (!employeeId || !password) {
-    throw new ApiError(
-      'Set HRGENIE_EMPLOYEE_ID and HRGENIE_PASSWORD in teams/.env — see the README.',
-    )
-  }
+  const dev = developerSession()
+  if (dev) return dev
 
-  const body = await request<{ token: string; employee: Record<string, unknown> }>(
-    '/api/auth/login',
-    { method: 'POST', body: JSON.stringify({ employeeId, password }) },
+  throw new ApiError(
+    'No signed-in employee on this turn. In Teams this means SSO is not configured — ' +
+      'set SSO_CONNECTION_NAME. Outside Teams, see HRGENIE_DEV_TOKEN in .env.example.',
   )
-
-  const employee = body.employee ?? {}
-  cached = {
-    employeeId: String(employee.employeeId ?? employeeId),
-    name: String(employee.name ?? employeeId),
-    token: body.token,
-  }
-  return cached
 }
 
-/** Drops the shared-account cache. For tests, and for sign-out. */
+/**
+ * A session for the card preview and `npm run try`, which have no Teams to sign into.
+ *
+ * A bearer the developer already holds, pasted in — not a password, not an account the
+ * product can fall back to. It expires on its own, it is absent in any real run, and
+ * nothing reaches it unless [asEmployee] left no identity in scope.
+ */
+let developerCache: Session | null = null
+
+function developerSession(): Session | null {
+  if (developerCache) return developerCache
+
+  const token = process.env.HRGENIE_DEV_TOKEN
+  if (!token) return null
+
+  // Best effort: the label is cosmetic, and a token that does not decode is still a
+  // token the server will judge for itself.
+  let employeeId = 'dev'
+  let name = 'Developer'
+  try {
+    const claims = JSON.parse(
+      Buffer.from(token.split('.')[1] ?? '', 'base64url').toString('utf8'),
+    ) as Record<string, unknown>
+    employeeId = String(claims.employeeId ?? claims.sub ?? employeeId)
+    name = String(claims.name ?? name)
+  } catch {
+    // Not a readable JWT. The server decides regardless.
+  }
+
+  developerCache = { employeeId, name, token }
+  return developerCache
+}
+
+/** Drops the developer session. For tests. */
 export function forgetSharedSession(): void {
-  cached = null
+  developerCache = null
 }
 
 export async function askKnowledgeBase(question: string): Promise<KbAnswer> {
@@ -446,12 +468,11 @@ export async function celebrations(): Promise<Celebrations> {
               employeeId: String(one.employeeId ?? ''),
               designation: String(one.designation ?? one.title ?? ''),
               // Every spelling the service might use. See docs/CELEBRATIONS_BACKEND.md.
-              // WISH_TEST_EMAIL is a development stand-in so the Wish button can be
-              // exercised before the service returns an address: it points *every*
-              // celebrant at one mailbox — your own — so nothing is ever sent to a
-              // colleague by mistake. Leave it unset anywhere real.
-              email: String(one.officialEmail ?? one.email ?? one.upn ?? '')
-                || (process.env.WISH_TEST_EMAIL ?? ''),
+              // Only the real address, never a stand-in: a Wish button is a deep link
+              // to a named person, and pointing one at anybody but the celebrant sends
+              // a birthday message to the wrong colleague. Absent, the button simply
+              // does not render — see [wish] in cards.ts.
+              email: String(one.officialEmail ?? one.email ?? one.upn ?? ''),
               ...(one.years === undefined ? {} : { years: Number(one.years) }),
             }
           })

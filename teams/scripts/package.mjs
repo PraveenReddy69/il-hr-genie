@@ -72,19 +72,48 @@ manifest.id = appId
 manifest.bots[0].botId = appId
 
 /**
+ * Where the bot and its tabs are reachable. Needed before the SSO block, because the
+ * App ID URI depends on the tab domain — see below.
+ */
+const publicBase = (process.env.PUBLIC_BASE_URL ?? fromEnvFile('PUBLIC_BASE_URL') ?? '')
+  .trim()
+  .replace(/\/$/, '')
+
+let publicHost = ''
+if (publicBase) {
+  try {
+    publicHost = new URL(publicBase).host
+  } catch {
+    console.error(`PUBLIC_BASE_URL is not a URL: ${publicBase}`)
+    process.exit(1)
+  }
+}
+
+/**
  * SSO is declared only when it is configured.
  *
  * `webApplicationInfo` holding a placeholder fails validation, and holding a stale id
  * fails at token exchange with an error that points nowhere near the manifest.
  * Leaving it out is the honest state of an app that does not have SSO yet.
+ *
+ * The `resource` form depends on what the app contains. A bot alone takes
+ * `api://botid-<appid>`. Add a tab that signs in and Teams checks the URI against the
+ * iframe's origin, rejecting the bot-only form with "App resource defined in manifest
+ * and iframe origin do not match" — so an app with both needs
+ * `api://<tab-host>/botid-<appid>`. Whatever is emitted here must also be the
+ * Application ID URI in Entra and the Token Exchange URL on the Azure OAuth
+ * connection; all three are compared as exact strings.
  */
 if (ssoConnection) {
-  manifest.webApplicationInfo = { id: appId, resource: `api://botid-${appId}` }
+  const resource = publicHost
+    ? `api://${publicHost}/botid-${appId}`
+    : `api://botid-${appId}`
+  manifest.webApplicationInfo = { id: appId, resource }
+  console.log(`  SSO resource ${resource}`)
 } else {
   delete manifest.webApplicationInfo
   console.warn('! No SSO_CONNECTION_NAME — packaging without SSO.')
-  console.warn('  Everyone who installs this reads the HRGENIE_EMPLOYEE_ID account.')
-  console.warn('  Keep it sideloaded to one person.\n')
+  console.warn('  Nobody can sign in: there is no shared account to fall back to.\n')
 }
 
 /**
@@ -98,18 +127,8 @@ if (ssoConnection) {
  * Without the variable the tab is left out entirely rather than shipped pointing at
  * a dead URL.
  */
-const publicBase = (process.env.PUBLIC_BASE_URL ?? fromEnvFile('PUBLIC_BASE_URL') ?? '')
-  .trim()
-  .replace(/\/$/, '')
-
 if (publicBase) {
-  let host
-  try {
-    host = new URL(publicBase).host
-  } catch {
-    console.error(`PUBLIC_BASE_URL is not a URL: ${publicBase}`)
-    process.exit(1)
-  }
+  const host = publicHost
   // Chat first: it is the only surface you can ask something. The rest are things
   // you look at, which is why they earned tabs of their own.
   manifest.staticTabs = [

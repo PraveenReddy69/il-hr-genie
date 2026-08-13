@@ -13,6 +13,19 @@
  * Hop 2 is ours and is tested below. Hop 1 is Microsoft's and cannot be exercised
  * without a real bot registration, which is why it sits behind [TokenSource] — the
  * rest of this file is decidable offline.
+ *
+ * Verified end to end on 13 August 2026. What hop 1 hands over looks like this:
+ *
+ *   aud  7c9867c8-…            our app, not Microsoft Graph
+ *   iss  …/v2.0                the v2 endpoint
+ *   ver  2.0
+ *   scp  access_as_user
+ *        preferred_username    the claim the backend joins on
+ *
+ * The audience is decided by the **Scopes** on the Azure OAuth connection, and it is
+ * the one thing here worth knowing: bare OIDC scopes (`openid profile email`) yield a
+ * Graph token that no third party can validate, and Azure's own Test Connection passes
+ * anyway. The connection must name our API — `api://botid-<appid>/access_as_user`.
  */
 
 import type { TurnContext } from 'botbuilder'

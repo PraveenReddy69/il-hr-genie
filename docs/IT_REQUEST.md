@@ -1,5 +1,13 @@
 # HR Genie for Microsoft Teams — access request
 
+> **Working through this with an admin? Use [IT_ADMIN_RUNBOOK.md](IT_ADMIN_RUNBOOK.md)
+> instead.** This document explains *what* is being asked for and why, which is what
+> IT needs to approve it. The runbook is the click-by-click version for doing it.
+>
+> One correction: "Item 2 (Azure) is no longer needed" below holds for *testing only*.
+> SSO needs an Azure Bot resource, because the OAuth connection that performs the token
+> exchange exists nowhere else.
+
 **Requested by:** `Praveen.Reddy@infinitylearn.com` — referenced throughout as
 *the developer account*.
 

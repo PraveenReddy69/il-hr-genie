@@ -14,8 +14,10 @@
  * them behind their own tab keeps the chat for the parts that are genuinely a
  * dialogue — asking a question, raising a ticket.
  *
- * Until SSO, every tab shows what the configured account can see, exactly as the bot
- * does.
+ * Each tab signs in for itself. A page cannot use the bot's turn context, so it asks
+ * Teams for a token with `getAuthToken` and sends it on every call; the server trades
+ * that for a session and runs the load as whoever is looking. Same identity as the
+ * chat, obtained a different way.
  */
 
 import * as api from './api.js'
@@ -272,8 +274,40 @@ function page(title: string, subtitle: string, script: string): string {
   <div class="sub">${subtitle}</div>
   <div id="out" class="empty">Loading…</div>
 <script>
-  if (window.microsoftTeams) { microsoftTeams.app.initialize().catch(function () {}) }
   var out = document.getElementById('out')
+
+  /**
+   * A Teams token for whoever is looking at this tab.
+   *
+   * The same identity the bot uses, obtained the same way — the page asks Teams, Teams
+   * asks Entra, and the server trades it for an HR Genie session. Fetched once and
+   * reused: getAuthToken is a round trip, and every page here makes more than one call.
+   */
+  var pending = null
+  function authToken() {
+    if (pending) return pending
+    if (!window.microsoftTeams) {
+      pending = Promise.reject(new Error('This page only opens inside Teams.'))
+      return pending
+    }
+    pending = microsoftTeams.app
+      .initialize()
+      .then(function () { return microsoftTeams.authentication.getAuthToken() })
+    return pending
+  }
+
+  /** fetch, with the caller's identity attached. Every API call here goes through it. */
+  function apiFetch(path, init) {
+    return authToken().then(function (token) {
+      var options = init || {}
+      var headers = {}
+      for (var key in options.headers || {}) headers[key] = options.headers[key]
+      headers.Authorization = 'Bearer ' + token
+      options.headers = headers
+      return fetch(path, options)
+    })
+  }
+
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
@@ -329,7 +363,7 @@ export const CELEBRATIONS_HTML = page(
     if (p.designation) bits.push(p.designation)
     return bits.join(' \\u00b7 ') || 'Infinity Learn'
   }
-  fetch('api/celebrations').then(function (r) {
+  apiFetch('api/celebrations').then(function (r) {
     if (!r.ok) throw new Error('HTTP ' + r.status); return r.json()
   }).then(function (data) {
     var html = ''
@@ -372,7 +406,7 @@ export const PULSE_HTML = page(
   'A few questions, once a month. Your HRBP sees the totals, never who said what.',
   `
   var picked = {}
-  fetch('api/pulse').then(function (r) {
+  apiFetch('api/pulse').then(function (r) {
     if (!r.ok) throw new Error('HTTP ' + r.status); return r.json()
   }).then(function (data) {
     var qs = data.questions || []
@@ -453,7 +487,7 @@ export const PULSE_HTML = page(
     save.addEventListener('click', function () {
       save.disabled = true
       save.textContent = 'Saving\\u2026'
-      fetch('api/pulse', {
+      apiFetch('api/pulse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(picked),
@@ -485,7 +519,7 @@ export const HOLIDAYS_HTML = page(
   function weekday(iso) {
     return new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long' })
   }
-  fetch('api/holidays').then(function (r) {
+  apiFetch('api/holidays').then(function (r) {
     if (!r.ok) throw new Error('HTTP ' + r.status); return r.json()
   }).then(function (data) {
     var list = data.holidays || []
@@ -541,7 +575,7 @@ export const TICKETS_HTML = page(
     return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) +
       ' · ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
   }
-  fetch('api/tickets').then(function (r) {
+  apiFetch('api/tickets').then(function (r) {
     if (!r.ok) throw new Error('HTTP ' + r.status); return r.json()
   }).then(function (data) {
     var list = data.tickets || []
