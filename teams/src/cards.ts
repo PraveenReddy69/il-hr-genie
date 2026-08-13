@@ -89,7 +89,7 @@ function header(eyebrow: string, title: string, subtitle?: string): unknown {
     type: 'Container',
     bleed: true,
     spacing: 'None',
-    backgroundImage: { url: `${ICON_BASE}/header.png`, fillMode: 'Cover' },
+    backgroundImage: { url: iconUrl('header'), fillMode: 'Cover' },
     items: [
       {
         type: 'TextBlock',
@@ -146,15 +146,65 @@ function body(items: unknown[]): unknown {
 const ICON_BASE = 'https://praveenreddy69.github.io/il-hr-genie/icons'
 
 /**
+ * Cache-buster for the glyphs.
+ *
+ * Teams caches card images by URL and holds them for a long time, so replacing a PNG
+ * at the same path leaves everyone looking at the old artwork — the file on Pages is
+ * new, the client just never asks for it again. Bumping this number changes the URL
+ * and forces a refetch.
+ *
+ * Bump it whenever an icon is redrawn.
+ */
+const ICON_VERSION = 2
+
+function iconUrl(name: string): string {
+  return `${ICON_BASE}/${name}.png?v=${ICON_VERSION}`
+}
+
+/**
  * The surface a tile sits on.
  *
  * `style` only — no background image. A remote PNG behind every tile means the whole
  * picker looks unstyled whenever the image is slow, blocked or cached badly, which is
- * exactly what happened on mobile: the tiles read as plain text on white. `emphasis`
- * is drawn by the Teams client itself, so it cannot fail to load and it follows the
+ * exactly what happened on mobile: the tiles read as plain text on white. A style is
+ * drawn by the Teams client itself, so it cannot fail to load and it follows the
  * user's light or dark theme for free.
+ *
+ * A white tile outlined and rounded, rather than the grey `emphasis` block. Checked
+ * against all seven backgrounds in the real client: `showBorder` and `roundedCorners`
+ * are honoured, and the outline separates tiles as well as a fill does without the
+ * weight. The tinted styles were rejected on meaning, not looks — `good`, `warning`
+ * and `attention` say success, caution and error in Teams, so a permanent amber tile
+ * reads as a permanent problem.
+ *
+ * Used by every tiled surface. For true white rather than the client's grey, see
+ * [WHITE_TILE].
  */
-const TILE_SURFACE = { style: 'emphasis' } as const
+const TILE_SURFACE = { style: 'default', showBorder: true, roundedCorners: true } as const
+
+/**
+ * The picker tiles, pinned to white.
+ *
+ * There is no white container style — `default` inherits the card surface, and the
+ * Teams client draws that as a light grey. An image is the only way to fix the fill,
+ * and it earns its keep here because the failure mode is now mild: if it does not
+ * load the tile keeps its border and rounded corners and merely falls back to the
+ * grey, rather than collapsing to unstyled text the way the old image-backed tiles
+ * did on mobile.
+ *
+ * The catch is that an image does not follow the theme. Teams draws default text
+ * white in dark mode, which on a pinned-white tile would be invisible, so the labels
+ * opt out of the theme too — see [TILE_TEXT]. That pairing is why this is a separate
+ * token and not a change to [TILE_SURFACE]: every other tiled surface carries text
+ * this function does not own, and would need the same treatment to stay readable.
+ */
+const WHITE_TILE = {
+  ...TILE_SURFACE,
+  backgroundImage: { url: `${ICON_BASE}/tile-white.png?v=${ICON_VERSION}`, fillMode: 'Cover' },
+} as const
+
+/** Pinned dark, because [WHITE_TILE] pins the background it sits on. */
+const TILE_TEXT = { color: 'Dark' } as const
 
 /**
  * A tappable tile: icon, label, and the whole thing is the button.
@@ -166,7 +216,7 @@ const TILE_SURFACE = { style: 'emphasis' } as const
 function tile(icon: string, label: string, data: CardAction, caption?: string): unknown {
   return {
     type: 'Container',
-    ...TILE_SURFACE,
+    ...WHITE_TILE,
     selectAction: { type: 'Action.Submit', data },
     spacing: 'Default',
     items: [
@@ -176,7 +226,7 @@ function tile(icon: string, label: string, data: CardAction, caption?: string): 
       // what survives is a wide grey box with a stray pill in it.
       {
         type: 'Image',
-        url: `${ICON_BASE}/${icon}.png`,
+        url: iconUrl(icon),
         width: '40px',
         height: '40px',
         altText: label,
@@ -191,6 +241,7 @@ function tile(icon: string, label: string, data: CardAction, caption?: string): 
         wrap: true,
         horizontalAlignment: 'Center',
         spacing: 'Small',
+        ...TILE_TEXT,
       },
       ...(caption
         ? [
@@ -202,6 +253,7 @@ function tile(icon: string, label: string, data: CardAction, caption?: string): 
               wrap: true,
               horizontalAlignment: 'Center',
               spacing: 'None',
+              ...TILE_TEXT,
             },
           ]
         : []),
@@ -668,7 +720,7 @@ function ticketRow(ticket: Ticket, index: number): unknown {
           items: [
             {
               type: 'Image',
-              url: `${ICON_BASE}/${iconFor(ticket.category)}.png`,
+              url: iconUrl(iconFor(ticket.category)),
               width: '28px',
               height: '28px',
               altText: ticket.category,
