@@ -18,7 +18,15 @@ import { fileURLToPath } from 'node:url'
 import { png, blend, disc, rect, segment } from './png.mjs'
 
 const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'web', 'public', 'icons')
-const SIZE = 64
+
+/**
+ * 128, to match the hand-drawn set.
+ *
+ * The originals were 64 and looked soft beside them — a card renders these at 32 or
+ * 40 CSS pixels, which is 64 or 80 real ones on any modern screen, so 64 was being
+ * upscaled exactly where it shows.
+ */
+const SIZE = 128
 
 /** The app's palette: [glyph, disc tint]. */
 const GREEN = ['#42c07a', '#e3f6ec']
@@ -28,17 +36,19 @@ const DEEP = ['#1a6fd6', '#e2eeff']
 const ORANGE = ['#f08a5d', '#fdeade']
 const SLATE = ['#5b6b8c', '#eaeef5']
 
+/**
+ * Only the four that are still generated.
+ *
+ * `ticket`, `list`, `mood`, `pulse`, `leave` and `something-else` were redrawn by
+ * hand and are better than anything here — they are deliberately absent so a run of
+ * this script cannot overwrite them. The glyph functions for them are kept below in
+ * case the set ever needs regenerating from scratch.
+ */
 const ICONS = {
   payroll: [GREEN, banknote],
-  leave: [BLUE, calendar],
   'it-access': [PURPLE, laptop],
   insurance: [DEEP, shield],
   facilities: [ORANGE, building],
-  'something-else': [SLATE, dots],
-  ticket: [BLUE, ticket],
-  list: [SLATE, list],
-  mood: [GREEN, smile],
-  pulse: [PURPLE, heartbeat],
 }
 
 mkdirSync(OUT, { recursive: true })
