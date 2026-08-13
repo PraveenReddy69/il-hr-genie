@@ -21,6 +21,7 @@
  */
 
 import {
+  type Celebrant,
   MOOD_REASONS,
   type Celebrations,
   type Mood,
@@ -28,6 +29,7 @@ import {
   type PulseQuestion,
   type Ticket,
 } from './api.js'
+import type { Holiday } from './holidays.js'
 
 const SCHEMA = 'http://adaptivecards.io/schemas/adaptive-card.json'
 const VERSION = '1.5'
@@ -42,10 +44,12 @@ export type CardAction =
   | { kind: 'startPulse' }
   | { kind: 'savePulse'; [answer: string]: string }
   | { kind: 'dismissNudge' }
-  | { kind: 'raise' }
+  | { kind: 'raise'; subject?: string }
   | { kind: 'cancel' }
   | { kind: 'myTickets' }
   | { kind: 'startTicket' }
+  | { kind: 'holidays' }
+  | { kind: 'team' }
 
 export interface AdaptiveCard {
   $schema: string
@@ -142,17 +146,15 @@ function body(items: unknown[]): unknown {
 const ICON_BASE = 'https://praveenreddy69.github.io/il-hr-genie/icons'
 
 /**
- * What every tile sits on.
+ * The surface a tile sits on.
  *
- * `style: 'emphasis'` is kept for the padding Teams gives a styled container — there
- * is no padding property in this schema version — and the image paints over its grey
- * with the app's own wash. Colour and breathing room, neither of which the style
- * alone provides.
+ * `style` only — no background image. A remote PNG behind every tile means the whole
+ * picker looks unstyled whenever the image is slow, blocked or cached badly, which is
+ * exactly what happened on mobile: the tiles read as plain text on white. `emphasis`
+ * is drawn by the Teams client itself, so it cannot fail to load and it follows the
+ * user's light or dark theme for free.
  */
-const TILE_SURFACE = {
-  style: 'emphasis',
-  backgroundImage: { url: `${ICON_BASE}/tile.png`, fillMode: 'Cover' },
-} as const
+const TILE_SURFACE = { style: 'emphasis' } as const
 
 /**
  * A tappable tile: icon, label, and the whole thing is the button.
@@ -168,47 +170,41 @@ function tile(icon: string, label: string, data: CardAction, caption?: string): 
     selectAction: { type: 'Action.Submit', data },
     spacing: 'Default',
     items: [
+      // Stacked and centred, two to a row. A horizontal version was tried against a
+      // design mockup and looked worse: the polish in that mockup comes from
+      // gradients, shadows and soft washes, and Adaptive Cards has none of them —
+      // what survives is a wide grey box with a stray pill in it.
       {
-        type: 'ColumnSet',
-        spacing: 'None',
-        columns: [
-          {
-            type: 'Column',
-            width: 'auto',
-            verticalContentAlignment: 'Center',
-            items: [
-              {
-                type: 'Image',
-                url: `${ICON_BASE}/${icon}.png`,
-                width: '32px',
-                height: '32px',
-                altText: label,
-                spacing: 'None',
-              },
-            ],
-          },
-          {
-            type: 'Column',
-            width: 'stretch',
-            verticalContentAlignment: 'Center',
-            items: [
-              { type: 'TextBlock', text: label, weight: 'Bolder', wrap: true, spacing: 'None' },
-              ...(caption
-                ? [
-                    {
-                      type: 'TextBlock',
-                      text: caption,
-                      size: 'Small',
-                      isSubtle: true,
-                      wrap: true,
-                      spacing: 'None',
-                    },
-                  ]
-                : []),
-            ],
-          },
-        ],
+        type: 'Image',
+        url: `${ICON_BASE}/${icon}.png`,
+        width: '40px',
+        height: '40px',
+        altText: label,
+        horizontalAlignment: 'Center',
+        spacing: 'Small',
       },
+      {
+        type: 'TextBlock',
+        text: label,
+        size: 'Medium',
+        weight: 'Bolder',
+        wrap: true,
+        horizontalAlignment: 'Center',
+        spacing: 'Small',
+      },
+      ...(caption
+        ? [
+            {
+              type: 'TextBlock',
+              text: caption,
+              size: 'Small',
+              isSubtle: true,
+              wrap: true,
+              horizontalAlignment: 'Center',
+              spacing: 'None',
+            },
+          ]
+        : []),
     ],
   }
 }
@@ -228,6 +224,114 @@ function grid(tiles: unknown[]): unknown[] {
   return rows
 }
 
+/**
+ * The holiday calendar, in chat.
+ *
+ * Chat works on every client; tabs do not. Anything an employee genuinely needs has
+ * to be reachable here, with the tab as the roomier view for people at a desk.
+ *
+ * Only what is still ahead, and only a handful — a list of dates that have already
+ * passed is a reference document, not an answer.
+ */
+export function holidaysCard(holidays: Holiday[], todayIso: string): AdaptiveCard {
+  const ahead = holidays.filter((one) => one.isoDate >= todayIso)
+  const shown = ahead.slice(0, HOLIDAYS_IN_CHAT)
+
+  if (shown.length === 0) {
+    return card([
+      header('Holidays', 'Nothing left this year'),
+      body([
+        {
+          type: 'TextBlock',
+          text: 'No more published dates for this year. The Holidays tab has the full calendar.',
+          wrap: true,
+          isSubtle: true,
+          spacing: 'Default',
+        },
+      ]),
+    ])
+  }
+
+  return card([
+    header('Holidays', 'What is coming up', `${ahead.length} still ahead this year`),
+    body(
+      shown.map((one) => ({
+        type: 'Container',
+        ...TILE_SURFACE,
+        spacing: 'Small',
+        items: [
+          {
+            type: 'ColumnSet',
+            columns: [
+              {
+                type: 'Column',
+                width: 'stretch',
+                items: [
+                  { type: 'TextBlock', text: one.name, weight: 'Bolder', wrap: true, spacing: 'None' },
+                  {
+                    type: 'TextBlock',
+                    text: `${prettyDate(one.isoDate)} · ${weekday(one.isoDate)} · ${one.region}`,
+                    size: 'Small',
+                    isSubtle: true,
+                    wrap: true,
+                    spacing: 'None',
+                  },
+                ],
+              },
+              {
+                type: 'Column',
+                width: 'auto',
+                verticalContentAlignment: 'Center',
+                items: [
+                  {
+                    type: 'Container',
+                    style: one.kind === 'OPTIONAL' ? 'warning' : 'good',
+                    spacing: 'None',
+                    items: [
+                      {
+                        type: 'TextBlock',
+                        text: one.kind === 'OPTIONAL' ? 'Optional' : 'Fixed',
+                        size: 'Small',
+                        weight: 'Bolder',
+                        color: one.kind === 'OPTIONAL' ? 'Warning' : 'Good',
+                        wrap: false,
+                        spacing: 'None',
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      })).concat([
+        {
+          type: 'TextBlock',
+          text: 'Fixed days are paid holidays everyone gets. Optional days you choose from the published list, and some are state-specific.',
+          wrap: true,
+          size: 'Small',
+          isSubtle: true,
+          spacing: 'Default',
+        },
+      ] as never),
+    ),
+  ])
+}
+
+/** Enough to answer "what is next", not the whole year. */
+const HOLIDAYS_IN_CHAT = 4
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+function prettyDate(iso: string): string {
+  const [year, month, day] = iso.split('-')
+  return `${Number(day)} ${MONTHS[Number(month) - 1]} ${year}`
+}
+
+function weekday(iso: string): string {
+  return new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'long' })
+}
+
 export function welcomeCard(firstName: string): AdaptiveCard {
   return card([
     header('Infinity Learn', `Hi ${firstName} 👋`, 'HR Genie · always on'),
@@ -243,8 +347,13 @@ export function welcomeCard(firstName: string): AdaptiveCard {
         tile('list', 'My tickets', { kind: 'myTickets' }, 'See replies'),
       ]),
       ...grid([
-        tile('mood', 'Check in', { kind: 'checkIn' }, 'Ten seconds'),
-        tile('pulse', 'Monthly pulse', { kind: 'startPulse' }, 'Four questions'),
+        tile('mood', 'Check in', { kind: 'checkIn' }, 'How today is going'),
+        tile('pulse', 'Monthly pulse', { kind: 'startPulse' }, 'Four quick questions'),
+      ]),
+      // Reachable from chat, not only the tabs: tabs do not open on Teams mobile.
+      ...grid([
+        tile('leave', 'Holidays', { kind: 'holidays' }, 'What is coming up'),
+        tile('something-else', 'Around the team', { kind: 'team' }, 'Birthdays and milestones'),
       ]),
     ]),
   ])
@@ -269,35 +378,40 @@ function iconFor(category: string): string {
   return CATEGORY_ICON[category] ?? 'something-else'
 }
 
-/** An icon beside a line of text, for the places a full tile would be too much. */
-function withIcon(category: string, text: string): unknown {
-  return {
-    type: 'ColumnSet',
-    spacing: 'None',
-    columns: [
-      {
-        type: 'Column',
-        width: 'auto',
-        verticalContentAlignment: 'Center',
-        items: [
-          {
-            type: 'Image',
-            url: `${ICON_BASE}/${iconFor(category)}.png`,
-            width: '24px',
-            height: '24px',
-            altText: category,
-            spacing: 'None',
-          },
-        ],
-      },
-      {
-        type: 'Column',
-        width: 'stretch',
-        verticalContentAlignment: 'Center',
-        items: [{ type: 'TextBlock', text, wrap: true, spacing: 'None' }],
-      },
+/**
+ * What was picked, and what to do next.
+ *
+ * The picker itself is retired once a category is chosen, because a card cannot be
+ * restyled after submit — six tiles that all still look identical are no record of
+ * anything. This replaces it and names the choice, so scrolling back shows the
+ * decision rather than the menu.
+ */
+export function subjectPromptCard(category: string): AdaptiveCard {
+  return card(
+    [
+      header('New ticket', category, 'Category chosen — HR can move it later.'),
+      body([
+        {
+          type: 'TextBlock',
+          text: "Tell me what's happening in a line or two. I'll put it straight into the ticket as you write it.",
+          wrap: true,
+          spacing: 'Default',
+        },
+        {
+          type: 'TextBlock',
+          text: 'Nothing goes to HR until you have seen it and chosen Raise it.',
+          wrap: true,
+          size: 'Small',
+          isSubtle: true,
+          spacing: 'Small',
+        },
+      ]),
     ],
-  }
+    // Picked the wrong one? The alternative is scrolling back to the picker, which
+    // by then may be several messages up — or, worse, finding an older picker from a
+    // previous attempt and using that.
+    [{ type: 'Action.Submit', title: 'Change category', data: { kind: 'startTicket' } }],
+  )
 }
 
 export function categoryCard(names: string[]): AdaptiveCard {
@@ -320,26 +434,58 @@ export function categoryCard(names: string[]): AdaptiveCard {
 export function draftCard(subject: string, category: string, raisedBy: string): AdaptiveCard {
   return card(
     [
-      header('Ticket preview', subject),
+      /*
+       * The category heads the card, and what was typed sits in a panel of its own.
+       *
+       * The subject used to be the heading, which read as a title someone had chosen
+       * rather than the words about to be sent to HR — and it left the category as an
+       * afterthought below. This way the band says what kind of thing this is, and the
+       * message is presented as the quotable thing it is, under a label saying so.
+       *
+       * It also matches the card the category picker leaves behind, so the two steps
+       * read as one flow rather than two designs.
+       */
+      header('Ticket preview', category, 'Check it over — nothing has gone to HR yet.'),
       body([
-        { ...(withIcon(category, `**${category}**`) as object), spacing: 'Default' },
         {
-          type: 'FactSet',
+          type: 'TextBlock',
+          text: 'WHAT YOU TOLD ME — EDIT IT IF YOU LIKE',
+          size: 'Small',
+          weight: 'Bolder',
+          isSubtle: true,
+          wrap: true,
+          spacing: 'Default',
+        },
+        /*
+         * Editable in place, rather than a read-only panel plus an Edit button.
+         *
+         * Whatever is in this box when Raise it is pressed is what gets filed —
+         * Adaptive Cards sends every input alongside the action. One less step, and
+         * no chance of the card showing one thing while another is sent.
+         */
+        {
+          type: 'Input.Text',
+          id: 'subject',
+          value: subject,
+          isMultiline: true,
           spacing: 'Small',
-          facts: [{ title: 'Raised by', value: raisedBy }],
+          placeholder: 'What is happening?',
         },
         {
-          type: 'Container',
-          style: 'warning',
+          type: 'FactSet',
           spacing: 'Default',
-          items: [
-            {
-              type: 'TextBlock',
-              text: '**Nothing has gone to HR yet.** Choose Raise it and it goes straight over.',
-              wrap: true,
-              size: 'Small',
-            },
+          facts: [
+            { title: 'Category', value: category },
+            { title: 'Raised by', value: raisedBy },
           ],
+        },
+        {
+          type: 'TextBlock',
+          text: 'Choose Raise it and it goes straight to your HRBP. Cancel drops it.',
+          wrap: true,
+          size: 'Small',
+          isSubtle: true,
+          spacing: 'Small',
         },
       ]),
     ],
@@ -350,31 +496,83 @@ export function draftCard(subject: string, category: string, raisedBy: string): 
   )
 }
 
+/**
+ * The receipt.
+ *
+ * Deliberately the same shape as the draft it replaces — reference in the band, the
+ * words in their own panel under a label, facts beneath — so raising a ticket reads
+ * as one card confirming rather than a second card starting over.
+ *
+ * It also answers the question people actually have at this moment, which is not
+ * "did it save" but "what happens now". Hence the closing line and a way to track it.
+ */
 export function receiptCard(ticket: Ticket): AdaptiveCard {
-  return card([
-    header('Ticket raised', ticket.id, 'Your HRBP sees it straight away.'),
-    body([
-      {
-        // Green is kept for the one line reporting the outcome rather than the whole
-        // header — every card wears the same band now, and success is the exception
-        // worth colouring.
-        type: 'Container',
-        style: 'good',
-        spacing: 'Default',
-        items: [
-          { type: 'TextBlock', text: '✅ Filed with HR', weight: 'Bolder', wrap: true, spacing: 'None' },
-        ],
-      },
-      { type: 'TextBlock', text: ticket.subject, wrap: true, spacing: 'Default' },
-      {
-        type: 'FactSet',
-        facts: [
-          { title: 'Category', value: ticket.category },
-          { title: 'Status', value: statusLabel(ticket.status) },
-        ],
-      },
-    ]),
-  ])
+  return card(
+    [
+      header('Ticket raised', ticket.id, `${ticket.category} · ${statusLabel(ticket.status)}`),
+      body([
+        {
+          // Green for the one line reporting the outcome rather than the whole header
+          // — every card wears the same band now, and success is the exception worth
+          // colouring.
+          type: 'Container',
+          style: 'good',
+          spacing: 'Default',
+          items: [
+            {
+              type: 'TextBlock',
+              text: '✅ Filed with HR',
+              weight: 'Bolder',
+              wrap: true,
+              spacing: 'None',
+            },
+          ],
+        },
+        {
+          type: 'TextBlock',
+          text: 'WHAT HR RECEIVED',
+          size: 'Small',
+          weight: 'Bolder',
+          isSubtle: true,
+          wrap: true,
+          spacing: 'Default',
+        },
+        {
+          type: 'Container',
+          ...TILE_SURFACE,
+          spacing: 'Small',
+          items: [
+            {
+              type: 'TextBlock',
+              text: ticket.subject,
+              size: 'Medium',
+              weight: 'Bolder',
+              wrap: true,
+              spacing: 'None',
+            },
+          ],
+        },
+        {
+          type: 'FactSet',
+          spacing: 'Default',
+          facts: [
+            { title: 'Reference', value: ticket.id },
+            { title: 'Category', value: ticket.category },
+            { title: 'Status', value: statusLabel(ticket.status) },
+          ],
+        },
+        {
+          type: 'TextBlock',
+          text: "I'll message you here as soon as HR moves it — you do not need to check back.",
+          wrap: true,
+          size: 'Small',
+          isSubtle: true,
+          spacing: 'Small',
+        },
+      ]),
+    ],
+    [{ type: 'Action.Submit', title: 'My tickets', data: { kind: 'myTickets' } }],
+  )
 }
 
 export function ticketsCard(tickets: Ticket[]): AdaptiveCard {
@@ -400,10 +598,62 @@ export function ticketsCard(tickets: Ticket[]): AdaptiveCard {
       `${tickets.length} with HR`,
       `${open} still open · newest first`,
     ),
-    body(
-      tickets.slice(0, 10).map((ticket) => ({
-        // A tile each, like the Android list. Separators alone leave ten tickets
-        // reading as one block of text.
+    body([
+      ...tickets.slice(0, TICKETS_IN_CHAT).map((ticket, index) => ticketRow(ticket, index)),
+      /*
+       * The rest expand here, in the card.
+       *
+       * This used to say "open the My tickets tab" — which is a dead end on Teams
+       * mobile, where personal tabs do not open. Chat renders on every client, so
+       * anything an employee needs has to be reachable from it.
+       */
+      ...(tickets.length > TICKETS_IN_CHAT
+        ? (() => {
+            const hidden = tickets.slice(TICKETS_IN_CHAT, 10)
+            const ids = hidden.map((_, offset) => `older-${TICKETS_IN_CHAT + offset}`)
+            const both = [...ids, 'older-more', 'older-less']
+            const button = (id: string, title: string, visible: boolean) => ({
+              type: 'ActionSet',
+              id,
+              spacing: 'Small',
+              ...(visible ? {} : { isVisible: false }),
+              actions: [{ type: 'Action.ToggleVisibility', title, targetElements: both }],
+            })
+            return [
+              ...hidden.map((ticket, offset) => ({
+                ...(ticketRow(ticket, TICKETS_IN_CHAT + offset) as object),
+                id: ids[offset],
+                isVisible: false,
+              })),
+              button('older-more', `Show ${hidden.length} older`, true),
+              button('older-less', 'Show fewer', false),
+            ]
+          })()
+        : []),
+    ]),
+  ])
+}
+
+/** The badge tint behind a status. `good` for done, `warning` for waiting. */
+function statusStyle(status: Ticket['status']): string {
+  return status === 'RESOLVED' ? 'good' : status === 'IN_PROGRESS' ? 'accent' : 'warning'
+}
+
+/** "today", "4 days ago" — how long this has been sitting with HR. */
+function ago(millis: number): string {
+  const days = Math.floor((Date.now() - millis) / 86400000)
+  if (days <= 0) return 'today'
+  if (days === 1) return 'yesterday'
+  if (days < 30) return `${days} days ago`
+  const months = Math.floor(days / 30)
+  return months === 1 ? 'a month ago' : `${months} months ago`
+}
+
+/** One ticket in the list. Shared by the visible rows and the folded-away ones. */
+function ticketRow(ticket: Ticket, index: number): unknown {
+  // A tile each, like the Android list. Separators alone leave ten tickets reading
+  // as one block of text.
+  return {
         type: 'Container',
         ...TILE_SURFACE,
         spacing: 'Default',
@@ -433,7 +683,9 @@ export function ticketsCard(tickets: Ticket[]): AdaptiveCard {
             { type: 'TextBlock', text: ticket.subject, wrap: true, weight: 'Bolder', spacing: 'None' },
             {
               type: 'TextBlock',
-              text: `${ticket.id} · ${ticket.category}`,
+              // Age matters more than the raw date in a list: "4 days ago" is the
+              // thing that tells you whether HR is being slow.
+              text: `${ticket.id} · ${ticket.category} · ${ago(ticket.createdAtMillis)}`,
               wrap: true,
               isSubtle: true,
               size: 'Small',
@@ -447,22 +699,202 @@ export function ticketsCard(tickets: Ticket[]): AdaptiveCard {
                 verticalContentAlignment: 'Center',
                 items: [
                   {
-                    type: 'TextBlock',
-                    text: statusLabel(ticket.status),
-                    size: 'Small',
-                    weight: 'Bolder',
-                    color: statusColour(ticket.status),
-                    wrap: false,
+                    // A tinted badge rather than a coloured word. Container styles are
+                    // the only fill Adaptive Cards offers, and the tint is drawn by
+                    // Teams — so it follows light and dark without a second palette.
+                    type: 'Container',
+                    style: statusStyle(ticket.status),
                     spacing: 'None',
+                    items: [
+                      {
+                        type: 'TextBlock',
+                        text: statusLabel(ticket.status),
+                        size: 'Small',
+                        weight: 'Bolder',
+                        color: statusColour(ticket.status),
+                        wrap: false,
+                        spacing: 'None',
+                      },
+                    ],
                   },
                 ],
               },
             ],
           },
+          // What HR wrote, folded away. Their reply is the point of the ticket, and
+          // until now it was only visible on the update card as it arrived — scroll
+          // past and it was gone. ToggleVisibility opens it in place, no round trip.
+          ...replyBlock(ticket, index),
         ],
-      })),
-    ),
-  ])
+  }
+}
+
+/** How many fit in a chat card before it stops being readable. */
+const TICKETS_IN_CHAT = 3
+
+/**
+ * A ticket's journey, hidden behind a toggle.
+ *
+ * Three stops, each with the moment it happened: raised, picked up, resolved. The
+ * timestamps are real — `createdAtMillis` for the first, and every status change
+ * carries its own time in the comment thread.
+ *
+ * Adaptive Cards cannot draw the connecting line between the dots; there are no
+ * shapes and no SVG. Coloured markers, aligned labels and consistent spacing carry
+ * the same reading — a sequence with a state each — which is what the line was for.
+ *
+ * Only where there is something to show: an OPEN ticket nobody has touched has no
+ * journey yet, and a button promising one would be a lie.
+ */
+function replyBlock(ticket: Ticket, index: number): unknown[] {
+  const comments = [...(ticket.comments ?? [])].sort((a, b) => a.atMillis - b.atMillis)
+  /*
+   * A comment's time where there is one; otherwise `updatedAtMillis` for the stop the
+   * ticket is sitting on right now.
+   *
+   * HR can move a ticket without commenting for every status but RESOLVED, and that
+   * move has only one timestamp — so it dates the current stop and nothing earlier.
+   */
+  const at = (status: string) => {
+    const commented = comments.find((one) => one.status === status)?.atMillis
+    if (commented) return commented
+    return status === ticket.status ? ticket.updatedAtMillis : undefined
+  }
+  const stops: { label: string; millis?: number; colour: string; reached: boolean }[] = [
+    { label: 'Raised', millis: ticket.createdAtMillis, colour: 'Warning', reached: true },
+    {
+      label: 'Picked up by HR',
+      millis: at('IN_PROGRESS'),
+      colour: 'Warning',
+      reached: ticket.status !== 'OPEN',
+    },
+    {
+      label: 'Resolved',
+      millis: at('RESOLVED'),
+      colour: 'Good',
+      reached: ticket.status === 'RESOLVED',
+    },
+  ]
+
+  const latest = [...comments].reverse().find((one) => one.text?.trim())
+  if (!latest && ticket.status === 'OPEN') return []
+
+  const id = `reply-${index}`
+  return [
+    {
+      type: 'ActionSet',
+      spacing: 'Small',
+      actions: [
+        {
+          type: 'Action.ToggleVisibility',
+          title: `Track this ticket · ${statusLabel(ticket.status)}`,
+          targetElements: [id],
+        },
+      ],
+    },
+    {
+      type: 'Container',
+      id,
+      isVisible: false,
+      spacing: 'Small',
+      items: [
+        ...stops.map((stop) => ({
+          type: 'ColumnSet',
+          spacing: 'Small',
+          columns: [
+            {
+              type: 'Column',
+              width: 'auto',
+              verticalContentAlignment: 'Center',
+              items: [
+                {
+                  // A filled marker for what has happened, hollow for what has not —
+                  // the same distinction the ring in the design carries.
+                  type: 'TextBlock',
+                  text: stop.reached ? '◉' : '○',
+                  size: 'Medium',
+                  color: stop.reached ? stop.colour : 'Default',
+                  isSubtle: !stop.reached,
+                  spacing: 'None',
+                },
+              ],
+            },
+            {
+              type: 'Column',
+              width: 'stretch',
+              items: [
+                {
+                  type: 'TextBlock',
+                  text: stop.label,
+                  weight: 'Bolder',
+                  wrap: true,
+                  isSubtle: !stop.reached,
+                  spacing: 'None',
+                },
+                {
+                  type: 'TextBlock',
+                  // Reached but untimed is a different thing from not reached: HR can
+                  // resolve a ticket without commenting at the in-progress stage, and
+                  // "Not yet" under a filled marker contradicts itself.
+                  text: stop.millis
+                    ? stamp(stop.millis)
+                    : stop.reached
+                      ? 'No comment recorded'
+                      : 'Not yet',
+                  size: 'Small',
+                  isSubtle: true,
+                  wrap: true,
+                  spacing: 'None',
+                },
+              ],
+            },
+          ],
+        })),
+        ...(latest
+          ? [
+              {
+                type: 'TextBlock',
+                text: 'WHAT HR SAID',
+                size: 'Small',
+                weight: 'Bolder',
+                isSubtle: true,
+                wrap: true,
+                spacing: 'Default',
+              },
+              {
+                type: 'Container',
+                ...TILE_SURFACE,
+                spacing: 'Small',
+                items: [
+                  { type: 'TextBlock', text: latest.text, wrap: true, spacing: 'None' },
+                  {
+                    type: 'TextBlock',
+                    text: `${employeeLabel(latest.authorId)} · ${stamp(latest.atMillis)}`,
+                    size: 'Small',
+                    isSubtle: true,
+                    wrap: true,
+                    spacing: 'Small',
+                  },
+                ],
+              },
+            ]
+          : []),
+      ],
+    },
+  ]
+}
+
+/** "12 May 2025 · 09:15 AM" — the format the Android app uses. */
+function stamp(millis: number): string {
+  const when = new Date(millis)
+  const date = when.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+  const time = when.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+  return `${date} · ${time}`
+}
+
+/** HR authors show as HR; anything else is the id, which is better than nothing. */
+function employeeLabel(authorId: string): string {
+  return /^HR/i.test(authorId) ? 'HR' : authorId
 }
 
 /**
@@ -500,48 +932,40 @@ export function moodCard(existing: MoodCheckIn | null): AdaptiveCard {
         : 'Your HRBP sees the check-in as part of a team trend. Your note stays with you.',
     ),
     body([
-      faceRow(),
+      ...faceRow(),
     ]),
   ])
 }
 
-/** The five faces, as a row of tiles. Shared by the check-in and the reminder. */
-function faceRow(): unknown {
-  return {
-        type: 'ColumnSet',
-        spacing: 'Default',
-        columns: (Object.keys(MOOD_FACE) as Mood[]).map((mood) => ({
-          type: 'Column',
-          width: 'stretch',
-          items: [
-            {
-              // A surface each, so five faces read as five buttons rather than a row
-              // of emoji with words under them.
-              type: 'Container',
-              ...TILE_SURFACE,
-              selectAction: { type: 'Action.Submit', data: { kind: 'pickMood', mood } },
-              items: [
-                {
-                  type: 'TextBlock',
-                  text: MOOD_FACE[mood].face,
-                  size: 'ExtraLarge',
-                  horizontalAlignment: 'Center',
-                  spacing: 'None',
-                },
-                {
-                  type: 'TextBlock',
-                  text: MOOD_FACE[mood].label,
-                  size: 'Small',
-                  weight: 'Bolder',
-                  wrap: true,
-                  horizontalAlignment: 'Center',
-                  spacing: 'None',
-                },
-              ],
-            },
-          ],
-        })),
-  }
+/**
+ * The five faces. Shared by the check-in and the reminder.
+ *
+ * Stacked rather than a row of five. Five columns across a phone is about 55px each,
+ * which shredded the labels one character at a time — "Stressed" came out as
+ * "St / res / se / d". A full-width row per mood reads at any width, and the tap
+ * target is the whole row rather than a thumbnail.
+ *
+ * The face and the label sit in one TextBlock: two columns reintroduces the width
+ * problem at the small end, and an emoji that fails to render leaves the word intact
+ * this way rather than an empty box.
+ */
+function faceRow(): unknown[] {
+  return (Object.keys(MOOD_FACE) as Mood[]).map((mood) => ({
+    type: 'Container',
+    ...TILE_SURFACE,
+    spacing: 'Small',
+    selectAction: { type: 'Action.Submit', data: { kind: 'pickMood', mood } },
+    items: [
+      {
+        type: 'TextBlock',
+        text: `${MOOD_FACE[mood].face}  ${MOOD_FACE[mood].label}`,
+        size: 'Medium',
+        weight: 'Bolder',
+        wrap: true,
+        spacing: 'None',
+      },
+    ],
+  }))
 }
 
 /**
@@ -557,7 +981,7 @@ export function checkInReminderCard(firstName: string): AdaptiveCard {
   return card([
     header('Check-in', `How are you today, ${firstName}?`, 'One tap. Your note stays with you.'),
     body([
-      faceRow(),
+      ...faceRow(),
       {
         type: 'TextBlock',
         text: 'Your HRBP sees the check-in as part of a team trend. Your manager never sees it.',
@@ -906,57 +1330,190 @@ export function ticketMovedCard(moved: {
  * Returns null when there is nothing today rather than a card saying so — an empty
  * "nobody is celebrating" card is noise every single day it is not someone's birthday.
  */
+/**
+ * How many of each group are named before the card gets summarised.
+ *
+ * Ten birthdays run as one comma-separated paragraph is a wall nobody reads, and it
+ * is also unkind — a name in the middle of a run of eleven has not really been
+ * mentioned. Three each, then a count.
+ */
+const CELEBRANTS_SHOWN = 3
+
+/**
+ * Today, around the team.
+ *
+ * Three labelled sections rather than one list, with a row per person carrying their
+ * id and job title — the console shows the same, and two colleagues who share a first
+ * name are otherwise indistinguishable. Adaptive Cards has no tabs, so the sections
+ * stack.
+ */
 export function celebrationsCard(celebrations: Celebrations): AdaptiveCard | null {
-  // Weight rather than markdown asterisks: TextBlock weight renders the same
-  // everywhere, and a renderer with markdown switched off shows the asterisks raw.
-  const groups: { emoji: string; label: string; names: string }[] = []
-  if (celebrations.birthdays.length > 0) {
-    groups.push({ emoji: '🎂', label: 'Birthdays', names: celebrations.birthdays.join(', ') })
-  }
-  for (const one of celebrations.anniversaries) {
-    groups.push({
-      emoji: '🎉',
-      label: `${one.years} ${one.years === 1 ? 'year' : 'years'} at Infinity Learn`,
-      names: one.name,
+  const sections: unknown[] = []
+
+  const add = (
+    key: string,
+    emoji: string,
+    label: string,
+    people: Celebrant[],
+    detail: (one: Celebrant) => string,
+    greeting: (one: Celebrant) => string,
+  ) => {
+    if (people.length === 0) return
+
+    /**
+     * "Wish" — opens a Teams chat with that person, message already typed.
+     *
+     * A deep link, not a message the bot sends. A bot cannot post as someone else,
+     * and it should not: a birthday wish that the recipient can see was written by a
+     * machine on a colleague's behalf is worse than no wish. This puts the words in
+     * the box and leaves the send to a human.
+     *
+     * It also needs no permission and no install on the recipient's side, which the
+     * alternative — the bot messaging them directly — would.
+     */
+    const wish = (one: Celebrant): unknown[] => {
+      if (!one.email) return []
+      const link =
+        'https://teams.microsoft.com/l/chat/0/0' +
+        `?users=${encodeURIComponent(one.email)}` +
+        `&message=${encodeURIComponent(greeting(one))}`
+      return [
+        {
+          type: 'ActionSet',
+          spacing: 'None',
+          horizontalAlignment: 'Right',
+          actions: [{ type: 'Action.OpenUrl', title: 'Wish', url: link }],
+        },
+      ]
+    }
+
+    /** One person, as their own surface — a row you can pick out at a glance. */
+    const row = (one: Celebrant, index: number): unknown => ({
+      type: 'Container',
+      ...TILE_SURFACE,
+      spacing: 'Small',
+      // Only the overflow carries an id; ToggleVisibility needs one to target.
+      ...(index < CELEBRANTS_SHOWN ? {} : { id: `${key}-${index}`, isVisible: false }),
+      items: [
+        {
+          type: 'ColumnSet',
+          spacing: 'None',
+          columns: [
+            {
+              type: 'Column',
+              width: 'auto',
+              verticalContentAlignment: 'Center',
+              items: [{ type: 'TextBlock', text: emoji, size: 'Large', spacing: 'None' }],
+            },
+            {
+              type: 'Column',
+              width: 'stretch',
+              items: [
+                { type: 'TextBlock', text: one.name, weight: 'Bolder', wrap: true, spacing: 'None' },
+                {
+                  type: 'TextBlock',
+                  text: detail(one),
+                  size: 'Small',
+                  isSubtle: true,
+                  wrap: true,
+                  spacing: 'None',
+                },
+              ],
+            },
+            // The action sits at the end of the row, not under the name: it belongs
+            // to the person beside it, and stacked under two lines of text it read as
+            // a footer for the whole section.
+            ...(one.email
+              ? [
+                  {
+                    type: 'Column',
+                    width: 'auto',
+                    verticalContentAlignment: 'Center',
+                    items: wish(one),
+                  },
+                ]
+              : []),
+          ],
+        },
+      ],
+    })
+
+    const hidden = people.length - CELEBRANTS_SHOWN
+    sections.push({
+      type: 'Container',
+      spacing: 'Default',
+      items: [
+        {
+          type: 'TextBlock',
+          text: label.toUpperCase(),
+          size: 'Small',
+          weight: 'Bolder',
+          isSubtle: true,
+          wrap: true,
+          spacing: 'None',
+        },
+        ...people.map(row),
+        /*
+         * Expand and collapse, in place, with no round trip to us.
+         *
+         * An action cannot rewrite its own title, so "+7 more" would still say "+7
+         * more" once everything was already showing. Two buttons instead — one
+         * visible, one not — and every toggle flips the rows *and* both buttons, so
+         * they swap. Which is the only way to get a label that tells the truth.
+         */
+        ...(hidden > 0
+          ? (() => {
+              const rows = people
+                .slice(CELEBRANTS_SHOWN)
+                .map((_, offset) => `${key}-${CELEBRANTS_SHOWN + offset}`)
+              const both = [...rows, `${key}-more`, `${key}-less`]
+              const button = (id: string, title: string, visible: boolean) => ({
+                type: 'ActionSet',
+                id,
+                spacing: 'Small',
+                ...(visible ? {} : { isVisible: false }),
+                actions: [{ type: 'Action.ToggleVisibility', title, targetElements: both }],
+              })
+              return [
+                button(`${key}-more`, `+${hidden} more`, true),
+                button(`${key}-less`, 'Show less', false),
+              ]
+            })()
+          : []),
+      ],
     })
   }
-  if (celebrations.newJoiners.length > 0) {
-    groups.push({ emoji: '👋', label: 'Just joined', names: celebrations.newJoiners.join(', ') })
-  }
-  if (groups.length === 0) return null
 
-  return card([
-    header('Around the team', 'Today at Infinity Learn'),
-    body(
-      groups.map((group) => ({
-        type: 'ColumnSet',
-        spacing: 'Default',
-        columns: [
-          {
-            type: 'Column',
-            width: 'auto',
-            items: [{ type: 'TextBlock', text: group.emoji, size: 'Large', spacing: 'None' }],
-          },
-          {
-            type: 'Column',
-            width: 'stretch',
-            items: [
-              {
-                type: 'TextBlock',
-                text: group.label,
-                size: 'Small',
-                weight: 'Bolder',
-                isSubtle: true,
-                wrap: true,
-                spacing: 'None',
-              },
-              { type: 'TextBlock', text: group.names, wrap: true, spacing: 'None' },
-            ],
-          },
-        ],
-      })),
-    ),
-  ])
+  /** People are wished by first name; the directory holds the full one. */
+  const firstNameOf = (one: Celebrant): string => one.name.split(' ')[0] || one.name
+
+  /** Id and title, skipping either if the directory has not got it. */
+  const who = (one: Celebrant): string =>
+    [one.employeeId, one.designation].filter(Boolean).join(' · ') || 'Infinity Learn'
+
+  add('bday', '🎂', 'Birthdays', celebrations.birthdays, who, (one) =>
+    `Happy birthday, ${firstNameOf(one)}! 🎂`,
+  )
+  add(
+    'anniv',
+    '🎉',
+    'Work anniversaries',
+    celebrations.anniversaries,
+    (one) =>
+      [one.years ? `${one.years} ${one.years === 1 ? 'year' : 'years'}` : '', who(one)]
+        .filter(Boolean)
+        .join(' · '),
+    (one) =>
+      one.years
+        ? `Congratulations on ${one.years} ${one.years === 1 ? 'year' : 'years'} at Infinity Learn, ${firstNameOf(one)}! 🎉`
+        : `Congratulations on your work anniversary, ${firstNameOf(one)}! 🎉`,
+  )
+  add('joiner', '👋', 'New joiners', celebrations.newJoiners, who, (one) =>
+    `Welcome to Infinity Learn, ${firstNameOf(one)}! 👋`,
+  )
+
+  if (sections.length === 0) return null
+  return card([header('Around the team', 'Today at Infinity Learn'), body(sections)])
 }
 
 /**
@@ -990,10 +1547,17 @@ export function answerCard(text: string, source: string | null): AdaptiveCard {
   ])
 }
 
+/**
+ * A status a person can only read as a state.
+ *
+ * "Open" was being read as a verb — the badge looked like a button that would open
+ * the ticket. "With HR" says who is holding it, which is the thing the reader
+ * actually wants to know.
+ */
 function statusLabel(status: Ticket['status']): string {
   switch (status) {
     case 'OPEN':
-      return 'Open'
+      return 'With HR'
     case 'IN_PROGRESS':
       return 'In progress'
     case 'RESOLVED':

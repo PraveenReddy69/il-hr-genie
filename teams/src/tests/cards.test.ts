@@ -22,6 +22,7 @@ import {
   pulseCard,
   pulseDoneCard,
   receiptCard,
+  subjectPromptCard,
   ticketsCard,
   updatesCard,
   welcomeCard,
@@ -35,6 +36,7 @@ const ticket = (status: Ticket['status'] = 'OPEN'): Ticket => ({
   category: 'Payroll',
   status,
   createdAtMillis: 1,
+    updatedAtMillis: 2,
   comments: [{ status, text: 'Reversed in the August run.', authorId: 'HR000', atMillis: 2 }],
 })
 
@@ -62,7 +64,11 @@ const ALL: [string, AdaptiveCard][] = [
   ['nudge', nudgeCard('Test', { mood: true, pulse: true })!],
   [
     'celebrations',
-    celebrationsCard({ birthdays: ['A'], anniversaries: [{ name: 'B', years: 2 }], newJoiners: [] })!,
+    celebrationsCard({
+      birthdays: [{ name: 'A', employeeId: 'EMP1', designation: 'Engineer', email: 'A@example.com' }],
+      anniversaries: [{ name: 'B', employeeId: 'EMP2', designation: 'Manager', years: 2, email: 'B@example.com' }],
+      newJoiners: [],
+    })!,
   ],
 ]
 
@@ -81,6 +87,8 @@ function* nodes(value: unknown): Generator<Record<string, unknown>> {
 /** The kinds `actionFrom` in bot.ts knows how to map. An unmapped one does nothing. */
 const MAPPED_KINDS = new Set([
   'startTicket',
+  'holidays',
+  'team',
   'myTickets',
   'raise',
   'cancel',
@@ -173,5 +181,201 @@ describe('the pulse card', () => {
       .filter((node) => node.type === 'Input.ChoiceSet')
       .map((node) => node.id)
     assert.deepEqual(ids, ['experience', 'workload'], 'answers are keyed by question id')
+  })
+})
+
+// ------------------------------------------------------- expanding in place
+
+describe('the celebrations overflow', () => {
+  const many = Array.from({ length: 10 }, (_, index) => ({
+    name: `Person ${index + 1}`,
+    employeeId: `EMP${100 + index}`,
+    designation: 'Executive',
+    email: `person${index + 1}@example.com`,
+  }))
+
+  it('hides the overflow and points the button at exactly those rows', () => {
+    // A ToggleVisibility whose targets do not match any element id does nothing at
+    // all, silently — the button is there, it just never opens. Only a check like
+    // this catches that, because the card is still perfectly valid.
+    const card = celebrationsCard({ birthdays: many, anniversaries: [], newJoiners: [] })!
+    const ids = new Set(
+      [...nodes(card)]
+        .filter((node) => node.isVisible === false && typeof node.id === 'string')
+        .map((node) => node.id as string),
+    )
+    const toggles = [...nodes(card)].filter(
+      (node) => node.type === 'Action.ToggleVisibility',
+    ) as { title?: string; targetElements?: string[] }[]
+
+    // Two: "+7 more" showing, "Show less" hidden. Each flips the rows and both
+    // buttons, so the label always matches what is on screen.
+    assert.deepEqual(
+      toggles.map((one) => one.title),
+      ['+7 more', 'Show less'],
+    )
+    assert.equal(ids.size, 8, 'seven rows plus the hidden Show less')
+    for (const toggle of toggles) {
+      for (const target of toggle.targetElements ?? []) {
+        assert.ok(
+          ids.has(target) || target.endsWith('-more'),
+          `nothing to toggle for "${target}"`,
+        )
+      }
+      assert.ok(
+        (toggle.targetElements ?? []).includes('bday-more'),
+        'each button must flip the other, or the label goes stale',
+      )
+      assert.ok((toggle.targetElements ?? []).includes('bday-less'))
+    }
+  })
+
+  it('shows no button when everyone fits', () => {
+    const card = celebrationsCard({
+      birthdays: many.slice(0, 2),
+      anniversaries: [],
+      newJoiners: [],
+    })!
+    const toggles = [...nodes(card)].filter((node) => node.type === 'Action.ToggleVisibility')
+    assert.equal(toggles.length, 0)
+  })
+})
+
+describe('the Wish button', () => {
+  const withEmail = {
+    name: 'Dheeraj Reddy',
+    employeeId: 'EMP3805',
+    designation: 'Senior Manager',
+    email: 'dheeraj@infinitylearn.com',
+  }
+
+  function openUrls(card: unknown): { title?: string; url?: string }[] {
+    return [...nodes(card)].filter((n) => n.type === 'Action.OpenUrl') as never
+  }
+
+  it('opens a Teams chat with that person, message already written', () => {
+    const card = celebrationsCard({ birthdays: [withEmail], anniversaries: [], newJoiners: [] })!
+    const [action] = openUrls(card)
+    assert.ok(action, 'a Wish button')
+    const url = new URL(action.url!)
+    assert.equal(url.pathname, '/l/chat/0/0')
+    assert.equal(url.searchParams.get('users'), 'dheeraj@infinitylearn.com')
+    assert.match(url.searchParams.get('message')!, /Happy birthday, Dheeraj/)
+  })
+
+  it('greets each occasion in its own words', () => {
+    const card = celebrationsCard({
+      birthdays: [],
+      anniversaries: [{ ...withEmail, years: 3 }],
+      newJoiners: [{ ...withEmail, name: 'New Person' }],
+    })!
+    const messages = openUrls(card).map((a) => new URL(a.url!).searchParams.get('message'))
+    assert.match(messages[0]!, /Congratulations on 3 years/)
+    assert.match(messages[1]!, /Welcome to Infinity Learn, New/)
+  })
+
+  it('hides itself when the directory has no email, rather than opening an empty chat', () => {
+    // The live payload has no email today — the button must simply not appear.
+    const card = celebrationsCard({
+      birthdays: [{ ...withEmail, email: '' }],
+      anniversaries: [],
+      newJoiners: [],
+    })!
+    assert.equal(openUrls(card).length, 0)
+  })
+})
+
+describe('choosing a category', () => {
+  it('names the choice, because the picker cannot show it', () => {
+    // A card is fixed once sent — the six tiles cannot be restyled to mark one. The
+    // picker is retired and this replaces it, so scrolling back shows the decision
+    // rather than the menu.
+    const card = subjectPromptCard('Leave')
+    const header = (card.body[0] as { items: { text: string }[] }).items.map((i) => i.text)
+    assert.deepEqual(header.slice(0, 2), ['NEW TICKET', 'Leave'])
+    assert.match(JSON.stringify(card), /Nothing goes to HR until you have seen it/)
+  })
+})
+
+describe("HR's reply in the ticket list", () => {
+  const withReply = {
+    id: 'HRG-0008',
+    subject: 'Need to update my pay cycle',
+    category: 'Payroll',
+    status: 'RESOLVED' as const,
+    createdAtMillis: 1,
+    updatedAtMillis: 2,
+    comments: [
+      { status: 'RESOLVED' as const, text: 'Updated from the September run.', authorId: 'HR000', atMillis: 2 },
+    ],
+  }
+  const untouched = { ...withReply, id: 'HRG-0009', status: 'OPEN' as const, comments: [] }
+
+  it('folds the journey away behind a toggle that can actually open it', () => {
+    const card = ticketsCard([withReply])
+    const hidden = [...nodes(card)].filter((n) => n.isVisible === false).map((n) => n.id)
+    const toggle = [...nodes(card)].find((n) => n.type === 'Action.ToggleVisibility') as {
+      title?: string
+      targetElements?: string[]
+    }
+    assert.ok(toggle, 'a toggle')
+    assert.match(toggle.title!, /Track this ticket/)
+    for (const target of toggle.targetElements ?? []) assert.ok(hidden.includes(target))
+    assert.match(JSON.stringify(card), /Updated from the September run/)
+  })
+
+  it('offers nothing on a ticket nobody has replied to', () => {
+    // A button promising HR's reply where there is none is a lie the card tells.
+    const card = ticketsCard([untouched])
+    assert.equal([...nodes(card)].filter((n) => n.type === 'Action.ToggleVisibility').length, 0)
+  })
+})
+
+describe('the ticket timeline', () => {
+  const t0 = Date.UTC(2025, 4, 12, 3, 45)
+  const inProgress = {
+    id: 'HRG-1',
+    subject: 'S',
+    category: 'Payroll',
+    status: 'IN_PROGRESS' as const,
+    createdAtMillis: t0,
+    updatedAtMillis: 2,
+    comments: [
+      { status: 'IN_PROGRESS' as const, text: 'Looking into it.', authorId: 'HR000', atMillis: t0 + 1800000 },
+    ],
+  }
+
+  it('marks what has happened and leaves what has not', () => {
+    // A resolved-looking marker on an unresolved ticket is the one thing this must
+    // never do — the whole point is showing where the ticket actually is.
+    const card = ticketsCard([inProgress])
+    const marks = [...nodes(card)]
+      .filter((n) => n.text === '◉' || n.text === '○')
+      .map((n) => n.text)
+    assert.deepEqual(marks, ['◉', '◉', '○'], 'raised and picked up, not resolved')
+    assert.match(JSON.stringify(card), /Not yet/, 'the unreached stop has no invented time')
+  })
+})
+
+describe('a stop with no comment', () => {
+  it('says so, rather than "Not yet" under a filled marker', () => {
+    // HR can resolve a ticket without commenting at the in-progress stage. The stop
+    // was still passed through, so claiming it has not happened is simply wrong.
+    const card = ticketsCard([
+      {
+        id: 'HRG-1',
+        subject: 'S',
+        category: 'Payroll',
+        status: 'RESOLVED' as const,
+        createdAtMillis: Date.UTC(2026, 7, 13, 5, 37),
+        updatedAtMillis: Date.UTC(2026, 7, 13, 5, 40),
+        comments: [
+          { status: 'RESOLVED' as const, text: 'Done.', authorId: 'HR000', atMillis: Date.UTC(2026, 7, 12, 18, 24) },
+        ],
+      },
+    ])
+    const text = JSON.stringify(card)
+    assert.match(text, /No comment recorded/)
+    assert.doesNotMatch(text, /Not yet/, 'every stop was reached on a resolved ticket')
   })
 })

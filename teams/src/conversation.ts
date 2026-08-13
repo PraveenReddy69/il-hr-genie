@@ -8,6 +8,7 @@
  */
 
 import * as api from './api.js'
+import { holidaysFor } from './holidays.js'
 import type { Mood } from './api.js'
 import {
   answerCard,
@@ -23,6 +24,8 @@ import {
   moodDoneCard,
   receiptCard,
   ticketsCard,
+  holidaysCard,
+  subjectPromptCard,
   welcomeCard,
   type AdaptiveCard,
   type CardAction,
@@ -68,11 +71,10 @@ export async function greet(): Promise<Reply[]> {
   const session = await api.gateway.signIn().catch(() => null)
   const firstName = session?.name?.split(' ')[0] ?? 'there'
 
-  const [mood, pulse, unseen, party] = await Promise.all([
+  const [mood, pulse, unseen] = await Promise.all([
     api.gateway.todaysMood().catch(() => undefined),
     api.gateway.thisCyclesPulse().catch(() => undefined),
     api.gateway.unseenTickets().catch(() => []),
-    api.gateway.celebrations().catch(() => null),
   ])
 
   const replies: Reply[] = []
@@ -92,10 +94,14 @@ export async function greet(): Promise<Reply[]> {
 
   replies.push({ card: welcomeCard(firstName) })
 
-  // Last, and only when there is something: it is the pleasant part, not the point.
-  const celebrating = party ? celebrationsCard(party) : null
-  if (celebrating) replies.push({ card: celebrating })
-
+  /*
+   * No celebrations here.
+   *
+   * They are a pleasant aside, not something the greeting owes anyone — and once
+   * there is a tile on the menu and a tab of their own, leading with a list of ten
+   * birthdays pushes the things someone actually came to do off the screen. Ask for
+   * them and they are one tap away.
+   */
   return replies
 }
 
@@ -108,6 +114,19 @@ export async function handle(state: ConversationState, input: Input): Promise<Re
 
   // Typed shortcuts, so the bot works for people who never press buttons.
   if (state.stage === 'idle') {
+    /**
+     * A greeting is not a policy question.
+     *
+     * Everything unmatched falls through to the knowledge base, so "hello" was being
+     * put to the policy library, which either answers nothing useful or — as it did
+     * in Teams — fails and makes the bot look broken on the very first message.
+     * Anchored and short, so "hi" opens the menu while "hire policy" does not.
+     * [greet] rather than the card alone, so saying hello shows anything HR has done
+     * since last time — the same as opening the app.
+     */
+    if (/^(hi|hey|hello|yo|start|menu|help|good morning|good evening)[!.\s]*$/i.test(text)) {
+      return greet()
+    }
     if (/^(raise|new|open)\b.*\bticket\b/i.test(text) || /^raise a ticket$/i.test(text)) {
       return startTicket(state)
     }
@@ -124,8 +143,10 @@ export async function handle(state: ConversationState, input: Input): Promise<Re
 
   switch (state.stage) {
     case 'awaitingCategory':
-      // Typing the category name works as well as pressing it.
-      return handleAction(state, { kind: 'pickCategory', category: text })
+      // Typing the category name works as well as pressing it — but only a real one.
+      // Anything else was being sent to the server as a category and rejected there,
+      // which is a round trip to say something we already knew.
+      return takeTypedCategory(state, text)
 
     case 'awaitingSubject':
       return takeSubject(state, text)
@@ -146,7 +167,24 @@ export async function handle(state: ConversationState, input: Input): Promise<Re
   }
 }
 
+/**
+ * Actions that take the employee somewhere else entirely.
+ *
+ * Anything here abandons a half-finished ticket, because it is a different errand.
+ * Leaving the flow where it was is how "Hi" became a ticket category: the picker was
+ * still waiting, three cards further up, long after the person had moved on.
+ */
+const LEAVES_TICKET_FLOW: ReadonlySet<string> = new Set([
+  'holidays',
+  'team',
+  'myTickets',
+  'checkIn',
+  'startPulse',
+])
+
 async function handleAction(state: ConversationState, action: CardAction): Promise<Reply[]> {
+  if (LEAVES_TICKET_FLOW.has(action.kind)) reset(state)
+
   switch (action.kind) {
     case 'startTicket':
       return startTicket(state)
@@ -154,25 +192,37 @@ async function handleAction(state: ConversationState, action: CardAction): Promi
     case 'myTickets':
       return listTickets()
 
+    case 'holidays':
+      return showHolidays()
+
+    case 'team':
+      return showTeam()
+
     case 'pickCategory': {
       state.stage = 'awaitingSubject'
       state.category = action.category
-      return [
-        {
-          text:
-            'Got it. Tell me what\'s happening in a line or two — I\'ll put it in the ticket as ' +
-            'you write it.',
-        },
-      ]
+      // A card, not a line. The picker above is retired once a category is chosen —
+      // a card cannot be restyled after submit, so six identical tiles are no record
+      // of the decision. This names it instead.
+      return [{ card: subjectPromptCard(action.category) }]
     }
 
     case 'cancel': {
+      /*
+       * With nothing to drop, say nothing.
+       *
+       * Pressing Cancel on a card left over from a ticket that had already been filed
+       * answered "Nothing was sent to HR" — which was untrue, and about the most
+       * alarming thing to read after raising something. The card is removed on raise
+       * now, so this is the second line of defence rather than the first.
+       */
+      if (!state.subject) return []
       reset(state)
       return [{ text: 'No problem, I\'ve dropped it. Nothing was sent to HR.' }]
     }
 
     case 'raise':
-      return raise(state)
+      return raise(state, action.subject)
 
     case 'checkIn':
       return startCheckIn(state)
@@ -206,9 +256,27 @@ async function handleAction(state: ConversationState, action: CardAction): Promi
   }
 }
 
+/**
+ * The monthly pulse, unless it is already done.
+ *
+ * Answered this cycle, it says so rather than presenting the form again. A pulse is
+ * once a month by design — re-asking invites second-guessing, and an answer changed
+ * on a whim is worse data than the first honest one. The Android app behaves the same.
+ *
+ * A failed read of this cycle's answers falls through to the questions: better to
+ * offer the form to someone who has already answered than to refuse someone who has
+ * not.
+ */
 async function startPulse(): Promise<Reply[]> {
   try {
-    return [{ card: pulseCard(await api.gateway.pulseQuestions()) }]
+    const [questions, answers] = await Promise.all([
+      api.gateway.pulseQuestions(),
+      api.gateway.thisCyclesPulse().catch(() => null),
+    ])
+    if (answers && Object.keys(answers).length >= questions.length && questions.length > 0) {
+      return [{ card: pulseDoneCard(questions.length, questions.length) }]
+    }
+    return [{ card: pulseCard(questions) }]
   } catch (error) {
     return [{ text: `I couldn’t load this month’s questions just then. (${message(error)})` }]
   }
@@ -275,6 +343,47 @@ async function saveMood(
   }
 }
 
+/**
+ * The calendar, from chat.
+ *
+ * Local data, so this cannot fail — see holidays.ts for why it is not fetched.
+ */
+async function showHolidays(): Promise<Reply[]> {
+  const now = new Date()
+  const month = `${now.getMonth() + 1}`.padStart(2, '0')
+  const day = `${now.getDate()}`.padStart(2, '0')
+  const todayIso = `${now.getFullYear()}-${month}-${day}`
+  return [{ card: holidaysCard(holidaysFor(now.getFullYear()), todayIso) }]
+}
+
+/** Today's birthdays and anniversaries, from chat rather than only the tab. */
+async function showTeam(): Promise<Reply[]> {
+  const party = await api.gateway.celebrations().catch(() => null)
+  const card = party ? celebrationsCard(party) : null
+  if (!card) {
+    return [{ text: 'Nothing to celebrate today. Worth another look tomorrow.' }]
+  }
+  return [{ card }]
+}
+
+/**
+ * A typed category, matched against the real list.
+ *
+ * Case-insensitive, because nobody types "IT & access" exactly. No match re-shows the
+ * picker rather than guessing — a wrong category is HR's problem to move later, and a
+ * made-up one is a failed request.
+ */
+async function takeTypedCategory(state: ConversationState, text: string): Promise<Reply[]> {
+  const names = await api.gateway.categories().catch(() => [] as string[])
+  const match = names.find((name) => name.toLowerCase() === text.toLowerCase())
+  if (match) return handleAction(state, { kind: 'pickCategory', category: match })
+
+  return [
+    { text: `I do not have a category called “${text}”. Pick one of these.` },
+    { card: categoryCard(names.length ? names : ['Payroll', 'Leave', 'Something else']) },
+  ]
+}
+
 async function startTicket(state: ConversationState): Promise<Reply[]> {
   reset(state)
   state.stage = 'awaitingCategory'
@@ -299,8 +408,15 @@ async function takeSubject(state: ConversationState, subject: string): Promise<R
   const session = await api.gateway.signIn().catch(() => null)
   state.subject = subject
   state.stage = 'awaitingConfirm'
+  /*
+   * One activity, not two.
+   *
+   * The line used to be a separate message above the card. When the card retires on
+   * raise, the line stayed — leaving "Check it over and I'll raise it" sitting above
+   * a ticket that had already been raised. A card can only be removed as a whole, so
+   * anything that dies with it has to live inside it. The card carries the line now.
+   */
   return [
-    { text: 'Here\'s what I\'ll send. Check it over and I\'ll raise it.' },
     {
       card: draftCard(
         subject,
@@ -311,9 +427,24 @@ async function takeSubject(state: ConversationState, subject: string): Promise<R
   ]
 }
 
-async function raise(state: ConversationState): Promise<Reply[]> {
-  if (!state.subject) {
-    return [{ text: 'There\'s no draft to raise — say "raise a ticket" and we\'ll start one.' }]
+async function raise(state: ConversationState, edited?: string): Promise<Reply[]> {
+  // Same reasoning as cancel: a second press on a spent card should do nothing at
+  // all, not explain itself. The receipt above it already says what happened.
+  if (!state.subject) return []
+
+  /*
+   * The draft's text box is editable, and what it holds at the moment of pressing is
+   * what gets filed — otherwise the card could show one thing and send another.
+   *
+   * Emptied or trimmed to nothing, the card stays put rather than filing a blank
+   * ticket or silently reverting to the original words.
+   */
+  if (edited !== undefined) {
+    const trimmed = edited.trim()
+    if (trimmed.length < MIN_SUBJECT) {
+      return [{ text: 'Give me a little more to go on — a sentence is plenty. Nothing sent yet.' }]
+    }
+    state.subject = trimmed
   }
 
   // One ticket per press. The card stays on screen while the request is in flight, and

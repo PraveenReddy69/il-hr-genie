@@ -18,6 +18,17 @@ import { HrGenieBot } from './bot.js'
 import { BotFrameworkTokens, Sso } from './sso.js'
 import { checkInReminderCard, ticketMovedCard } from './cards.js'
 import { DEV_CHAT_HTML, devTurn } from './devChat.js'
+import {
+  CELEBRATIONS_HTML,
+  HOLIDAYS_HTML,
+  PULSE_HTML,
+  TICKETS_HTML,
+  celebrationsJson,
+  holidaysJson,
+  pulseJson,
+  ticketsJson,
+  savePulseJson,
+} from './tab.js'
 import { References, handleNotify } from './notify.js'
 
 const auth = new ConfigurationBotFrameworkAuthentication({
@@ -87,6 +98,50 @@ server.post('/dev/turn', async (request, response) => {
   } catch (error) {
     console.error('[HrGenieBot] dev turn failed', error)
     response.status(500).json([{ text: 'Something went wrong at my end.' }])
+  }
+})
+
+/**
+ * The "Around the team" personal tab, and the data it reads.
+ *
+ * Both under /tab so the page and its fetch share an origin — a tab served from
+ * somewhere else would need CORS on this endpoint and a second thing to deploy.
+ */
+const PAGES: Record<string, string> = {
+  celebrations: CELEBRATIONS_HTML,
+  pulse: PULSE_HTML,
+  holidays: HOLIDAYS_HTML,
+  tickets: TICKETS_HTML,
+}
+
+server.get('/tab/:page', (request, response) => {
+  const html = PAGES[request.params.page]
+  if (!html) return response.status(404).send('No such tab.')
+  response.type('html').send(html)
+})
+
+/** Wraps a tab's data call so a backend outage is a message, not a blank page. */
+const tabData = (name: string, load: () => Promise<unknown> | unknown) =>
+  async (_request: express.Request, response: express.Response) => {
+    try {
+      response.json(await load())
+    } catch (error) {
+      console.warn(`[HrGenieBot] tab ${name} failed`, error)
+      response.status(502).json({ error: 'Could not reach the HR service.' })
+    }
+  }
+
+server.get('/tab/api/celebrations', tabData('celebrations', celebrationsJson))
+server.get('/tab/api/pulse', tabData('pulse', pulseJson))
+server.get('/tab/api/holidays', tabData('holidays', () => holidaysJson()))
+server.get('/tab/api/tickets', tabData('tickets', ticketsJson))
+
+server.post('/tab/api/pulse', async (request, response) => {
+  try {
+    response.json(await savePulseJson(request.body as Record<string, string>))
+  } catch (error) {
+    console.warn('[HrGenieBot] tab could not save the pulse', error)
+    response.status(502).json({ error: 'Could not save that.' })
   }
 })
 

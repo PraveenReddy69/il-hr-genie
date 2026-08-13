@@ -87,6 +87,64 @@ if (ssoConnection) {
   console.warn('  Keep it sideloaded to one person.\n')
 }
 
+/**
+ * The "Around the team" tab.
+ *
+ * `contentUrl` has to be absolute, so it comes from PUBLIC_BASE_URL — the tunnel now,
+ * a real host later. The host is added to validDomains at the same time: Teams
+ * refuses to load a tab whose domain is not listed, and does it silently, showing an
+ * empty frame with nothing in any log.
+ *
+ * Without the variable the tab is left out entirely rather than shipped pointing at
+ * a dead URL.
+ */
+const publicBase = (process.env.PUBLIC_BASE_URL ?? fromEnvFile('PUBLIC_BASE_URL') ?? '')
+  .trim()
+  .replace(/\/$/, '')
+
+if (publicBase) {
+  let host
+  try {
+    host = new URL(publicBase).host
+  } catch {
+    console.error(`PUBLIC_BASE_URL is not a URL: ${publicBase}`)
+    process.exit(1)
+  }
+  // Chat first: it is the only surface you can ask something. The rest are things
+  // you look at, which is why they earned tabs of their own.
+  manifest.staticTabs = [
+    { entityId: 'conversations', scopes: ['personal'] },
+    {
+      entityId: 'hrgenie.tickets',
+      name: 'My tickets',
+      contentUrl: `${publicBase}/tab/tickets`,
+      scopes: ['personal'],
+    },
+    {
+      entityId: 'hrgenie.pulse',
+      name: 'Pulse',
+      contentUrl: `${publicBase}/tab/pulse`,
+      scopes: ['personal'],
+    },
+    {
+      entityId: 'hrgenie.holidays',
+      name: 'Holidays',
+      contentUrl: `${publicBase}/tab/holidays`,
+      scopes: ['personal'],
+    },
+    {
+      entityId: 'hrgenie.celebrations',
+      name: 'Around the team',
+      contentUrl: `${publicBase}/tab/celebrations`,
+      scopes: ['personal'],
+    },
+  ]
+  if (!manifest.validDomains.includes(host)) manifest.validDomains.push(host)
+} else {
+  delete manifest.staticTabs
+  console.warn('! No PUBLIC_BASE_URL — packaging without the "Around the team" tab.\n')
+}
+
 const leftover = JSON.stringify(manifest).match(/\$\{\{[^}]+\}\}|<[a-z-]+>/gi)
 if (leftover) {
   console.error(`Unfilled placeholders in the manifest: ${[...new Set(leftover)].join(', ')}`)

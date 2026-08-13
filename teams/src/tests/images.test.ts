@@ -33,6 +33,7 @@ const ticket: Ticket = {
   category: 'Payroll',
   status: 'RESOLVED',
   createdAtMillis: 1,
+    updatedAtMillis: 2,
   comments: [{ status: 'RESOLVED', text: 'Done.', authorId: 'HR000', atMillis: 2 }],
 }
 
@@ -50,7 +51,7 @@ const CARDS = [
   moodCard(null),
   moodDetailCard('GOOD'),
   pulseCard([{ id: 'q', text: 'Q?', hint: '', options: ['A'] }]),
-  celebrationsCard({ birthdays: ['A'], anniversaries: [], newJoiners: [] })!,
+  celebrationsCard({ birthdays: [{ name: 'A', employeeId: 'EMP1', designation: 'Engineer', email: 'A@example.com' }], anniversaries: [], newJoiners: [] })!,
 ]
 
 function* urls(value: unknown): Generator<string> {

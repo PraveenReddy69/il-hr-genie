@@ -44,14 +44,31 @@ export class HrGenieBot extends ActivityHandler {
     super()
 
     this.onMessage(async (context, next) => {
+      /*
+       * Say something immediately.
+       *
+       * Pressing a tile does nothing visible until the reply lands, and a reply that
+       * waits on the HR service can take a second or two. Teams' own "Your response
+       * was sent to the app" is a grey line most people never notice, so the card
+       * looks unresponsive and gets pressed again.
+       *
+       * A typing indicator is ephemeral — it leaves nothing in the transcript — and
+       * it is sent before any work starts, which is the whole point. Failing to send
+       * it must never cost the turn.
+       */
+      await context.sendActivity({ type: 'typing' }).catch(() => undefined)
+
       await this.asCaller(context, async () => {
         await this.remember(context)
         const state = this.stateFor(context)
+        const action = actionFrom(context.activity)
         const replies = await handle(state, {
           text: context.activity.text ?? undefined,
-          action: actionFrom(context.activity),
+          action,
         })
-        await this.send(context, replies)
+        const sent = await this.send(context, replies)
+        await this.retireCard(context, action, state)
+        await this.supersedePrompt(context, action, sent)
       })
       await next()
     })
@@ -146,6 +163,63 @@ export class HrGenieBot extends ActivityHandler {
     return super.onInvokeActivity(context)
   }
 
+  /**
+   * Cards whose form is spent once it has been submitted.
+   *
+   * A check-in that has been saved still shows its checkboxes and its Save button,
+   * which read as live and are not — pressing Save again re-submits an answer that
+   * has already been recorded. The confirmation card below it is the record now, so
+   * the form is removed rather than left as a decoy.
+   *
+   * Only forms. The menus and pickers are worth keeping: someone scrolling back
+   * should still be able to raise a second ticket from the welcome card.
+   */
+  private static readonly SPENT: ReadonlySet<string> = new Set([
+    'saveMood',
+    'skipMoodDetail',
+    'savePulse',
+    // Raise and Cancel finish the draft they sit on. Leaving that card behind is
+    // worse than untidy: pressing Cancel on an already-filed ticket answered
+    // "Nothing was sent to HR", which is simply untrue. Retired only once the draft
+    // is actually gone — see [retireCard] — so a failed raise keeps the card and the
+    // subject that was typed into it.
+    'raise',
+    'cancel',
+    // The picker cannot show which of six tiles was chosen — a card is fixed once
+    // sent. It is replaced by one naming the category instead.
+    'pickCategory',
+    // Same for the five faces: the detail card below names the mood that was picked,
+    // so the row of faces is spent the moment one is chosen.
+    'pickMood',
+  ])
+
+  /**
+   * Removes the card an action came from.
+   *
+   * Deliberately after the replies are sent, so a turn that throws leaves the form —
+   * and whatever was typed into it — where the person can try again. Failing to
+   * delete is not worth reporting: the card is stale, not broken, and an error about
+   * housekeeping helps nobody mid-conversation.
+   */
+  private async retireCard(
+    context: TurnContext,
+    action: CardAction | undefined,
+    state: ConversationState,
+  ): Promise<void> {
+    const source = context.activity.replyToId
+    if (!action || !source || !HrGenieBot.SPENT.has(action.kind)) return
+
+    // A raise that failed leaves the draft in state on purpose, so the subject does
+    // not have to be retyped. The card it was typed into has to survive with it.
+    if ((action.kind === 'raise' || action.kind === 'cancel') && state.subject) return
+
+    try {
+      await context.deleteActivity(source)
+    } catch {
+      // Teams refuses after its edit window, and some channels never allow it.
+    }
+  }
+
   private stateFor(context: TurnContext): ConversationState {
     const id = context.activity.conversation?.id ?? 'unknown'
     const existing = this.states.get(id)
@@ -155,15 +229,55 @@ export class HrGenieBot extends ActivityHandler {
     return created
   }
 
-  private async send(context: TurnContext, replies: Reply[]): Promise<void> {
+  /** Sends the replies and hands back their activity ids, so one can be superseded. */
+  private async send(context: TurnContext, replies: Reply[]): Promise<string[]> {
+    const sent: string[] = []
     for (const reply of replies) {
-      if ('text' in reply) {
-        await context.sendActivity(MessageFactory.text(reply.text))
-      } else {
-        await context.sendActivity(
-          MessageFactory.attachment(CardFactory.adaptiveCard(reply.card)),
-        )
+      const activity =
+        'text' in reply
+          ? MessageFactory.text(reply.text)
+          : MessageFactory.attachment(CardFactory.adaptiveCard(reply.card))
+      const response = await context.sendActivity(activity)
+      if (response?.id) sent.push(response.id)
+    }
+    return sent
+  }
+
+  /**
+   * The category prompt, which only the newest of should exist.
+   *
+   * Choosing again — via Change category — otherwise leaves a card per attempt, each
+   * still offering to change the category it names. Only the last one is true, so the
+   * previous is removed as the new one arrives.
+   *
+   * Keyed by conversation and held here rather than in [ConversationState]: which
+   * message is on screen is a Teams concern, and `conversation.ts` is deliberately
+   * free of them.
+   */
+  private readonly lastPrompt = new Map<string, string>()
+
+  private async supersedePrompt(
+    context: TurnContext,
+    action: CardAction | undefined,
+    sent: string[],
+  ): Promise<void> {
+    if (!action) return
+    const key = context.activity.conversation?.id ?? 'unknown'
+    const spends = action.kind === 'raise' || action.kind === 'cancel'
+    if (action.kind !== 'pickCategory' && !spends) return
+
+    const previous = this.lastPrompt.get(key)
+    if (previous) {
+      this.lastPrompt.delete(key)
+      try {
+        await context.deleteActivity(previous)
+      } catch {
+        // Past Teams' edit window, or a channel that forbids it. Not worth reporting.
       }
+    }
+    // The prompt is whatever a category choice just produced; a raise leaves none.
+    if (action.kind === 'pickCategory' && sent.length > 0) {
+      this.lastPrompt.set(key, sent[sent.length - 1])
     }
   }
 }
@@ -185,13 +299,17 @@ function actionFrom(activity: Partial<Activity>): CardAction | undefined {
   switch (value.kind) {
     case 'startTicket':
     case 'myTickets':
-    case 'raise':
     case 'cancel':
     case 'checkIn':
     case 'skipMoodDetail':
     case 'startPulse':
+    case 'holidays':
+    case 'team':
     case 'dismissNudge':
       return { kind: value.kind } as CardAction
+    case 'raise':
+      // The draft's text box rides along with the press. Whatever is in it wins.
+      return { kind: 'raise', subject: value.subject === undefined ? undefined : String(value.subject) }
     case 'savePulse':
       // Every other key is a question id — see savePulse in conversation.ts.
       return value as unknown as CardAction

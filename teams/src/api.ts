@@ -25,14 +25,41 @@ export interface Ticket {
   category: string
   status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED'
   createdAtMillis: number
+  /**
+   * When the status last changed.
+   *
+   * The only timestamp for a move HR made without commenting — which they can, for
+   * every status except RESOLVED. It dates the ticket's *current* stop and nothing
+   * earlier: a ticket that went open → in progress → resolved has one of these, not
+   * three.
+   */
+  updatedAtMillis: number
   /** What HR wrote when they moved it. Resolving requires one. */
   comments: TicketComment[]
 }
 
+/** Someone worth mentioning today, with enough to tell two colleagues apart. */
+export interface Celebrant {
+  name: string
+  employeeId: string
+  /** Job title. Empty when the directory has none. */
+  designation: string
+  /** Only on a work anniversary. */
+  years?: number
+  /**
+   * Work email, which is also the Teams sign-in.
+   *
+   * Empty today: `/api/employees/celebrations` does not return one, and the directory
+   * that does is HR-only. Without it there is no way to open a chat with the person,
+   * so the Wish button hides itself rather than opening an empty chat.
+   */
+  email: string
+}
+
 export interface Celebrations {
-  birthdays: string[]
-  anniversaries: { name: string; years: number }[]
-  newJoiners: string[]
+  birthdays: Celebrant[]
+  anniversaries: Celebrant[]
+  newJoiners: Celebrant[]
 }
 
 /** The five the server accepts, worst to best is not the order they are offered in. */
@@ -170,7 +197,9 @@ export async function askKnowledgeBase(question: string): Promise<KbAnswer> {
   const session = await signIn()
   const body = await request<{ answer?: string; text?: string; sources?: unknown }>(
     '/api/kb/query',
-    { method: 'POST', body: JSON.stringify({ query: question }), token: session.token },
+    // `question`, not `query` — QueryDto in the deployed spec, and the server rejects
+    // an unknown property outright rather than ignoring it.
+    { method: 'POST', body: JSON.stringify({ question }), token: session.token },
   )
 
   const text = String(body.answer ?? body.text ?? '').trim()
@@ -344,9 +373,22 @@ export async function myTickets(): Promise<Ticket[]> {
     { token: session.token },
   )
   const rows = Array.isArray(raw) ? raw : ((raw as { items?: unknown[] }).items ?? [])
+  /*
+   * Newest activity first, not newest ticket.
+   *
+   * A ticket HR just replied to is the one you came to look at, even if it was
+   * raised weeks ago — sorting by creation buries it under things nothing has
+   * happened to.
+   *
+   * It also survives a bad `createdAtMillis`: when every ticket claims the same
+   * creation time the comment timestamps still order them sensibly.
+   */
+  const lastActivity = (ticket: Ticket): number =>
+    Math.max(ticket.createdAtMillis, ...ticket.comments.map((one) => one.atMillis), 0)
+
   return rows
     .map((row) => toTicket(row as Record<string, unknown>))
-    .sort((a, b) => b.createdAtMillis - a.createdAtMillis)
+    .sort((a, b) => lastActivity(b) - lastActivity(a))
 }
 
 /**
@@ -387,19 +429,41 @@ export async function celebrations(): Promise<Celebrations> {
   const raw = await request<Record<string, unknown>>('/api/employees/celebrations', {
     token: session.token,
   })
-  const names = (value: unknown): string[] =>
+  /**
+   * The server sends whole employee records; a bare string is tolerated in case a
+   * thinner shape ever comes back.
+   */
+  const people = (value: unknown): Celebrant[] =>
     Array.isArray(value)
-      ? value.map((row) => (typeof row === 'string' ? row : String((row as { name?: string }).name ?? ''))).filter(Boolean)
+      ? value
+          .map((row) => {
+            if (typeof row === 'string') {
+              return { name: row, employeeId: '', designation: '', email: '' }
+            }
+            const one = row as Record<string, unknown>
+            return {
+              name: String(one.name ?? ''),
+              employeeId: String(one.employeeId ?? ''),
+              designation: String(one.designation ?? one.title ?? ''),
+              // Every spelling the service might use. See docs/CELEBRATIONS_BACKEND.md.
+              // WISH_TEST_EMAIL is a development stand-in so the Wish button can be
+              // exercised before the service returns an address: it points *every*
+              // celebrant at one mailbox — your own — so nothing is ever sent to a
+              // colleague by mistake. Leave it unset anywhere real.
+              email: String(one.officialEmail ?? one.email ?? one.upn ?? '')
+                || (process.env.WISH_TEST_EMAIL ?? ''),
+              ...(one.years === undefined ? {} : { years: Number(one.years) }),
+            }
+          })
+          .filter((one) => one.name)
       : []
+
   return {
-    birthdays: names(raw.birthdays),
-    anniversaries: Array.isArray(raw.anniversaries)
-      ? raw.anniversaries.map((row) => {
-          const a = row as Record<string, unknown>
-          return { name: String(a.name ?? ''), years: Number(a.years ?? 0) }
-        }).filter((a) => a.name)
-      : [],
-    newJoiners: names(raw.newJoiners ?? raw.joiners),
+    birthdays: people(raw.birthdays),
+    // `workAnniversaries` is what the service actually returns. It was being read as
+    // `anniversaries`, so this section had silently never appeared.
+    anniversaries: people(raw.workAnniversaries ?? raw.anniversaries),
+    newJoiners: people(raw.newJoiners ?? raw.joiners),
   }
 }
 
@@ -424,13 +488,33 @@ const FALLBACK_CATEGORIES = [
 ]
 
 function toTicket(raw: Record<string, unknown>): Ticket {
-  const created = raw.createdAt ?? raw.raisedAt ?? raw.created_at
+  /*
+   * `createdAtMillis` first — it is what the service actually sends.
+   *
+   * This read `createdAt`, `raisedAt` and `created_at`, none of which exist in the
+   * response, so every ticket fell through to `Date.now()` and claimed to have been
+   * raised the instant it was displayed. The list looked plausible, which is why it
+   * survived: only a timeline putting "Raised" after "Resolved" gave it away.
+   *
+   * The string forms are kept as a fallback in case an older shape resurfaces.
+   */
+  const millis = (value: unknown, fallback: number): number => {
+    if (typeof value === 'number' && Number.isFinite(value)) return value
+    const parsed = value ? Date.parse(String(value)) : NaN
+    return Number.isFinite(parsed) ? parsed : fallback
+  }
+  const createdAtMillis = millis(
+    raw.createdAtMillis ?? raw.createdAt ?? raw.raisedAt ?? raw.created_at,
+    Date.now(),
+  )
+
   return {
     id: String(raw.ticketId ?? raw.id ?? ''),
     subject: String(raw.subject ?? raw.title ?? ''),
     category: String(raw.category ?? ''),
     status: (String(raw.status ?? 'OPEN').toUpperCase() as Ticket['status']) ?? 'OPEN',
-    createdAtMillis: created ? Date.parse(String(created)) || Date.now() : Date.now(),
+    createdAtMillis,
+    updatedAtMillis: millis(raw.updatedAtMillis ?? raw.updatedAt, createdAtMillis),
     comments: Array.isArray(raw.comments)
       ? raw.comments.map((row) => {
           const c = row as Record<string, unknown>

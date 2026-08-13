@@ -33,6 +33,7 @@ function ticket(id: string, status: Ticket['status'] = 'OPEN', comment?: string)
     category: 'Payroll',
     status,
     createdAtMillis: 1,
+    updatedAtMillis: 2,
     comments: comment ? [{ status, text: comment, authorId: 'HR000', atMillis: 2 }] : [],
   }
 }
@@ -145,7 +146,9 @@ describe('raising a ticket', () => {
     assert.match(titleOf(short[0]), /little more/i)
 
     const draft = await handle(state, { text: 'My payslip is missing from the portal' })
-    assert.match(cards(draft)[0], /Ticket preview|payslip/i)
+    // The card is headed by the category now; what was typed sits in its own panel.
+    assert.match(cards(draft)[0], /Payroll/)
+    assert.match(JSON.stringify(draft), /My payslip is missing from the portal/)
 
     const receipt = await handle(state, { action: { kind: 'raise' } })
     assert.equal(calls.raise, 1)
@@ -290,6 +293,30 @@ describe('typing instead of pressing', () => {
     assert.match(JSON.stringify(replies), /Twelve days/)
   })
 
+  for (const greeting of ['hello', 'Hi', 'hey!', 'good morning', 'menu']) {
+    it(`"${greeting}" opens the menu rather than asking the policy library`, async () => {
+      // Everything unmatched falls through to the knowledge base, which is how
+      // "hello" became a policy question and failed on the first message anyone
+      // ever sent the bot.
+      let asked: string | null = null
+      stubAll({
+        askKnowledgeBase: async (question: string) => {
+          asked = question
+          return { text: 'should not be reached', source: null }
+        },
+      })
+      const replies = await handle(newState(), { text: greeting })
+      assert.equal(asked, null, 'a greeting must not reach the knowledge base')
+      assert.match(JSON.stringify(replies), /Raise a ticket/)
+    })
+  }
+
+  it('still sends a question that merely starts like a greeting', async () => {
+    // "hi" must not swallow "hire policy" — the shortcut is anchored for this.
+    const replies = await handle(newState(), { text: 'hiring policy for interns?' })
+    assert.match(JSON.stringify(replies), /Twelve days/, 'should have gone to the knowledge base')
+  })
+
   it('never invents an answer when the knowledge base is unreachable', async () => {
     stubAll({
       askKnowledgeBase: async () => {
@@ -300,5 +327,161 @@ describe('typing instead of pressing', () => {
     const said = titleOf(replies[0])
     assert.match(said, /couldn|could not/i)
     assert.doesNotMatch(said, /\b(30|60|90) days\b/, 'must not guess at policy')
+  })
+})
+
+describe('a spent ticket draft', () => {
+  async function raised() {
+    const state = newState()
+    await handle(state, { action: { kind: 'pickCategory', category: 'Payroll' } })
+    await handle(state, { text: 'My payslip is missing from the portal' })
+    await handle(state, { action: { kind: 'raise' } })
+    return state
+  }
+
+  it('says nothing when Raise is pressed again after filing', async () => {
+    const state = await raised()
+    assert.deepEqual(await handle(state, { action: { kind: 'raise' } }), [])
+    assert.equal(calls.raise, 1, 'and files nothing more')
+  })
+
+  it('never claims nothing was sent once something was', async () => {
+    // The bug this exists for: Cancel on an already-filed ticket answered "Nothing
+    // was sent to HR", which is untrue and alarming right after raising something.
+    const state = await raised()
+    const replies = await handle(state, { action: { kind: 'cancel' } })
+    assert.deepEqual(replies, [])
+    assert.doesNotMatch(JSON.stringify(replies), /Nothing was sent/)
+  })
+
+  it('still confirms a real cancel, with a draft on screen', async () => {
+    const state = newState()
+    await handle(state, { action: { kind: 'pickCategory', category: 'Payroll' } })
+    await handle(state, { text: 'My payslip is missing from the portal' })
+    const replies = await handle(state, { action: { kind: 'cancel' } })
+    assert.match(JSON.stringify(replies), /Nothing was sent to HR/)
+  })
+})
+
+describe('the ticket draft', () => {
+  it('is a single card, so nothing survives it being retired', async () => {
+    // The line "Check it over and I'll raise it" used to be its own message. The card
+    // is removed once the ticket is filed; the line was not, and ended up sitting
+    // above a raised ticket telling the reader to check it over.
+    const state = newState()
+    await handle(state, { action: { kind: 'pickCategory', category: 'Payroll' } })
+    const replies = await handle(state, { text: 'My payslip is missing from the portal' })
+
+    assert.equal(replies.length, 1, 'one activity, not a line plus a card')
+    assert.ok('card' in replies[0])
+    assert.match(JSON.stringify(replies[0]), /nothing has gone to HR yet/i)
+  })
+})
+
+describe('editing the draft before raising', () => {
+  async function atDraft() {
+    const state = newState()
+    await handle(state, { action: { kind: 'pickCategory', category: 'Payroll' } })
+    await handle(state, { text: 'My payslip is missing from the portal' })
+    return state
+  }
+
+  it('files what is in the box, not what was first typed', async () => {
+    let filed = ''
+    stubAll({
+      raiseTicket: async (subject: string) => {
+        filed = subject
+        calls.raise += 1
+        return ticket('HRG-0001')
+      },
+    })
+    const state = await atDraft()
+    await handle(state, { action: { kind: 'raise', subject: 'My July payslip is missing entirely' } })
+    assert.equal(filed, 'My July payslip is missing entirely')
+  })
+
+  it('refuses an emptied box rather than filing a blank ticket', async () => {
+    const state = await atDraft()
+    const replies = await handle(state, { action: { kind: 'raise', subject: '   ' } })
+    assert.match(JSON.stringify(replies), /little more to go on/)
+    assert.equal(calls.raise, 0, 'nothing filed')
+    // And the draft survives, so the original words are not lost.
+    assert.equal(state.subject, 'My payslip is missing from the portal')
+  })
+
+  it('still works when the card sends no subject at all', async () => {
+    const state = await atDraft()
+    await handle(state, { action: { kind: 'raise' } })
+    assert.equal(calls.raise, 1)
+  })
+})
+
+describe('the monthly pulse, once answered', () => {
+  it('says it is done rather than asking again', async () => {
+    // Once a month by design. Re-presenting the form invites second-guessing, and an
+    // answer changed on a whim is worse data than the first honest one.
+    stubAll({ thisCyclesPulse: async () => ({ experience: 'Good' }) })
+    const replies = await handle(newState(), { action: { kind: 'startPulse' } })
+    const text = JSON.stringify(replies)
+    assert.doesNotMatch(text, /Input\.ChoiceSet/, 'no form')
+    assert.match(text, /pulse|done|thank/i)
+  })
+
+  it('still asks when this cycle has no answers', async () => {
+    stubAll({ thisCyclesPulse: async () => ({}) })
+    const replies = await handle(newState(), { action: { kind: 'startPulse' } })
+    assert.match(JSON.stringify(replies), /How was it\?/)
+  })
+
+  it('asks rather than refuses when the answers cannot be read', async () => {
+    // Offering the form to someone who has answered is a smaller harm than refusing
+    // someone who has not.
+    stubAll({
+      thisCyclesPulse: async () => {
+        throw new Error('offline')
+      },
+    })
+    const replies = await handle(newState(), { action: { kind: 'startPulse' } })
+    assert.match(JSON.stringify(replies), /How was it\?/)
+  })
+})
+
+describe('leaving a half-finished ticket', () => {
+  it('does not treat the next thing typed as a category', async () => {
+    // The bug: Raise a ticket → Holidays → "Hi" filed "Hi" as the category. The
+    // picker was still waiting three cards up, long after the person moved on.
+    const state = newState()
+    await handle(state, { action: { kind: 'startTicket' } })
+    await handle(state, { action: { kind: 'holidays' } })
+    assert.equal(state.stage, 'idle', 'holidays abandons the draft')
+
+    const replies = await handle(state, { text: 'Hi' })
+    assert.equal(state.category, undefined, '"Hi" must not become a category')
+    assert.match(JSON.stringify(replies), /Raise a ticket/, 'a greeting opens the menu')
+  })
+
+  for (const kind of ['team', 'myTickets', 'checkIn', 'startPulse'] as const) {
+    it(`"${kind}" also abandons the draft`, async () => {
+      const state = newState()
+      await handle(state, { action: { kind: 'startTicket' } })
+      await handle(state, { action: { kind } })
+      assert.notEqual(state.stage, 'awaitingCategory')
+    })
+  }
+
+  it('refuses a category that does not exist instead of asking the server', async () => {
+    const state = newState()
+    await handle(state, { action: { kind: 'startTicket' } })
+    const replies = await handle(state, { text: 'Nonsense' })
+    assert.match(JSON.stringify(replies), /do not have a category/)
+    assert.equal(state.category, undefined)
+  })
+
+  it('still accepts a real category typed in any case', async () => {
+    const state = newState()
+    await handle(state, { action: { kind: 'startTicket' } })
+    await handle(state, { text: 'payroll' })
+    assert.equal(state.category, 'Payroll')
+    assert.equal(state.stage, 'awaitingSubject')
   })
 })
