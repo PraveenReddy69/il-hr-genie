@@ -543,3 +543,39 @@ describe('the holidays card', () => {
     assert.match(card, /Christmas Day/)
   })
 })
+
+describe('a ticket row, as the Android list has it', () => {
+  const at = (id: string, status: Ticket['status']): Ticket => ({
+    id,
+    subject: 'My salary got deducted',
+    category: 'Payroll',
+    status,
+    createdAtMillis: 1,
+    updatedAtMillis: 2,
+    comments: [],
+  })
+
+  it('marks the status twice — a glyph and the word', () => {
+    // Nothing should depend on colour alone, and a glyph is what makes a stack of
+    // tickets scannable. Same reasoning as item_my_ticket.xml.
+    const card = JSON.stringify(ticketsCard([at('HRG-1', 'RESOLVED')]))
+    assert.match(card, /"text":"✓"/, 'the glyph')
+    assert.match(card, /"text":"Resolved"/, 'and the word')
+  })
+
+  it('gives each status its own glyph', () => {
+    const card = JSON.stringify(
+      ticketsCard([at('HRG-1', 'OPEN'), at('HRG-2', 'IN_PROGRESS'), at('HRG-3', 'RESOLVED')]),
+    )
+    assert.match(card, /"text":"!"/)
+    assert.match(card, /"text":"⋯"/)
+    assert.match(card, /"text":"✓"/)
+  })
+
+  it('monospaces the reference', () => {
+    // HRG-0012 is read aloud and typed into a search box; proportional digits make
+    // that harder than it needs to be.
+    const card = JSON.stringify(ticketsCard([at('HRG-0012', 'OPEN')]))
+    assert.match(card, /"text":"HRG-0012","size":"Small","fontType":"Monospace"/)
+  })
+})

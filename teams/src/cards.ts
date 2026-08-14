@@ -1100,71 +1100,137 @@ function ago(millis: number): string {
   return months === 1 ? 'a month ago' : `${months} months ago`
 }
 
-/** One ticket in the list. Shared by the visible rows and the folded-away ones. */
+/**
+ * One of the employee's own tickets, laid out like the Android list.
+ *
+ * The status reads twice on purpose: a glyph on the left for scanning down the stack,
+ * and the word on the meta line so nothing depends on colour alone — the same
+ * reasoning as `item_my_ticket.xml`, and worth keeping because the two surfaces show
+ * the same tickets to the same person.
+ *
+ * The reference is monospaced. `HRG-0012` is a thing people read out and type into a
+ * search box, and proportional digits make that harder than it needs to be.
+ */
 function ticketRow(ticket: Ticket, index: number): unknown {
-  // A tile each, like the Android list. Separators alone leave ten tickets reading
-  // as one block of text.
+  const glyph =
+    ticket.status === 'RESOLVED' ? '✓' : ticket.status === 'IN_PROGRESS' ? '⋯' : '!'
+
   return {
+    type: 'Container',
+    ...TILE_SURFACE,
+    spacing: 'Default',
+    items: [
+      {
         type: 'Container',
-        ...TILE_SURFACE,
-        spacing: 'Default',
+        ...whiteFill(),
         items: [
           {
             type: 'ColumnSet',
             columns: [
-        {
-          type: 'Column',
-          width: 'auto',
-          verticalContentAlignment: 'Center',
-          items: [
-            {
-              type: 'Image',
-              url: iconUrl(iconFor(ticket.category)),
-              width: '28px',
-              height: '28px',
-              altText: ticket.category,
-              spacing: 'None',
-            },
-          ],
-        },
-        {
-          type: 'Column',
-          width: 'stretch',
-          items: [
-            { type: 'TextBlock', text: ticket.subject, wrap: true, weight: 'Bolder', spacing: 'None' },
-            {
-              type: 'TextBlock',
-              // Age matters more than the raw date in a list: "4 days ago" is the
-              // thing that tells you whether HR is being slow.
-              text: `${ticket.id} · ${ticket.category} · ${ago(ticket.createdAtMillis)}`,
-              wrap: true,
-              isSubtle: true,
-              size: 'Small',
-              spacing: 'None',
-            },
-          ],
-        },
               {
                 type: 'Column',
                 width: 'auto',
                 verticalContentAlignment: 'Center',
                 items: [
                   {
-                    // A tinted badge rather than a coloured word. Container styles are
-                    // the only fill Adaptive Cards offers, and the tint is drawn by
-                    // Teams — so it follows light and dark without a second palette.
+                    // A tinted disc with the status in it. Container styles are the
+                    // only fill Adaptive Cards offers, and Teams draws the tint — so
+                    // it follows light and dark without a second palette.
                     type: 'Container',
                     style: statusStyle(ticket.status),
+                    roundedCorners: true,
+                    minHeight: '38px',
+                    verticalContentAlignment: 'Center',
                     spacing: 'None',
                     items: [
                       {
                         type: 'TextBlock',
-                        text: statusLabel(ticket.status),
-                        size: 'Small',
+                        text: glyph,
+                        size: 'Medium',
                         weight: 'Bolder',
                         color: statusColour(ticket.status),
-                        wrap: false,
+                        horizontalAlignment: 'Center',
                         spacing: 'None',
+                        wrap: false,
+                      },
+                    ],
+                  },
+                ],
+              },
+              {
+                type: 'Column',
+                width: 'stretch',
+                spacing: 'Medium',
+                verticalContentAlignment: 'Center',
+                items: [
+                  {
+                    type: 'TextBlock',
+                    text: ticket.subject,
+                    weight: 'Bolder',
+                    size: 'Medium',
+                    wrap: true,
+                    maxLines: 2,
+                    spacing: 'None',
+                    ...TILE_TEXT,
+                  },
+                  {
+                    // Status, reference and age on one line: three short facts that
+                    // only mean anything together.
+                    type: 'ColumnSet',
+                    spacing: 'Small',
+                    columns: [
+                      {
+                        type: 'Column',
+                        width: 'auto',
+                        verticalContentAlignment: 'Center',
+                        items: [
+                          {
+                            type: 'TextBlock',
+                            text: statusLabel(ticket.status),
+                            size: 'Small',
+                            weight: 'Bolder',
+                            color: statusColour(ticket.status),
+                            spacing: 'None',
+                            wrap: false,
+                          },
+                        ],
+                      },
+                      {
+                        type: 'Column',
+                        width: 'auto',
+                        spacing: 'Small',
+                        verticalContentAlignment: 'Center',
+                        items: [
+                          {
+                            type: 'TextBlock',
+                            text: ticket.id,
+                            size: 'Small',
+                            fontType: 'Monospace',
+                            isSubtle: true,
+                            spacing: 'None',
+                            wrap: false,
+                            ...TILE_TEXT,
+                          },
+                        ],
+                      },
+                      {
+                        type: 'Column',
+                        width: 'stretch',
+                        spacing: 'Small',
+                        verticalContentAlignment: 'Center',
+                        items: [
+                          {
+                            type: 'TextBlock',
+                            // Age rather than a date: "4 days ago" is what tells you
+                            // whether HR is being slow.
+                            text: `${ticket.category} · ${ago(ticket.createdAtMillis)}`,
+                            size: 'Small',
+                            isSubtle: true,
+                            spacing: 'None',
+                            wrap: false,
+                            ...TILE_TEXT,
+                          },
+                        ],
                       },
                     ],
                   },
@@ -1173,10 +1239,12 @@ function ticketRow(ticket: Ticket, index: number): unknown {
             ],
           },
           // What HR wrote, folded away. Their reply is the point of the ticket, and
-          // until now it was only visible on the update card as it arrived — scroll
+          // until this it was only visible on the update card as it arrived — scroll
           // past and it was gone. ToggleVisibility opens it in place, no round trip.
           ...replyBlock(ticket, index),
         ],
+      },
+    ],
   }
 }
 
