@@ -104,10 +104,14 @@ if (publicBase) {
  * Application ID URI in Entra and the Token Exchange URL on the Azure OAuth
  * connection; all three are compared as exact strings.
  */
+const withTabs = publicHost && !process.argv.includes('--no-tabs')
+
 if (ssoConnection) {
-  const resource = publicHost
-    ? `api://${publicHost}/botid-${appId}`
-    : `api://botid-${appId}`
+  // With tabs, Teams compares this against the iframe's origin and rejects the
+  // bot-only form. Without them nothing checks the host, and the short form is what
+  // Entra already holds — which is why `--no-tabs` can ship before an administrator
+  // is available to change the Application ID URI.
+  const resource = withTabs ? `api://${publicHost}/botid-${appId}` : `api://botid-${appId}`
   manifest.webApplicationInfo = { id: appId, resource }
   console.log(`  SSO resource ${resource}`)
 } else {
@@ -127,7 +131,14 @@ if (ssoConnection) {
  * Without the variable the tab is left out entirely rather than shipped pointing at
  * a dead URL.
  */
-if (publicBase) {
+if (publicBase && !withTabs) {
+  // The host still has to be listed even with no tabs: the cards load their artwork
+  // from it, and Teams will not fetch an image from a domain it does not know.
+  if (!manifest.validDomains.includes(publicHost)) manifest.validDomains.push(publicHost)
+  delete manifest.staticTabs
+  console.warn('! Packaging without tabs — the Application ID URI is the bot-only form.')
+  console.warn('  Add them once an admin can set api://<host>/botid-<appid>.\n')
+} else if (publicBase) {
   const host = publicHost
   // Chat first: it is the only surface you can ask something. The rest are things
   // you look at, which is why they earned tabs of their own.

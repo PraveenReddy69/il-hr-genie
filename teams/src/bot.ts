@@ -319,8 +319,37 @@ export class HrGenieBot extends ActivityHandler {
  * recognised `kind` is ignored rather than guessed at — a stray submit from an old
  * card should do nothing, not something surprising.
  */
-function actionFrom(activity: Partial<Activity>): CardAction | undefined {
+/**
+ * The action a card press carried, however Teams chose to deliver it.
+ *
+ * A `messageBack` submit — which is what makes a tap show up as a message from the
+ * person, see `submit` in cards.ts — puts the payload in one of two places depending
+ * on the client: as `activity.value` directly, or JSON-encoded inside
+ * `msteams.value`. Reading both costs nothing and means a tile cannot silently do
+ * nothing on one platform.
+ */
+function payloadOf(activity: Partial<Activity>): Record<string, unknown> | undefined {
   const value = activity.value as Record<string, unknown> | undefined
+  if (!value) return undefined
+  if (typeof value.kind === 'string') return value
+
+  const nested = (value.msteams as { value?: unknown } | undefined)?.value
+  if (typeof nested === 'string') {
+    try {
+      const parsed = JSON.parse(nested) as Record<string, unknown>
+      return typeof parsed?.kind === 'string' ? parsed : undefined
+    } catch {
+      return undefined
+    }
+  }
+  if (nested && typeof (nested as Record<string, unknown>).kind === 'string') {
+    return nested as Record<string, unknown>
+  }
+  return undefined
+}
+
+function actionFrom(activity: Partial<Activity>): CardAction | undefined {
+  const value = payloadOf(activity)
   if (!value || typeof value.kind !== 'string') return undefined
 
   switch (value.kind) {

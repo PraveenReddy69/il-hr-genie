@@ -233,6 +233,37 @@ function whiteFill() {
 const TILE_TEXT = { color: 'Dark' } as const
 
 /**
+ * A tap that leaves a trace in the conversation.
+ *
+ * A plain `Action.Submit` posts nothing. Teams shows a grey "Your response was sent to
+ * the app" line most people never notice, so someone who taps a tile — especially one
+ * several messages up, which stays tappable forever — sees no evidence anything
+ * happened, and taps again. The reply, meanwhile, arrives at the bottom of a chat they
+ * are not looking at.
+ *
+ * `messageBack` posts `displayText` as a message from them. That is the confirmation,
+ * and it also scrolls the chat to the bottom, which is where the answer is.
+ *
+ * The action rides along twice on purpose: as the data itself, and JSON-encoded inside
+ * `msteams.value`. Which of the two Teams delivers as `activity.value` depends on the
+ * client, and [actionFrom] reads either.
+ */
+function submit(action: CardAction, label: string): Record<string, unknown> {
+  return {
+    ...action,
+    msteams: {
+      type: 'messageBack',
+      displayText: label,
+      // Also delivered as activity.text. If the value ever fails to arrive, the typed
+      // shortcuts catch the common labels — a worse outcome than the card working, and
+      // a much better one than silence.
+      text: label,
+      value: JSON.stringify(action),
+    },
+  }
+}
+
+/**
  * A tappable tile: icon, label, and the whole thing is the button.
  *
  * `selectAction` is the trick. A stock `Action.Submit` renders as a full-width bar
@@ -246,7 +277,7 @@ function tile(icon: string, label: string, data: CardAction, caption?: string): 
     // The stroke is drawn out here and the white filled inside, because one container
     // cannot do both — see [whiteFill]. `selectAction` stays on the outer one so the
     // whole tile, border included, is the button.
-    selectAction: { type: 'Action.Submit', data },
+    selectAction: { type: 'Action.Submit', data: submit(data, label) },
     spacing: 'Default',
     items: [
       {
@@ -309,7 +340,7 @@ function listTile(icon: string, label: string, data: CardAction): unknown {
   return {
     type: 'Container',
     ...TILE_SURFACE,
-    selectAction: { type: 'Action.Submit', data },
+    selectAction: { type: 'Action.Submit', data: submit(data, label) },
     spacing: 'Small',
     items: [
       {

@@ -431,3 +431,51 @@ describe('the nudge and the menu are told apart', () => {
     assert.ok(!kindsIn(nudge).includes('nudgeCheckIn'))
   })
 })
+
+/**
+ * A tap has to leave a trace.
+ *
+ * A plain Action.Submit posts nothing visible, so someone tapping a tile — especially
+ * one several messages up, which stays tappable forever — sees no evidence anything
+ * happened and taps again, while the reply lands at the bottom of a chat they are not
+ * looking at. `messageBack` posts the label as a message from them, which both confirms
+ * the tap and scrolls the chat to where the answer is.
+ */
+describe('tiles report themselves in the conversation', () => {
+  const tiles = (card: AdaptiveCard) =>
+    [...nodes(card)]
+      .filter((node) => node.type === 'Container' && node.selectAction)
+      .map((node) => node.selectAction as { data?: Record<string, unknown> })
+
+  for (const [name, card] of [
+    ['welcome', welcomeCard('Test')],
+    ['categories', categoryCard(['Payroll', 'Leave'])],
+  ] as [string, AdaptiveCard][]) {
+    it(`${name} tiles post a message back`, () => {
+      const found = tiles(card)
+      assert.ok(found.length > 0, 'no tappable tiles found')
+
+      for (const action of found) {
+        const teams = action.data?.msteams as Record<string, unknown> | undefined
+        assert.equal(teams?.type, 'messageBack', 'a silent submit leaves the tap invisible')
+        assert.ok(
+          typeof teams?.displayText === 'string' && (teams.displayText as string).length > 0,
+          'displayText is what the person sees themselves say',
+        )
+
+        // The payload has to survive both delivery shapes — see payloadOf in bot.ts.
+        assert.ok(typeof action.data?.kind === 'string', 'the action must ride at the top level')
+        const encoded = JSON.parse(String(teams?.value)) as { kind?: string }
+        assert.equal(encoded.kind, action.data?.kind, 'and identically inside msteams.value')
+      }
+    })
+  }
+
+  it('labels the message with the tile that was tapped', () => {
+    const labels = tiles(welcomeCard('Test')).map(
+      (action) => (action.data?.msteams as { displayText?: string })?.displayText,
+    )
+    assert.ok(labels.includes('Raise a ticket'))
+    assert.ok(labels.includes('My tickets'))
+  })
+})
