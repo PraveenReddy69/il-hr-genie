@@ -171,7 +171,7 @@ function iconBase(): string {
  *
  * Bump it whenever an icon is redrawn.
  */
-const ICON_VERSION = 3
+const ICON_VERSION = 4
 
 function iconUrl(name: string): string {
   return `${iconBase()}/${name}.png?v=${ICON_VERSION}`
