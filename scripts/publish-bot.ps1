@@ -1,7 +1,7 @@
 <#
     Publishes the bot service to Bitbucket.
 
-    The company repository holds the service alone — no docs, no README, no history
+    The company repository holds the service alone - no docs, no README, no history
     from this repository. This builds a clean tree from whatever is committed here,
     commits it as one commit, and replaces the remote branch with it.
 
@@ -34,7 +34,7 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "Running the tests before anything leaves the machine..."
 Push-Location (Join-Path $Root 'teams')
 npm test | Out-Null
-if ($LASTEXITCODE -ne 0) { Pop-Location; throw "Tests failed — nothing published." }
+if ($LASTEXITCODE -ne 0) { Pop-Location; throw "Tests failed - nothing published." }
 Pop-Location
 
 New-Item -ItemType Directory -Force -Path $Staging | Out-Null
