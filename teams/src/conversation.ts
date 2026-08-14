@@ -25,15 +25,63 @@ import {
   receiptCard,
   ticketsCard,
   holidaysCard,
+  helloCard,
   subjectPromptCard,
   welcomeCard,
   type AdaptiveCard,
   type CardAction,
 } from './cards.js'
 
+/**
+ * The word that opens the menu.
+ *
+ * One word, said the same way every time, is worth more than a dozen phrasings that
+ * each work once: it is something a person can remember and reuse. `help` comes along
+ * because it is what everybody tries first anyway.
+ */
+const OPENS_MENU = /^(genie|hr ?genie|help|menu)[!.?\s]*$/i
+
+/**
+ * Words people type without asking for anything.
+ *
+ * Greetings, acknowledgements, and the half-typed openers of a question that never
+ * arrived. Kept here rather than looked up: none of them need the server, and a
+ * failed lookup on "hi" is a bot that looks broken on the first message.
+ *
+ * Deliberately exact matches. "thanks" is small talk; "thanks, what is the leave
+ * policy" is a question, and the difference is the whole point of anchoring.
+ */
+const SMALL_TALK: ReadonlySet<string> = new Set([
+  'hi', 'hii', 'hiii', 'hey', 'heyy', 'hello', 'helo', 'hlo', 'yo', 'hai',
+  'good morning', 'good afternoon', 'good evening', 'good night', 'gm', 'ge',
+  'there', 'where', 'what', 'who', 'how', 'why', 'when',
+  'ok', 'okay', 'okk', 'k', 'fine', 'sure', 'yes', 'yeah', 'yep', 'no', 'nope',
+  'thanks', 'thank you', 'thankyou', 'ty', 'thx', 'cool', 'nice', 'great',
+  'test', 'testing', 'hmm', 'hm', 'oh', 'bye', 'ok bye', 'good', 'welcome',
+  'anyone', 'anybody', 'hello?', 'are you there', 'u there', 'you there',
+])
+
+function isSmallTalk(text: string): boolean {
+  // Trailing punctuation and emphasis are noise: "hi!!!" and "ok..." are the same
+  // word. Anything left after that has to match a whole entry.
+  const word = text
+    .toLowerCase()
+    .replace(/[!.?,]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return SMALL_TALK.has(word)
+}
+
 /** Where a conversation is in the ticket flow. Nothing else needs remembering. */
 export interface ConversationState {
-  stage: 'idle' | 'awaitingCategory' | 'awaitingSubject' | 'awaitingConfirm' | 'awaitingMoodDetail'
+  stage:
+    | 'idle'
+    | 'awaitingCategory'
+    | 'awaitingSubject'
+    | 'awaitingConfirm'
+    /** The faces are on screen, waiting for one to be picked. */
+    | 'awaitingMood'
+    | 'awaitingMoodDetail'
   category?: string
   subject?: string
   /** The face picked, waiting on reasons and a note. */
@@ -115,17 +163,29 @@ export async function handle(state: ConversationState, input: Input): Promise<Re
   // Typed shortcuts, so the bot works for people who never press buttons.
   if (state.stage === 'idle') {
     /**
-     * A greeting is not a policy question.
+     * One word opens the menu, and it is always the same word.
      *
-     * Everything unmatched falls through to the knowledge base, so "hello" was being
-     * put to the policy library, which either answers nothing useful or — as it did
-     * in Teams — fails and makes the bot look broken on the very first message.
-     * Anchored and short, so "hi" opens the menu while "hire policy" does not.
-     * [greet] rather than the card alone, so saying hello shows anything HR has done
-     * since last time — the same as opening the app.
+     * [greet] rather than the card alone, so it also shows anything HR has done since
+     * last time — the same as opening the app.
      */
-    if (/^(hi|hey|hello|yo|start|menu|help|good morning|good evening)[!.\s]*$/i.test(text)) {
+    if (OPENS_MENU.test(text)) {
       return greet()
+    }
+
+    /**
+     * Small talk gets an answer, not a menu and not the policy library.
+     *
+     * Everything unmatched falls through to the knowledge base, so "hello" used to be
+     * put to the policy library — which answers nothing useful, and in Teams failed
+     * outright and made the bot look broken on the very first message.
+     *
+     * Answered from this list rather than the server: these are the words people type
+     * without meaning anything by them, and a round trip to say "hello" back is a
+     * round trip that can fail. It also teaches the one word worth remembering, which
+     * a full menu on every "ok" does not.
+     */
+    if (isSmallTalk(text)) {
+      return [{ card: helloCard() }]
     }
     if (/^(raise|new|open)\b.*\bticket\b/i.test(text) || /^raise a ticket$/i.test(text)) {
       return startTicket(state)
@@ -157,6 +217,12 @@ export async function handle(state: ConversationState, input: Input): Promise<Re
       // silently ignoring what they wrote.
       return takeSubject(state, text)
 
+    case 'awaitingMood':
+      // The faces are on screen and none has been picked. There is nothing sensible
+      // to do with a sentence yet — a question is more likely than a mood, so it goes
+      // where questions go, and the card stays where it is.
+      return askKnowledgeBase(text)
+
     case 'awaitingMoodDetail':
       // Typing here is taken as the note, since that is the only free-text field on
       // the card they are looking at.
@@ -180,9 +246,34 @@ const LEAVES_TICKET_FLOW: ReadonlySet<string> = new Set([
   'myTickets',
   'checkIn',
   'startPulse',
+  'nudgeCheckIn',
+  'nudgePulse',
 ])
 
 async function handleAction(state: ConversationState, action: CardAction): Promise<Reply[]> {
+  /*
+   * A repeat press of Check in, before the reset below can hide it.
+   *
+   * `checkIn` abandons a half-finished ticket, which is right — but the reset also
+   * clears the stage that says a set of faces is already on screen, so the guard in
+   * the case below never saw it and every press answered with another card. Asked
+   * and answered here instead, ahead of the reset.
+   */
+  if (
+    (action.kind === 'checkIn' || action.kind === 'nudgeCheckIn') &&
+    (state.stage === 'awaitingMood' || state.stage === 'awaitingMoodDetail')
+  ) {
+    /*
+     * A line, not silence.
+     *
+     * Returning nothing was correct — the card is already open — but Teams shows a
+     * typing indicator the moment a button is pressed, so nothing arriving after it
+     * reads as a failure rather than as "already done". Older nudges stay pressable
+     * for as long as the chat is scrollable, so this is reachable indefinitely.
+     */
+    return [{ text: 'The check-in is already open just above — pick a face there.' }]
+  }
+
   if (LEAVES_TICKET_FLOW.has(action.kind)) reset(state)
 
   switch (action.kind) {
@@ -221,10 +312,22 @@ async function handleAction(state: ConversationState, action: CardAction): Promi
       return [{ text: 'No problem, I\'ve dropped it. Nothing was sent to HR.' }]
     }
 
+    // The box on the subject card. Typing into the chat still works and lands in the
+    // same place — see [takeSubject] — so nobody who ignores the field is stuck.
+    case 'describe': {
+      const typed = (action.subject ?? '').trim()
+      if (!typed) {
+        return [{ text: 'Add a line about what is happening and press Continue.' }]
+      }
+      return takeSubject(state, typed)
+    }
+
     case 'raise':
       return raise(state, action.subject)
 
     case 'checkIn':
+    case 'nudgeCheckIn':
+      // A repeat press never reaches here — see the guard at the top of this function.
       return startCheckIn(state)
 
     case 'pickMood': {
@@ -245,6 +348,7 @@ async function handleAction(state: ConversationState, action: CardAction): Promi
     case 'skipMoodDetail':
       return saveMood(state, [], null)
 
+    case 'nudgePulse':
     case 'startPulse':
       return startPulse()
 
@@ -310,9 +414,23 @@ async function savePulse(action: { kind: string; [id: string]: string }): Promis
 async function startCheckIn(state: ConversationState): Promise<Reply[]> {
   reset(state)
   try {
-    return [{ card: moodCard(await api.gateway.todaysMood()) }]
+    const today = await api.gateway.todaysMood()
+    /*
+     * Once a day, and the answer already given is the answer.
+     *
+     * The tile comes off the menu after a check-in, but the menu is not the only way
+     * in — an older card is still pressable, and "check in" can be typed. Showing the
+     * faces again offers something that cannot be done today, and worse, invites
+     * someone to answer twice and wonder which one counted. Same shape as the pulse.
+     */
+    if (today) {
+      return [{ card: moodDoneCard(today.mood, today.reasons ?? [], today.note ?? null) }]
+    }
+    state.stage = 'awaitingMood'
+    return [{ card: moodCard(null) }]
   } catch (error) {
     // Not being able to read today's answer is no reason to block a new one.
+    state.stage = 'awaitingMood'
     return [{ card: moodCard(null) }, { text: `(Couldn't check today's answer: ${message(error)})` }]
   }
 }

@@ -100,6 +100,11 @@ const MAPPED_KINDS = new Set([
   'startPulse',
   'savePulse',
   'dismissNudge',
+  // The nudge's own buttons. Same errands as checkIn and startPulse, but distinct so
+  // the nudge can be retired on use without taking the welcome menu with it.
+  'nudgeCheckIn',
+  'nudgePulse',
+  'describe',
 ])
 
 describe('every card', () => {
@@ -377,5 +382,48 @@ describe('a stop with no comment', () => {
     const text = JSON.stringify(card)
     assert.match(text, /No comment recorded/)
     assert.doesNotMatch(text, /Not yet/, 'every stop was reached on a resolved ticket')
+  })
+})
+
+/**
+ * Which card an action belongs to.
+ *
+ * The nudge and the welcome menu offer the same two errands. They must not submit the
+ * same action kind: the nudge is a prompt and is removed once answered, while the menu
+ * is meant to survive being used — someone scrolling back should still be able to
+ * check in from it tomorrow. One shared kind means either the prompt lingers as a
+ * decoy or the menu disappears under them.
+ */
+describe('the nudge and the menu are told apart', () => {
+  const kindsIn = (card: AdaptiveCard): string[] =>
+    [...JSON.stringify(card).matchAll(/"kind":"([a-zA-Z]+)"/g)].map((match) => match[1])
+
+  it('the nudge submits only its own kinds', () => {
+    const nudge = nudgeCard('Test', { mood: true, pulse: true })
+    assert.ok(nudge, 'both outstanding, so there is a nudge')
+    const kinds = kindsIn(nudge)
+
+    assert.deepEqual(
+      kinds.sort(),
+      ['dismissNudge', 'nudgeCheckIn', 'nudgePulse'],
+      'every button on the nudge is one the nudge owns',
+    )
+  })
+
+  it('the menu keeps the plain kinds, so it is never retired', () => {
+    const kinds = kindsIn(welcomeCard('Test'))
+
+    assert.ok(!kinds.includes('checkIn'), 'the menu leaves the check-in to the nudge')
+    assert.ok(kinds.includes('startPulse'), 'but it does start the pulse')
+    assert.ok(
+      !kinds.some((kind) => kind.startsWith('nudge')),
+      'nothing on the menu is a nudge action',
+    )
+  })
+
+  it('the nudge drops the check-in button once today is answered', () => {
+    const nudge = nudgeCard('Test', { mood: false, pulse: true })
+    assert.ok(nudge)
+    assert.ok(!kindsIn(nudge).includes('nudgeCheckIn'))
   })
 })

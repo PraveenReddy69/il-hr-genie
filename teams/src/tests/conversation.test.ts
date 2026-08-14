@@ -103,6 +103,70 @@ describe('opening the conversation', () => {
     assert.match(titles[0], /how are you today/i)
   })
 
+  it('offers the check-in once, from the nudge, never twice', async () => {
+    // The menu tile could only ever be live when today was unanswered — which is
+    // exactly when the nudge is already asking. Two buttons for one errand, and the
+    // second did nothing because the first had opened the card.
+    stubAll({ todaysMood: async () => null })
+    const replies = JSON.stringify(await greet())
+
+    assert.match(replies, /nudgeCheckIn/, 'the nudge asks')
+    assert.doesNotMatch(replies, /"kind":"checkIn"/, 'the menu does not ask as well')
+    assert.match(replies, /Monthly pulse/, 'the rest of the menu is untouched')
+  })
+
+  it('leaves no check-in button at all once today is answered', async () => {
+    const replies = JSON.stringify(await greet())
+    assert.doesNotMatch(replies, /checkIn/i, 'nothing offers something already done')
+  })
+
+  it('shows one set of faces however many times Check in is pressed', async () => {
+    // Check in is reachable from the menu, the nudge, and every older copy of either
+    // still sitting in the chat. Each press was answering with its own card.
+    stubAll({ todaysMood: async () => null })
+    const state = newState()
+
+    const first = await handle(state, { action: { kind: 'checkIn' } })
+    const second = await handle(state, { action: { kind: 'checkIn' } })
+    const third = await handle(state, { action: { kind: 'checkIn' } })
+
+    assert.equal(first.length, 1, 'the first press asks')
+    // Not silence: Teams shows a typing indicator on every press, so nothing coming
+    // back reads as a failure rather than as "already open".
+    assert.match(titleOf(second[0]), /already open/i)
+    assert.match(titleOf(third[0]), /already open/i)
+    assert.equal(cards(second).length, 0, 'and no second set of faces')
+  })
+
+  it('asks again once the check-in has been finished', async () => {
+    // The guard is about one card at a time, not about locking the flow shut: if the
+    // save fails and the person starts over, the faces have to come back.
+    stubAll({ todaysMood: async () => null })
+    const state = newState()
+
+    await handle(state, { action: { kind: 'checkIn' } })
+    await handle(state, { action: { kind: 'pickMood', mood: 'GOOD' } })
+    await handle(state, { action: { kind: 'saveMood' } })
+
+    assert.equal(state.stage, 'idle')
+    const again = await handle(state, { action: { kind: 'checkIn' } })
+    assert.equal(again.length, 1)
+  })
+
+  it('shows what was already said, rather than asking again', async () => {
+    stubAll({
+      todaysMood: async () => ({
+        mood: 'GOOD' as const,
+        reasons: ['Workload'],
+        note: null,
+        dateIso: 'x',
+      }),
+    })
+    const replies = JSON.stringify(await handle(newState(), { action: { kind: 'checkIn' } }))
+    assert.match(replies, /Checked in/i, 'the answer already given')
+    assert.doesNotMatch(replies, /How are you today/i, 'not the faces again')
+  })
+
   it('does not nudge when the check-in cannot be read', async () => {
     // A failed read must not become "you have not checked in" — that tells people to
     // redo something they may already have done.
@@ -153,6 +217,36 @@ describe('raising a ticket', () => {
     const receipt = await handle(state, { action: { kind: 'raise' } })
     assert.equal(calls.raise, 1)
     assert.match(cards(receipt)[0], /HRG-0001/)
+  })
+
+  it('takes the subject from the box on the card', async () => {
+    const state = newState()
+    await handle(state, { action: { kind: 'startTicket' } })
+    const prompt = await handle(state, {
+      action: { kind: 'pickCategory', category: 'Payroll' },
+    })
+    // The card asks for the subject and carries somewhere to put it.
+    assert.match(JSON.stringify(prompt), /"type":"Input.Text","id":"subject"/)
+
+    const draft = await handle(state, {
+      action: { kind: 'describe', subject: 'My payslip is missing from the portal' },
+    })
+    assert.match(JSON.stringify(draft), /My payslip is missing from the portal/)
+
+    const receipt = await handle(state, { action: { kind: 'raise' } })
+    assert.equal(calls.raise, 1)
+    assert.match(cards(receipt)[0], /HRG-0001/)
+  })
+
+  it('keeps asking when the box was sent empty', async () => {
+    const state = newState()
+    await handle(state, { action: { kind: 'pickCategory', category: 'Payroll' } })
+
+    const empty = await handle(state, { action: { kind: 'describe', subject: '   ' } })
+    assert.match(titleOf(empty[0]), /add a line/i)
+
+    // Still waiting, so the card with the box must not be retired underneath them.
+    assert.equal(state.stage, 'awaitingSubject')
   })
 
   it('files one ticket when Raise is pressed twice', async () => {
@@ -283,6 +377,8 @@ describe('typing instead of pressing', () => {
 
   for (const [typed, expected] of shortcuts) {
     it(`"${typed}" starts the right flow`, async () => {
+      // Nothing done yet today, so every flow is genuinely open.
+      stubAll({ todaysMood: async () => null })
       const titles = cards(await handle(newState(), { text: typed }))
       assert.match(titles[0], expected)
     })
@@ -293,8 +389,8 @@ describe('typing instead of pressing', () => {
     assert.match(JSON.stringify(replies), /Twelve days/)
   })
 
-  for (const greeting of ['hello', 'Hi', 'hey!', 'good morning', 'menu']) {
-    it(`"${greeting}" opens the menu rather than asking the policy library`, async () => {
+  for (const greeting of ['hello', 'Hi', 'hey!', 'good morning', 'ok', 'thanks', 'there']) {
+    it(`"${greeting}" is answered here, not by the policy library`, async () => {
       // Everything unmatched falls through to the knowledge base, which is how
       // "hello" became a policy question and failed on the first message anyone
       // ever sent the bot.
@@ -306,8 +402,21 @@ describe('typing instead of pressing', () => {
         },
       })
       const replies = await handle(newState(), { text: greeting })
-      assert.equal(asked, null, 'a greeting must not reach the knowledge base')
+      assert.equal(asked, null, 'small talk must not reach the knowledge base')
+
+      // A hello, not the menu: six tiles for every "ok" is noise, and it teaches
+      // nobody the one word that does open the menu.
+      assert.match(JSON.stringify(replies), /HR Genie/)
+      assert.match(JSON.stringify(replies), /genie/i)
+      assert.doesNotMatch(JSON.stringify(replies), /Monthly pulse/, 'not the full menu')
+    })
+  }
+
+  for (const opener of ['genie', 'Genie', 'help', 'menu', 'HR Genie']) {
+    it(`"${opener}" opens the menu`, async () => {
+      const replies = await handle(newState(), { text: opener })
       assert.match(JSON.stringify(replies), /Raise a ticket/)
+      assert.match(JSON.stringify(replies), /Monthly pulse/)
     })
   }
 
@@ -457,7 +566,7 @@ describe('leaving a half-finished ticket', () => {
 
     const replies = await handle(state, { text: 'Hi' })
     assert.equal(state.category, undefined, '"Hi" must not become a category')
-    assert.match(JSON.stringify(replies), /Raise a ticket/, 'a greeting opens the menu')
+    assert.match(JSON.stringify(replies), /HR Genie/, 'a greeting is answered as one')
   })
 
   for (const kind of ['team', 'myTickets', 'checkIn', 'startPulse'] as const) {

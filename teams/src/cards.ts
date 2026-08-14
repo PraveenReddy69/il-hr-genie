@@ -44,7 +44,13 @@ export type CardAction =
   | { kind: 'startPulse' }
   | { kind: 'savePulse'; [answer: string]: string }
   | { kind: 'dismissNudge' }
+  // The nudge's own buttons. Same errands as `checkIn` and `startPulse`, but a
+  // distinct kind so the nudge can be retired when one is pressed without taking
+  // the welcome menu — which fires the plain kinds — down with it.
+  | { kind: 'nudgeCheckIn' }
+  | { kind: 'nudgePulse' }
   | { kind: 'raise'; subject?: string }
+  | { kind: 'describe'; subject?: string }
   | { kind: 'cancel' }
   | { kind: 'myTickets' }
   | { kind: 'startTicket' }
@@ -155,7 +161,7 @@ const ICON_BASE = 'https://praveenreddy69.github.io/il-hr-genie/icons'
  *
  * Bump it whenever an icon is redrawn.
  */
-const ICON_VERSION = 2
+const ICON_VERSION = 3
 
 function iconUrl(name: string): string {
   return `${ICON_BASE}/${name}.png?v=${ICON_VERSION}`
@@ -277,16 +283,83 @@ function tile(icon: string, label: string, data: CardAction, caption?: string): 
   }
 }
 
+/**
+ * A tappable row: icon beside the label, full width.
+ *
+ * The list form, for the category picker. Six stacked tiles read as a wall of equal
+ * options to weigh up; six rows read as a list to scan down, which is what choosing a
+ * category actually is. The grid earns its place on the welcome card, where the tiles
+ * are destinations rather than a single choice — and where the captions under each
+ * label need the room.
+ */
+function listTile(icon: string, label: string, data: CardAction): unknown {
+  return {
+    type: 'Container',
+    ...TILE_SURFACE,
+    selectAction: { type: 'Action.Submit', data },
+    spacing: 'Small',
+    items: [
+      {
+        type: 'Container',
+        ...WHITE_FILL,
+        items: [
+          {
+            type: 'ColumnSet',
+            columns: [
+              {
+                type: 'Column',
+                width: 'auto',
+                verticalContentAlignment: 'Center',
+                items: [
+                  {
+                    type: 'Image',
+                    url: iconUrl(icon),
+                    width: '32px',
+                    height: '32px',
+                    altText: label,
+                  },
+                ],
+              },
+              {
+                type: 'Column',
+                width: 'stretch',
+                verticalContentAlignment: 'Center',
+                spacing: 'Medium',
+                items: [
+                  {
+                    type: 'TextBlock',
+                    text: label,
+                    weight: 'Bolder',
+                    wrap: true,
+                    spacing: 'None',
+                    ...TILE_TEXT,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  }
+}
+
 /** Lays tiles out two to a row. */
 function grid(tiles: unknown[]): unknown[] {
   const rows: unknown[] = []
   for (let index = 0; index < tiles.length; index += 2) {
+    const pair = [tiles[index], tiles[index + 1]]
     rows.push({
       type: 'ColumnSet',
       spacing: 'Default',
-      columns: [tiles[index], tiles[index + 1]]
-        .filter(Boolean)
-        .map((item) => ({ type: 'Column', width: 'stretch', items: [item] })),
+      // An odd tile keeps its half of the row rather than stretching across it. The
+      // menu loses a tile whenever something is already done for the day, and a lone
+      // double-width card in the last row reads as a different kind of thing.
+      columns: pair.map((item) => ({
+        type: 'Column',
+        width: 'stretch',
+        items: item ? [item] : [],
+      })),
     })
   }
   return rows
@@ -400,7 +473,55 @@ function weekday(iso: string): string {
   return new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'long' })
 }
 
+/**
+ * The answer to "hi".
+ *
+ * Small, and deliberately not the menu. Six tiles every time somebody types "ok" is
+ * noise, and it teaches nothing — whereas one card naming the word that opens the
+ * menu is a thing a person can remember and use tomorrow.
+ */
+export function helloCard(): AdaptiveCard {
+  return card([
+    header('Infinity Learn', "Hello! I'm HR Genie 👋", 'Here whenever you need HR'),
+    body([
+      {
+        type: 'TextBlock',
+        text: "You can always start our conversation by typing **genie** or **help**.",
+        wrap: true,
+        spacing: 'Default',
+      },
+      {
+        type: 'TextBlock',
+        text: 'Or just ask me a question — leave, insurance, payroll, policy.',
+        wrap: true,
+        size: 'Small',
+        isSubtle: true,
+        spacing: 'Small',
+      },
+    ]),
+  ])
+}
+
+/**
+ * The menu.
+ *
+ * No check-in tile, deliberately. A check-in is once a day, so the tile could only
+ * ever be live when today was unanswered — which is precisely when the nudge above
+ * is already asking for it. Two buttons for one errand on one screen, and pressing
+ * the second did nothing, because the first had already opened the card.
+ *
+ * Check in is still reachable: the nudge, and typing "check in".
+ */
 export function welcomeCard(firstName: string): AdaptiveCard {
+  const tiles = [
+    tile('ticket', 'Raise a ticket', { kind: 'startTicket' }, 'File with HR'),
+    tile('list', 'My tickets', { kind: 'myTickets' }, 'See replies'),
+    tile('pulse', 'Monthly pulse', { kind: 'startPulse' }, 'Four quick questions'),
+    // Reachable from chat, not only the tabs: tabs do not open on Teams mobile.
+    tile('leave', 'Holidays', { kind: 'holidays' }, 'What is coming up'),
+    tile('something-else', 'Around the team', { kind: 'team' }, 'Birthdays and milestones'),
+  ]
+
   return card([
     header('Infinity Learn', `Hi ${firstName} 👋`, 'HR Genie · always on'),
     body([
@@ -410,19 +531,7 @@ export function welcomeCard(firstName: string): AdaptiveCard {
         wrap: true,
         spacing: 'Default',
       },
-      ...grid([
-        tile('ticket', 'Raise a ticket', { kind: 'startTicket' }, 'File with HR'),
-        tile('list', 'My tickets', { kind: 'myTickets' }, 'See replies'),
-      ]),
-      ...grid([
-        tile('mood', 'Check in', { kind: 'checkIn' }, 'How today is going'),
-        tile('pulse', 'Monthly pulse', { kind: 'startPulse' }, 'Four quick questions'),
-      ]),
-      // Reachable from chat, not only the tabs: tabs do not open on Teams mobile.
-      ...grid([
-        tile('leave', 'Holidays', { kind: 'holidays' }, 'What is coming up'),
-        tile('something-else', 'Around the team', { kind: 'team' }, 'Birthdays and milestones'),
-      ]),
+      ...grid(tiles),
     ]),
   ])
 }
@@ -461,9 +570,21 @@ export function subjectPromptCard(category: string): AdaptiveCard {
       body([
         {
           type: 'TextBlock',
-          text: "Tell me what's happening in a line or two. I'll put it straight into the ticket as you write it.",
+          text: "Tell me what's happening in a line or two.",
           wrap: true,
           spacing: 'Default',
+        },
+        // A box, not an instruction to type into the chat. The line above used to be
+        // the whole card, which left people looking at a message that asked for
+        // something with nowhere obvious to put it — and anything they did type went
+        // through the same path as "hi", where a stray word became the subject. A
+        // field makes the ask and the answer the same object.
+        {
+          type: 'Input.Text',
+          id: 'subject',
+          isMultiline: true,
+          placeholder: 'e.g. My March payslip is missing the shift allowance',
+          spacing: 'Small',
         },
         {
           type: 'TextBlock',
@@ -475,19 +596,22 @@ export function subjectPromptCard(category: string): AdaptiveCard {
         },
       ]),
     ],
-    // Picked the wrong one? The alternative is scrolling back to the picker, which
-    // by then may be several messages up — or, worse, finding an older picker from a
-    // previous attempt and using that.
-    [{ type: 'Action.Submit', title: 'Change category', data: { kind: 'startTicket' } }],
+    [
+      // First, and styled: it is what the card is for. Change category is the escape
+      // hatch — the alternative being to scroll back to a picker that may be several
+      // messages up, or worse, an older one from a previous attempt.
+      { type: 'Action.Submit', title: 'Continue', style: 'positive', data: { kind: 'describe' } },
+      { type: 'Action.Submit', title: 'Change category', data: { kind: 'startTicket' } },
+    ],
   )
 }
 
 export function categoryCard(names: string[]): AdaptiveCard {
   return card([
     header('New ticket', 'What\'s it about?', 'Pick the closest — HR can move it later.'),
-    ...grid(
+    body(
       names.map((category) =>
-        tile(iconFor(category), category, { kind: 'pickCategory', category }),
+        listTile(iconFor(category), category, { kind: 'pickCategory', category }),
       ),
     ),
   ])
@@ -1174,7 +1298,14 @@ export function nudgeCard(
     ],
     [
       ...(outstanding.mood
-        ? [{ type: 'Action.Submit', title: 'Check in', style: 'positive', data: { kind: 'checkIn' } }]
+        ? [
+            {
+              type: 'Action.Submit',
+              title: 'Check in',
+              style: 'positive',
+              data: { kind: 'nudgeCheckIn' },
+            },
+          ]
         : []),
       ...(outstanding.pulse
         ? [
@@ -1182,7 +1313,7 @@ export function nudgeCard(
               type: 'Action.Submit',
               title: 'Take the pulse',
               ...(outstanding.mood ? {} : { style: 'positive' }),
-              data: { kind: 'startPulse' },
+              data: { kind: 'nudgePulse' },
             },
           ]
         : []),

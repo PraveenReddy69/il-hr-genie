@@ -201,6 +201,19 @@ export class HrGenieBot extends ActivityHandler {
     // Same for the five faces: the detail card below names the mood that was picked,
     // so the row of faces is spent the moment one is chosen.
     'pickMood',
+    // The subject box. Once it has been accepted the draft below holds the words and
+    // is the thing to edit; leaving the empty box above it invites a second attempt
+    // at describing a ticket that already exists. Kept when the text was rejected —
+    // see [retireCard].
+    'describe',
+    // The nudge is a prompt, and a prompt that has been answered is a decoy: its
+    // buttons stay pressable, so the same nudge could be acted on again tomorrow from
+    // a scroll-back. Retired whichever of the three is pressed. The welcome menu is
+    // deliberately not in here — it fires the plain `checkIn` and `startPulse`, and
+    // it is meant to survive being used.
+    'nudgeCheckIn',
+    'nudgePulse',
+    'dismissNudge',
   ])
 
   /**
@@ -222,6 +235,10 @@ export class HrGenieBot extends ActivityHandler {
     // A raise that failed leaves the draft in state on purpose, so the subject does
     // not have to be retyped. The card it was typed into has to survive with it.
     if ((action.kind === 'raise' || action.kind === 'cancel') && state.subject) return
+
+    // Too short, or empty: the answer was not accepted, so the box has to stay. The
+    // stage only moves on once there is a subject worth showing back.
+    if (action.kind === 'describe' && state.stage === 'awaitingSubject') return
 
     try {
       await context.deleteActivity(source)
@@ -316,10 +333,18 @@ function actionFrom(activity: Partial<Activity>): CardAction | undefined {
     case 'holidays':
     case 'team':
     case 'dismissNudge':
+    case 'nudgeCheckIn':
+    case 'nudgePulse':
       return { kind: value.kind } as CardAction
     case 'raise':
       // The draft's text box rides along with the press. Whatever is in it wins.
       return { kind: 'raise', subject: value.subject === undefined ? undefined : String(value.subject) }
+    case 'describe':
+      // Same for the subject card's box.
+      return {
+        kind: 'describe',
+        subject: value.subject === undefined ? undefined : String(value.subject),
+      }
     case 'savePulse':
       // Every other key is a question id — see savePulse in conversation.ts.
       return value as unknown as CardAction
