@@ -14,6 +14,7 @@ import {
   MessageFactory,
 } from 'botbuilder'
 import express from 'express'
+import { existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { HrGenieBot } from './bot.js'
 import { BotFrameworkTokens, Sso } from './sso.js'
@@ -84,26 +85,34 @@ const bot = new HrGenieBot(references, sso, ssoConnection)
 const server = express()
 server.use(express.json())
 
-/**
- * The card artwork.
- *
- * Served from here rather than the console's Pages site, so the bot ships everything a
- * card needs. Cached hard and busted by a version query — see ICON_VERSION in cards.ts
- * — because Teams caches card images by URL and will otherwise show a redrawn glyph's
+/*
+ * The card artwork, served by this service so the bot ships everything a card needs.
+ * Cached hard and busted by a version query — see ICON_VERSION in cards.ts — because
+ * Teams caches card images by URL and will otherwise show a redrawn glyph's
  * predecessor indefinitely.
+ *
+ * Two candidate directories, in order of preference.
+ *
+ * `dist/assets` is where `npm run build` puts it, and what a normal deployment
+ * serves. `src/assets` is the fallback for a deployment that ships sources and
+ * builds in place — the pipeline copies the `src` directory, which is exactly why
+ * the files live under it rather than at the project root.
+ *
+ * fileURLToPath, not `.pathname`: on Windows the latter yields "/D:/…", and Express
+ * resolves that leading slash against the working directory, giving "D:\D:\…" and a
+ * 404 for every glyph. It is correct on Linux, so it only ever breaks locally.
  */
-server.use(
-  '/icons',
-  // fileURLToPath, not `.pathname`: on Windows the latter yields "/D:/…", and Express
-  // resolves that leading slash against the working directory — giving "D:\D:\…" and
-  // a 404 for every glyph. It happens to be correct on Linux, so it only ever breaks
-  // on a developer's machine.
-  express.static(fileURLToPath(new URL('../assets/icons', import.meta.url)), {
-    maxAge: '365d',
-    immutable: true,
-    fallthrough: false,
-  }),
-)
+const ICON_DIRECTORIES = ['../assets/icons', '../src/assets/icons']
+  .map((where) => fileURLToPath(new URL(where, import.meta.url)))
+  .filter((where) => existsSync(where))
+
+if (ICON_DIRECTORIES.length === 0) {
+  console.warn('[HrGenieBot] no icons found — every card will render with holes in it.')
+}
+
+for (const directory of ICON_DIRECTORIES) {
+  server.use('/icons', express.static(directory, { maxAge: '365d', immutable: true }))
+}
 
 server.post('/api/messages', async (request, response) => {
   await adapter.process(request, response, (context) => bot.run(context))

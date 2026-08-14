@@ -16,7 +16,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { png, blend, disc, rect, segment } from './png.mjs'
 
-const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'assets', 'icons')
+const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'assets', 'icons')
 
 /**
  * 128, to match the hand-drawn set.

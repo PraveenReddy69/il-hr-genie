@@ -14,6 +14,6 @@ import { png } from './png.mjs'
 
 const WHITE = [255, 255, 255, 255]
 
-const out = new URL('../assets/icons/tile-white.png', import.meta.url)
+const out = new URL('../src/assets/icons/tile-white.png', import.meta.url)
 writeFileSync(out, png(8, () => WHITE))
 console.log('wrote', out.pathname)

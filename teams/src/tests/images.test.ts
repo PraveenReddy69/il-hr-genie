@@ -74,7 +74,7 @@ function* urls(value: unknown): Generator<string> {
 
 const referenced = [...new Set(CARDS.flatMap((card) => [...urls(card)]))].sort()
 
-const ICONS = fileURLToPath(new URL('../../assets/icons/', import.meta.url))
+const ICONS = fileURLToPath(new URL('../assets/icons/', import.meta.url))
 
 /** `https://host/icons/ticket.png?v=3` -> `ticket.png` */
 const fileOf = (url: string): string => url.split('/').pop()!.split('?')[0]

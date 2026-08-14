@@ -15,7 +15,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { png, blend, disc, rect } from './png.mjs'
 
-const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'assets', 'icons')
+const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'assets', 'icons')
 const SIZE = 256
 
 const HALO = [96, 165, 250, 70] // a lighter blue, mostly transparent

@@ -15,6 +15,7 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY tsconfig.json ./
+COPY scripts ./scripts
 COPY src ./src
 RUN npm run build
 
@@ -27,9 +28,9 @@ ENV NODE_ENV=production
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
+# The build stage already copied src/assets into dist/assets — see
+# scripts/copy-assets.mjs.
 COPY --from=build /app/dist ./dist
-# The card artwork is served by this service — see /icons in src/index.ts.
-COPY assets ./assets
 
 # Where conversation references are kept. Mount a volume here, or point
 # REFERENCES_FILE somewhere else that survives a redeploy; losing it means nobody
