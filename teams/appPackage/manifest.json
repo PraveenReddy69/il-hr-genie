@@ -1,7 +1,7 @@
 {
   "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
   "manifestVersion": "1.17",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "id": "f24f1b34-dda0-47d8-a6ff-80932b1cb1d2",
   "developer": {
     "name": "Infinity Learn",
@@ -37,6 +37,10 @@
           ],
           "commands": [
             {
+              "title": "Main Menu",
+              "description": "Everything HR Genie can do"
+            },
+            {
               "title": "Raise a ticket",
               "description": "File something with HR"
             },
@@ -49,8 +53,8 @@
               "description": "How are you today? Takes ten seconds"
             },
             {
-              "title": "Pulse",
-              "description": "This month's four questions"
+              "title": "Holidays",
+              "description": "What is coming up"
             }
           ]
         }

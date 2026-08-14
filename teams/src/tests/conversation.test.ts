@@ -682,3 +682,39 @@ describe('changing the category without leaving the card', () => {
     assert.equal(state.category, 'Payroll')
   })
 })
+
+/**
+ * The command list Teams shows under "View prompts".
+ *
+ * Picking one sends its title as an ordinary message, so every title in
+ * appPackage/manifest.json has to be a phrase the flow already understands. A command
+ * that lands in the knowledge base looks broken in a way nothing else does — the
+ * person picked it from a menu we wrote.
+ */
+describe('the Teams command list', () => {
+  const commands = ['Main Menu', 'Raise a ticket', 'My tickets', 'Check in', 'Holidays']
+
+  for (const command of commands) {
+    it(`"${command}" does what the menu says`, async () => {
+      let askedTheLibrary = false
+      stubAll({
+        todaysMood: async () => null,
+        askKnowledgeBase: async () => {
+          askedTheLibrary = true
+          return { text: 'should not be reached', source: null }
+        },
+      })
+
+      const replies = await handle(newState(), { text: command })
+
+      assert.equal(askedTheLibrary, false, `"${command}" fell through to the policy library`)
+      assert.ok(replies.length > 0, `"${command}" produced nothing`)
+    })
+  }
+
+  it('"Main Menu" opens the menu itself', async () => {
+    const replies = JSON.stringify(await handle(newState(), { text: 'Main Menu' }))
+    assert.match(replies, /Raise a ticket/)
+    assert.match(replies, /Popular questions/)
+  })
+})

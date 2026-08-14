@@ -39,7 +39,7 @@ import {
  * each work once: it is something a person can remember and reuse. `help` comes along
  * because it is what everybody tries first anyway.
  */
-const OPENS_MENU = /^(genie|hr ?genie|help|menu)[!.?\s]*$/i
+const OPENS_MENU = /^(genie|hr ?genie|help|menu|main ?menu)[!.?\s]*$/i
 
 /**
  * Words people type without asking for anything.
@@ -202,6 +202,11 @@ export async function handle(state: ConversationState, input: Input): Promise<Re
   if (/\bpulse\b/i.test(text) || /\bsurvey\b/i.test(text)) {
     reset(state)
     return startPulse()
+  }
+  // On the command list, so it arrives as typed text when picked from Teams' menu.
+  if (/^holidays?$/i.test(text) || /\bholiday list\b/i.test(text)) {
+    reset(state)
+    return showHolidays()
   }
 
   switch (state.stage) {
