@@ -316,8 +316,8 @@ describe('choosing a category', () => {
     const payroll = JSON.stringify(subjectPromptCard('Payroll', ['Payroll', 'Leave']))
     const access = JSON.stringify(subjectPromptCard('IT & access', ['Payroll', 'Leave']))
 
-    assert.match(payroll, /What happened.+when it started.+reference/)
-    assert.match(access, /What happened.+when it started.+reference/)
+    assert.match(payroll, /Please describe your concern here/)
+    assert.match(access, /Please describe your concern here/)
     assert.doesNotMatch(access, /payslip/, 'nothing category-specific to go stale')
   })
 })

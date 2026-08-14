@@ -786,23 +786,12 @@ function hintFor(category: string): string {
 /**
  * The placeholder in the subject box.
  *
- * One line for every category rather than a per-category example, because a sent card
- * cannot react to its own dropdown. Adaptive Cards has no change event: nothing
- * reaches the bot until a button is pressed, so a placeholder chosen from the category
- * picked a moment ago goes stale the instant somebody changes it — showing a payroll
- * example under IT & access.
- *
- * So it names the three things HR asks for on almost every ticket, whatever it is
- * about: what happened, when it started, and any reference they can look up. That is
- * more use than an example of somebody else's problem — it tells you what to write
- * rather than showing you one sentence you then have to generalise from.
- *
- * Making it follow the dropdown needs Action.Execute, where the bot returns a
- * replacement card: a round trip on every change, and a different action model, for
- * one line of grey text.
+ * One line for every category, because a sent card cannot react to its own dropdown.
+ * Adaptive Cards has no change event: nothing about a changed selection reaches the
+ * bot until a button is pressed, so a per-category example goes stale the instant
+ * somebody changes it — showing a payroll example under IT & access.
  */
-const SUBJECT_PLACEHOLDER =
-  'What happened  ·  when it started  ·  any ID, date or reference'
+const SUBJECT_PLACEHOLDER = 'Please describe your concern here'
 
 export function subjectPromptCard(category: string, categories: string[] = []): AdaptiveCard {
   // The chosen one first, so the dropdown opens on it, and never twice if the server
