@@ -168,63 +168,40 @@ In order, and steps 2–4 are a coordinated ten minutes rather than four separat
 
 1. **You** deploy and confirm `https://<host>/healthz` answers, and that
    `https://<host>/icons/ticket.png` returns an image.
-2. **Entra admin** creates the production app registration and sets its Application ID
-   URI to `api://<host>/botid-<the new id>`. See *Dev and prod* below — this is a new
-   registration, not a change to the existing one, so nothing in use breaks.
-3. **We** create the production Azure Bot against it, point its messaging endpoint at
-   `https://<host>/api/messages`, and add the OAuth connection.
-4. **We** build the production Teams package and the four testers install it.
+2. **Entra admin** changes the Application ID URI on the existing registration
+   (`7c9867c8-3ab2-49c0-99e7-6794fea7ee9d`) to `api://<host>/botid-7c9867c8-…`, and adds
+   the developer as an owner so later changes do not need them.
+3. **We** point the Azure Bot's messaging endpoint at `https://<host>/api/messages` and
+   update its OAuth connection to match the new URI.
+4. **We** build the Teams package against the new hostname; the four testers install it.
 5. **Teams admin** grants app upload to the other three.
 
-Nothing is live until step 4, so there is no downtime window to coordinate.
+Steps 2 and 3 are a coordinated ten minutes — between them, sign-in is broken, because
+three values have to agree and only two of them are ours.
 
 ---
 
-## Dev and prod
+## One environment, deliberately
 
-Two environments, and the awkward part is not the hosting — it is that **one Entra
-application registration can only carry one Application ID URI**, and tab SSO ties that
-URI to the hostname. Dev and prod therefore cannot share a registration while both have
-working tabs.
+There is no separate dev deployment. The bot runs in one place, on the hostname above,
+and that is what everyone uses — including us while building it.
 
-So: **two registrations, two bots, two Teams apps.**
+The reason is that a bot registration points at exactly one URL. Running a second copy
+on a laptop would mean a second registration, a second Azure Bot and a second Teams app,
+and at four users that is more moving parts than it saves.
 
-| | Dev | Prod |
-|---|---|---|
-| Host | The developer's tunnel | `hrgenie-bot.devinfinitylearn.in` |
-| Bot / app id | `7c9867c8-…` (the existing one) | New — created with IT |
-| App ID URI | `api://<tunnel>/botid-7c9867c8-…` | `api://<prod host>/botid-<new id>` |
-| OAuth connection | `hrgenie-sso` on the dev bot | `hrgenie-sso` on the prod bot |
-| Teams app | Sideloaded to the developer | Sideloaded to the four testers |
-| Backend | The same HR Genie API | The same HR Genie API |
+**What this means in practice**
 
-**Create prod fresh and leave dev alone.** Repointing the existing registration at the
-production hostname would break the developer's environment the moment it changed, and
-leaves no way to test anything without disturbing the people using it. Building the
-prod one alongside also means no coordinated downtime window — nothing is live on it
-until the app package ships.
+- Changes are tested by deploying them. A fast deploy matters more here than it would
+  otherwise — that is the one thing we would ask you to optimise for.
+- Everything that does not need Teams is tested before it gets near you: 196 automated
+  tests, a command-line run of the whole ticket flow, and a browser page that renders
+  every card. What needs a real deploy is how it looks in Teams, and sign-in.
+- **There is no separate HR Genie API for testing either.** A ticket raised while
+  testing is a real ticket in HR's queue. We prefix those with `TEST —`.
 
-Both talk to the same backend. There is no separate HR Genie API for dev, so anything
-raised while testing is a real ticket. Worth knowing before demoing.
-
-### Running each
-
-Configuration is per environment, in files git never sees:
-
-```bash
-npm run start:dev     # reads .env.dev
-npm run start:prod    # reads .env.prod
-npm run package:dev   # a Teams package pointed at dev
-npm run package:prod  # a Teams package pointed at prod
-```
-
-`.env`, `.env.dev` and `.env.prod` are all gitignored. **On the server, use real
-environment variables rather than a file** — the scripts above are for a developer
-machine.
-
-The package a run produces carries that environment's bot id, hostname and App ID URI,
-so a dev package installed against prod simply will not authenticate. That is the
-intended behaviour: the two cannot be confused into talking to each other.
+If the deploy loop turns out to be painful, a second registration for a developer
+machine is the fix, and it does not change anything on your side.
 
 ---
 

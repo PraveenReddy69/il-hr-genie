@@ -2,7 +2,7 @@
   "name": "hr-genie-teams",
   "version": "0.1.0",
   "private": true,
-  "description": "HR Genie as a Microsoft Teams bot — proof of concept.",
+  "description": "HR Genie as a Microsoft Teams bot \u2014 proof of concept.",
   "type": "module",
   "scripts": {
     "build": "tsc",
@@ -13,11 +13,7 @@
     "test": "tsc && node --test \"dist/tests/conversation.test.js\" \"dist/tests/cards.test.js\" \"dist/tests/notify.test.js\" \"dist/tests/sso.test.js\" \"dist/tests/authTeams.test.js\"",
     "test:images": "tsc && node --test \"dist/tests/images.test.js\"",
     "package": "node scripts/package.mjs",
-    "package:bump": "node scripts/package.mjs --bump",
-    "start:dev": "node --env-file=.env.dev dist/index.js",
-    "start:prod": "node --env-file=.env.prod dist/index.js",
-    "package:dev": "node --env-file=.env.dev scripts/package.mjs",
-    "package:prod": "node --env-file=.env.prod scripts/package.mjs"
+    "package:bump": "node scripts/package.mjs --bump"
   },
   "dependencies": {
     "botbuilder": "^4.23.1",
