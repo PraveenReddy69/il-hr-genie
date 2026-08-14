@@ -1,7 +1,20 @@
-# HR Genie in Microsoft Teams — proof of concept
+# HR Genie in Microsoft Teams
 
 A Teams bot over the **same backend** the Android app and the HRBP console already use.
 Nothing here replaces that service; it is a third client.
+
+**Deploying it:** [docs/DEPLOY.md](docs/DEPLOY.md) — runtime, hostname, environment
+variables, and what the API team needs to call. Start there.
+
+Employees are identified by their own Teams sign-in (Entra SSO); there is no shared
+account and no password anywhere in this service. The endpoint the backend provides for
+that is specified in [docs/TEAMS_SSO_BACKEND.md](docs/TEAMS_SSO_BACKEND.md).
+
+> **Note on the icon scripts.** `scripts/make-*-icons.mjs` and `scripts/make-header.mjs`
+> write into the HRBP console's `web/public/icons`, which lives in the main HR Genie
+> repository rather than here. Card icons are served from that site over https, because
+> Adaptive Cards will not load an image any other way. Nothing at runtime depends on
+> those scripts — they are only for redrawing the glyphs.
 
 What works today: the welcome card, knowledge-base answers, the full ticket flow
 (category → subject → preview → raise → receipt) and My tickets.
