@@ -974,7 +974,7 @@ export function draftCard(subject: string, category: string, raisedBy: string): 
     ],
     [
       { type: 'Action.Submit', title: 'Raise it', style: 'positive', data: { kind: 'raise' } },
-      { type: 'Action.Submit', title: 'Cancel', data: { kind: 'cancel' } },
+      { type: 'Action.Submit', title: 'Cancel', data: submit({ kind: 'cancel' }, 'Cancel') },
     ],
   )
 }
@@ -1054,7 +1054,7 @@ export function receiptCard(ticket: Ticket): AdaptiveCard {
         },
       ]),
     ],
-    [{ type: 'Action.Submit', title: 'My tickets', data: { kind: 'myTickets' } }],
+    [{ type: 'Action.Submit', title: 'My tickets', data: submit({ kind: 'myTickets' }, 'My tickets') }],
   )
 }
 
@@ -1505,7 +1505,7 @@ function faceRow(): unknown[] {
     type: 'Container',
     ...TILE_SURFACE,
     spacing: 'Small',
-    selectAction: { type: 'Action.Submit', data: { kind: 'pickMood', mood } },
+    selectAction: { type: 'Action.Submit', data: submit({ kind: 'pickMood', mood }, MOOD_FACE[mood].label) },
     items: [
       {
         type: 'TextBlock',
@@ -1591,7 +1591,7 @@ export function moodDetailCard(mood: Mood): AdaptiveCard {
     ],
     [
       { type: 'Action.Submit', title: 'Save', style: 'positive', data: { kind: 'saveMood' } },
-      { type: 'Action.Submit', title: 'Just the face', data: { kind: 'skipMoodDetail' } },
+      { type: 'Action.Submit', title: 'Just the face', data: submit({ kind: 'skipMoodDetail' }, 'Just the face') },
     ],
   )
 }
@@ -1662,7 +1662,7 @@ export function nudgeCard(
               type: 'Action.Submit',
               title: 'Check in',
               style: 'positive',
-              data: { kind: 'nudgeCheckIn' },
+              data: submit({ kind: 'nudgeCheckIn' }, 'Check in'),
             },
           ]
         : []),
@@ -1672,11 +1672,11 @@ export function nudgeCard(
               type: 'Action.Submit',
               title: 'Take the pulse',
               ...(outstanding.mood ? {} : { style: 'positive' }),
-              data: { kind: 'nudgePulse' },
+              data: submit({ kind: 'nudgePulse' }, 'Take the pulse'),
             },
           ]
         : []),
-      { type: 'Action.Submit', title: 'Not today', data: { kind: 'dismissNudge' } },
+      { type: 'Action.Submit', title: 'Not today', data: submit({ kind: 'dismissNudge' }, 'Not today') },
     ],
   )
 }
@@ -1878,7 +1878,7 @@ export function ticketMovedCard(moved: {
         },
       ]),
     ],
-    [{ type: 'Action.Submit', title: 'My tickets', data: { kind: 'myTickets' } }],
+    [{ type: 'Action.Submit', title: 'My tickets', data: submit({ kind: 'myTickets' }, 'My tickets') }],
   )
 }
 
@@ -2101,7 +2101,7 @@ export function answerCard(text: string, source: string | null): AdaptiveCard {
     })
   }
   return card(body, [
-    { type: 'Action.Submit', title: 'Raise a ticket instead', data: { kind: 'startTicket' } },
+    { type: 'Action.Submit', title: 'Raise a ticket instead', data: submit({ kind: 'startTicket' }, 'Raise a ticket') },
   ])
 }
 
