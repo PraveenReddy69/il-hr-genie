@@ -309,17 +309,16 @@ describe('choosing a category', () => {
     assert.match(JSON.stringify(card), /Nothing goes to HR until you have seen it/)
   })
 
-  it('shows an example of the category that was picked', () => {
-    // A placeholder does more work than an instruction: it shows the length, the tone
-    // and the detail worth including.
-    assert.match(JSON.stringify(subjectPromptCard('Leave')), /leave balance shows 2 days/)
-    assert.match(JSON.stringify(subjectPromptCard('Payroll')), /payslip is missing/)
-    assert.match(JSON.stringify(subjectPromptCard('IT & access')), /connect to the VPN/)
-  })
+  it('uses one placeholder for every category', () => {
+    // A sent card cannot react to its own dropdown — Adaptive Cards has no change
+    // event — so a per-category example goes stale the moment somebody changes the
+    // selection, showing a payroll example under IT & access.
+    const payroll = JSON.stringify(subjectPromptCard('Payroll', ['Payroll', 'Leave']))
+    const access = JSON.stringify(subjectPromptCard('IT & access', ['Payroll', 'Leave']))
 
-  it('falls back to a general example for a category it does not know', () => {
-    // The names come from the API, so one added server-side must still get a hint.
-    assert.match(JSON.stringify(subjectPromptCard('Relocation')), /What happened, when/)
+    assert.match(payroll, /What happened, when, and anything HR will need/)
+    assert.match(access, /What happened, when, and anything HR will need/)
+    assert.doesNotMatch(access, /payslip/, 'nothing category-specific to go stale')
   })
 })
 

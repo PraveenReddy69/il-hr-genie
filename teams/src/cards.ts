@@ -784,37 +784,23 @@ function hintFor(category: string): string {
 }
 
 /**
- * An example of the kind of thing this category is for.
+ * The placeholder in the subject box.
  *
- * A placeholder does more work than an instruction: it shows the length, the tone and
- * the detail worth including, without asking anybody to read a sentence about how to
- * write a sentence.
+ * One line for every category rather than a per-category example, because a sent card
+ * cannot react to its own dropdown. Adaptive Cards has no change event: nothing
+ * reaches the bot until a button is pressed, so a placeholder chosen from the category
+ * picked a moment ago goes stale the instant somebody changes it — showing a payroll
+ * example under IT & access.
  *
- * Chosen when the card is sent, from the category that was picked. It cannot follow
- * the dropdown afterwards — a sent card renders once, and nothing about a changed
- * selection reaches us until Continue is pressed.
+ * It still does what a placeholder should, by showing the length, the tone and the
+ * detail worth including, without claiming to know which category it is for.
+ *
+ * Making it follow the dropdown needs Action.Execute, where the bot returns a
+ * replacement card: a round trip on every change, and a different action model, for
+ * one line of grey text.
  */
-const CATEGORY_EXAMPLE: Record<string, string> = {
-  Payroll: 'e.g. My March payslip is missing the shift allowance',
-  Leave: 'e.g. My leave balance shows 2 days, but I should have 8',
-  'IT & access': 'e.g. I have not been able to connect to the VPN since Monday',
-  Insurance: 'e.g. My spouse is not listed on the policy and needs to be added',
-  Facilities: 'e.g. The air conditioning on the third floor has been off all week',
-  'Something else': 'e.g. What happened, when, and anything HR will need to look it up',
-}
+const SUBJECT_PLACEHOLDER = 'What happened, when, and anything HR will need to look it up'
 
-function exampleFor(category: string): string {
-  return CATEGORY_EXAMPLE[category] ?? CATEGORY_EXAMPLE['Something else']
-}
-
-/**
- * What was picked, and what to do next.
- *
- * The picker itself is retired once a category is chosen, because a card cannot be
- * restyled after submit — six tiles that all still look identical are no record of
- * anything. This replaces it and names the choice, so scrolling back shows the
- * decision rather than the menu.
- */
 export function subjectPromptCard(category: string, categories: string[] = []): AdaptiveCard {
   // The chosen one first, so the dropdown opens on it, and never twice if the server
   // already lists it.
@@ -872,7 +858,7 @@ export function subjectPromptCard(category: string, categories: string[] = []): 
           type: 'Input.Text',
           id: 'subject',
           isMultiline: true,
-          placeholder: exampleFor(category),
+          placeholder: SUBJECT_PLACEHOLDER,
           spacing: 'Small',
         },
         {
