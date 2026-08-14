@@ -14,6 +14,7 @@ import {
   MessageFactory,
 } from 'botbuilder'
 import express from 'express'
+import { fileURLToPath } from 'node:url'
 import { HrGenieBot } from './bot.js'
 import { BotFrameworkTokens, Sso } from './sso.js'
 import { checkInReminderCard, ticketMovedCard } from './cards.js'
@@ -93,7 +94,11 @@ server.use(express.json())
  */
 server.use(
   '/icons',
-  express.static(new URL('../assets/icons', import.meta.url).pathname, {
+  // fileURLToPath, not `.pathname`: on Windows the latter yields "/D:/…", and Express
+  // resolves that leading slash against the working directory — giving "D:\D:\…" and
+  // a 404 for every glyph. It happens to be correct on Linux, so it only ever breaks
+  // on a developer's machine.
+  express.static(fileURLToPath(new URL('../assets/icons', import.meta.url)), {
     maxAge: '365d',
     immutable: true,
     fallthrough: false,

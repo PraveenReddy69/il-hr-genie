@@ -160,45 +160,48 @@ export async function handle(state: ConversationState, input: Input): Promise<Re
   if (action) return handleAction(state, action)
   if (!text) return []
 
-  // Typed shortcuts, so the bot works for people who never press buttons.
-  if (state.stage === 'idle') {
-    /**
-     * One word opens the menu, and it is always the same word.
-     *
-     * [greet] rather than the card alone, so it also shows anything HR has done since
-     * last time — the same as opening the app.
-     */
-    if (OPENS_MENU.test(text)) {
-      return greet()
-    }
+  /*
+   * Typed shortcuts, at any point in a flow.
+   *
+   * These used to run only when idle, which meant that mid-ticket the words people
+   * reach for when they are lost — "genie", "help" — were swallowed by whatever the
+   * flow was waiting for. Typing "help me" while a ticket was waiting for its subject
+   * made "help me" the subject and produced a draft nobody asked for.
+   *
+   * An explicit intent outranks an unfinished flow. Someone typing "my tickets" wants
+   * their tickets, not to have those words filed as a payroll complaint.
+   */
+  if (OPENS_MENU.test(text)) {
+    reset(state)
+    return greet()
+  }
 
-    /**
-     * Small talk gets an answer, not a menu and not the policy library.
-     *
-     * Everything unmatched falls through to the knowledge base, so "hello" used to be
-     * put to the policy library — which answers nothing useful, and in Teams failed
-     * outright and made the bot look broken on the very first message.
-     *
-     * Answered from this list rather than the server: these are the words people type
-     * without meaning anything by them, and a round trip to say "hello" back is a
-     * round trip that can fail. It also teaches the one word worth remembering, which
-     * a full menu on every "ok" does not.
-     */
-    if (isSmallTalk(text)) {
-      return [{ card: helloCard() }]
-    }
-    if (/^(raise|new|open)\b.*\bticket\b/i.test(text) || /^raise a ticket$/i.test(text)) {
-      return startTicket(state)
-    }
-    if (/^my tickets$/i.test(text) || /\bmy tickets\b/i.test(text)) {
-      return listTickets()
-    }
-    if (/\bcheck ?-?in\b/i.test(text) || /^mood$/i.test(text) || /how am i\b/i.test(text)) {
-      return startCheckIn(state)
-    }
-    if (/\bpulse\b/i.test(text) || /\bsurvey\b/i.test(text)) {
-      return startPulse()
-    }
+  /*
+   * Small talk gets an answer, not a menu and not the policy library.
+   *
+   * Everything unmatched falls through to the knowledge base, so "hello" used to be
+   * put to the policy library — which answers nothing useful, and in Teams failed
+   * outright and made the bot look broken on the very first message.
+   *
+   * The flow is left alone: a stray "ok" should not throw away a half-written ticket.
+   */
+  if (isSmallTalk(text)) {
+    return [{ card: helloCard() }]
+  }
+
+  if (/^(raise|new|open)\b.*\bticket\b/i.test(text) || /^raise a ticket$/i.test(text)) {
+    return startTicket(state)
+  }
+  if (/^my tickets$/i.test(text) || /\bmy tickets\b/i.test(text)) {
+    reset(state)
+    return listTickets()
+  }
+  if (/\bcheck ?-?in\b/i.test(text) || /^mood$/i.test(text) || /how am i\b/i.test(text)) {
+    return startCheckIn(state)
+  }
+  if (/\bpulse\b/i.test(text) || /\bsurvey\b/i.test(text)) {
+    reset(state)
+    return startPulse()
   }
 
   switch (state.stage) {
@@ -209,13 +212,19 @@ export async function handle(state: ConversationState, input: Input): Promise<Re
       return takeTypedCategory(state, text)
 
     case 'awaitingSubject':
-      return takeSubject(state, text)
-
     case 'awaitingConfirm':
-      // Anything typed here is treated as a correction to the subject rather than an
-      // answer to the buttons — retyping is the common case, and the alternative is
-      // silently ignoring what they wrote.
-      return takeSubject(state, text)
+      /*
+       * The card has a box; the chat is not it.
+       *
+       * Both of these cards carry a text field, and that field is where a subject
+       * comes from. Treating whatever is typed into the chat as the subject too meant
+       * a passing question became a ticket — and there is no way to tell the two
+       * apart, because both are just a sentence.
+       *
+       * So a sentence is a question. The draft is still on screen with its box, and
+       * nothing about it is lost by answering something else first.
+       */
+      return askKnowledgeBase(text)
 
     case 'awaitingMood':
       // The faces are on screen and none has been picked. There is nothing sensible

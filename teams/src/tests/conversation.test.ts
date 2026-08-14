@@ -206,10 +206,12 @@ describe('raising a ticket', () => {
     assert.match(cards(await handle(state, { action: { kind: 'startTicket' } }))[0], /about/i)
 
     await handle(state, { action: { kind: 'pickCategory', category: 'Payroll' } })
-    const short = await handle(state, { text: 'oops' })
+    const short = await handle(state, { action: { kind: 'describe', subject: 'oops' } })
     assert.match(titleOf(short[0]), /little more/i)
 
-    const draft = await handle(state, { text: 'My payslip is missing from the portal' })
+    const draft = await handle(state, {
+      action: { kind: 'describe', subject: 'My payslip is missing from the portal' },
+    })
     // The card is headed by the category now; what was typed sits in its own panel.
     assert.match(cards(draft)[0], /Payroll/)
     assert.match(JSON.stringify(draft), /My payslip is missing from the portal/)
@@ -252,7 +254,9 @@ describe('raising a ticket', () => {
   it('files one ticket when Raise is pressed twice', async () => {
     const state = newState()
     await handle(state, { action: { kind: 'pickCategory', category: 'Payroll' } })
-    await handle(state, { text: 'My payslip is missing from the portal' })
+    await handle(state, {
+      action: { kind: 'describe', subject: 'My payslip is missing from the portal' },
+    })
 
     // Both presses in flight at once, which is what a double click produces.
     const [first, second] = await Promise.all([
@@ -273,7 +277,9 @@ describe('raising a ticket', () => {
     })
     const state = newState()
     await handle(state, { action: { kind: 'pickCategory', category: 'Payroll' } })
-    await handle(state, { text: 'My payslip is missing from the portal' })
+    await handle(state, {
+      action: { kind: 'describe', subject: 'My payslip is missing from the portal' },
+    })
 
     const failed = await handle(state, { action: { kind: 'raise' } })
     assert.match(titleOf(failed[0]), /still here/i)
@@ -285,13 +291,28 @@ describe('raising a ticket', () => {
     assert.match(cards(receipt)[0], /HRG-0001/)
   })
 
-  it('treats typing at the draft as a corrected subject', async () => {
+  it('does not take a typed sentence as the subject', async () => {
+    // Both the subject card and the draft carry a text box, and that box is where a
+    // subject comes from. Treating the chat as a second one meant a passing question
+    // became a ticket: "help me" was long enough to qualify, so it filed itself.
     const state = newState()
     await handle(state, { action: { kind: 'pickCategory', category: 'Payroll' } })
-    await handle(state, { text: 'First attempt at the subject' })
-    const again = await handle(state, { text: 'Second attempt at the subject' })
-    assert.match(JSON.stringify(again), /Second attempt/)
-    assert.equal(calls.raise, 0, 'typing must not file anything')
+
+    const replies = await handle(state, { text: 'What is the leave policy?' })
+
+    assert.equal(state.subject, undefined, 'nothing was filed')
+    assert.match(JSON.stringify(replies), /Twelve days/, 'it was answered as a question')
+  })
+
+  it('lets "genie" out of a half-finished ticket', async () => {
+    // The words people reach for when lost were being swallowed by the flow.
+    const state = newState()
+    await handle(state, { action: { kind: 'pickCategory', category: 'Payroll' } })
+
+    const replies = await handle(state, { text: 'help' })
+
+    assert.equal(state.stage, 'idle', 'the draft is abandoned')
+    assert.match(JSON.stringify(replies), /Raise a ticket/, 'and the menu opens')
   })
 })
 
@@ -443,7 +464,9 @@ describe('a spent ticket draft', () => {
   async function raised() {
     const state = newState()
     await handle(state, { action: { kind: 'pickCategory', category: 'Payroll' } })
-    await handle(state, { text: 'My payslip is missing from the portal' })
+    await handle(state, {
+      action: { kind: 'describe', subject: 'My payslip is missing from the portal' },
+    })
     await handle(state, { action: { kind: 'raise' } })
     return state
   }
@@ -466,7 +489,9 @@ describe('a spent ticket draft', () => {
   it('still confirms a real cancel, with a draft on screen', async () => {
     const state = newState()
     await handle(state, { action: { kind: 'pickCategory', category: 'Payroll' } })
-    await handle(state, { text: 'My payslip is missing from the portal' })
+    await handle(state, {
+      action: { kind: 'describe', subject: 'My payslip is missing from the portal' },
+    })
     const replies = await handle(state, { action: { kind: 'cancel' } })
     assert.match(JSON.stringify(replies), /Nothing was sent to HR/)
   })
@@ -479,7 +504,9 @@ describe('the ticket draft', () => {
     // above a raised ticket telling the reader to check it over.
     const state = newState()
     await handle(state, { action: { kind: 'pickCategory', category: 'Payroll' } })
-    const replies = await handle(state, { text: 'My payslip is missing from the portal' })
+    const replies = await handle(state, {
+      action: { kind: 'describe', subject: 'My payslip is missing from the portal' },
+    })
 
     assert.equal(replies.length, 1, 'one activity, not a line plus a card')
     assert.ok('card' in replies[0])
@@ -491,7 +518,9 @@ describe('editing the draft before raising', () => {
   async function atDraft() {
     const state = newState()
     await handle(state, { action: { kind: 'pickCategory', category: 'Payroll' } })
-    await handle(state, { text: 'My payslip is missing from the portal' })
+    await handle(state, {
+      action: { kind: 'describe', subject: 'My payslip is missing from the portal' },
+    })
     return state
   }
 
