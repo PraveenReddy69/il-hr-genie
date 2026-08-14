@@ -368,11 +368,16 @@ function actionFrom(activity: Partial<Activity>): CardAction | undefined {
     case 'raise':
       // The draft's text box rides along with the press. Whatever is in it wins.
       return { kind: 'raise', subject: value.subject === undefined ? undefined : String(value.subject) }
+    case 'ask':
+      return { kind: 'ask', question: String(value.question ?? '') }
     case 'describe':
       // Same for the subject card's box.
       return {
         kind: 'describe',
         subject: value.subject === undefined ? undefined : String(value.subject),
+        // The dropdown on the same card. Whatever it says when Continue is pressed
+        // is the category, whether or not it was the one picked a moment ago.
+        category: value.category === undefined ? undefined : String(value.category),
       }
     case 'savePulse':
       // Every other key is a question id — see savePulse in conversation.ts.

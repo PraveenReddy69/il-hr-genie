@@ -80,10 +80,32 @@ after(() => {
 
 // --------------------------------------------------------------- assertions
 
+/**
+ * The headline of a card, wherever it sits.
+ *
+ * Walks rather than indexing: the welcome card's header nests its text in a ColumnSet
+ * so the mascot can sit beside it, and a fixed path broke the moment it did. The
+ * headline is the first Large-or-bigger TextBlock, which is what a header is.
+ */
 const titleOf = (reply: Reply): string => {
   if ('text' in reply) return reply.text
-  const header = (reply.card.body[0] as { items?: { text?: string }[] }).items ?? []
-  return header[1]?.text ?? ''
+
+  const found: string[] = []
+  const walk = (node: unknown): void => {
+    if (Array.isArray(node)) return node.forEach(walk)
+    if (!node || typeof node !== 'object') return
+    const item = node as Record<string, unknown>
+    if (
+      item.type === 'TextBlock' &&
+      typeof item.text === 'string' &&
+      (item.size === 'Large' || item.size === 'ExtraLarge')
+    ) {
+      found.push(item.text)
+    }
+    Object.values(item).forEach(walk)
+  }
+  walk(reply.card.body[0])
+  return found[0] ?? ''
 }
 
 const cards = (replies: Reply[]): string[] => replies.filter((r) => 'card' in r).map(titleOf)
@@ -621,5 +643,42 @@ describe('leaving a half-finished ticket', () => {
     await handle(state, { text: 'payroll' })
     assert.equal(state.category, 'Payroll')
     assert.equal(state.stage, 'awaitingSubject')
+  })
+})
+
+describe('changing the category without leaving the card', () => {
+  it('offers the other categories as a dropdown on the same card', async () => {
+    const state = newState()
+    const replies = await handle(state, { action: { kind: 'pickCategory', category: 'Payroll' } })
+    const card = JSON.stringify(replies)
+
+    assert.match(card, /"type":"Input.ChoiceSet","id":"category"/, 'a dropdown, not a second card')
+    assert.match(card, /"value":"Payroll"/, 'opening on the one already chosen')
+    assert.match(card, /"title":"Leave"/, 'and offering the others')
+    assert.doesNotMatch(card, /Change category/, 'the escape hatch is gone')
+  })
+
+  it('takes the category from the dropdown when Continue is pressed', async () => {
+    // The point of the dropdown: switching category costs nothing that was typed.
+    const state = newState()
+    await handle(state, { action: { kind: 'pickCategory', category: 'Payroll' } })
+
+    await handle(state, {
+      action: { kind: 'describe', subject: 'My laptop will not start', category: 'Leave' },
+    })
+
+    assert.equal(state.category, 'Leave', 'the dropdown wins')
+    assert.equal(state.subject, 'My laptop will not start', 'and nothing typed is lost')
+  })
+
+  it('keeps the chosen category when the dropdown is left alone', async () => {
+    const state = newState()
+    await handle(state, { action: { kind: 'pickCategory', category: 'Payroll' } })
+
+    await handle(state, {
+      action: { kind: 'describe', subject: 'My payslip is missing', category: 'Payroll' },
+    })
+
+    assert.equal(state.category, 'Payroll')
   })
 })

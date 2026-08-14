@@ -301,10 +301,13 @@ async function handleAction(state: ConversationState, action: CardAction): Promi
     case 'pickCategory': {
       state.stage = 'awaitingSubject'
       state.category = action.category
+      // The full list rides along so the card can offer a dropdown. A failed read is
+      // not worth blocking on: the card falls back to the one already chosen.
+      const names = await api.gateway.categories().catch(() => [])
       // A card, not a line. The picker above is retired once a category is chosen —
       // a card cannot be restyled after submit, so six identical tiles are no record
       // of the decision. This names it instead.
-      return [{ card: subjectPromptCard(action.category) }]
+      return [{ card: subjectPromptCard(action.category, names) }]
     }
 
     case 'cancel': {
@@ -324,6 +327,11 @@ async function handleAction(state: ConversationState, action: CardAction): Promi
     // The box on the subject card. Typing into the chat still works and lands in the
     // same place — see [takeSubject] — so nobody who ignores the field is stuck.
     case 'describe': {
+      // The dropdown rides along with Continue, so a category changed on the card is
+      // simply the category now — no second card, and nothing typed is lost.
+      const chosen = (action.category ?? '').trim()
+      if (chosen) state.category = chosen
+
       const typed = (action.subject ?? '').trim()
       if (!typed) {
         return [{ text: 'Add a line about what is happening and press Continue.' }]
@@ -333,6 +341,12 @@ async function handleAction(state: ConversationState, action: CardAction): Promi
 
     case 'raise':
       return raise(state, action.subject)
+
+    // A pill on the welcome card. The words are ours rather than typed, so they go
+    // straight to the knowledge base without the small-talk and shortcut checks a
+    // typed message goes through.
+    case 'ask':
+      return askKnowledgeBase(action.question)
 
     case 'checkIn':
     case 'nudgeCheckIn':

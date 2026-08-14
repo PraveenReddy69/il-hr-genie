@@ -109,6 +109,8 @@ const MAPPED_KINDS = new Set([
   'nudgeCheckIn',
   'nudgePulse',
   'describe',
+  // The popular-question pills on the welcome card.
+  'ask',
 ])
 
 describe('every card', () => {

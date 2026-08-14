@@ -50,12 +50,13 @@ export type CardAction =
   | { kind: 'nudgeCheckIn' }
   | { kind: 'nudgePulse' }
   | { kind: 'raise'; subject?: string }
-  | { kind: 'describe'; subject?: string }
+  | { kind: 'describe'; subject?: string; category?: string }
   | { kind: 'cancel' }
   | { kind: 'myTickets' }
   | { kind: 'startTicket' }
   | { kind: 'holidays' }
   | { kind: 'team' }
+  | { kind: 'ask'; question: string }
 
 export interface AdaptiveCard {
   $schema: string
@@ -264,70 +265,6 @@ function submit(action: CardAction, label: string): Record<string, unknown> {
 }
 
 /**
- * A tappable tile: icon, label, and the whole thing is the button.
- *
- * `selectAction` is the trick. A stock `Action.Submit` renders as a full-width bar
- * with no room for an icon, and six of those is a wall — the same reason the Android
- * picker uses tiles rather than a list.
- */
-function tile(icon: string, label: string, data: CardAction, caption?: string): unknown {
-  return {
-    type: 'Container',
-    ...TILE_SURFACE,
-    // The stroke is drawn out here and the white filled inside, because one container
-    // cannot do both — see [whiteFill]. `selectAction` stays on the outer one so the
-    // whole tile, border included, is the button.
-    selectAction: { type: 'Action.Submit', data: submit(data, label) },
-    spacing: 'Default',
-    items: [
-      {
-        type: 'Container',
-        ...whiteFill(),
-        items: [
-          // Stacked and centred, two to a row. A horizontal version was tried against
-          // a design mockup and looked worse: the polish in that mockup comes from
-          // gradients, shadows and soft washes, and Adaptive Cards has none of them —
-          // what survives is a wide grey box with a stray pill in it.
-          {
-            type: 'Image',
-            url: iconUrl(icon),
-            width: '40px',
-            height: '40px',
-            altText: label,
-            horizontalAlignment: 'Center',
-            spacing: 'Small',
-          },
-          {
-            type: 'TextBlock',
-            text: label,
-            size: 'Medium',
-            weight: 'Bolder',
-            wrap: true,
-            horizontalAlignment: 'Center',
-            spacing: 'Small',
-            ...TILE_TEXT,
-          },
-          ...(caption
-            ? [
-                {
-                  type: 'TextBlock',
-                  text: caption,
-                  size: 'Small',
-                  isSubtle: true,
-                  wrap: true,
-                  horizontalAlignment: 'Center',
-                  spacing: 'None',
-                  ...TILE_TEXT,
-                },
-              ]
-            : []),
-        ],
-      },
-    ],
-  }
-}
-
-/**
  * A tappable row: icon beside the label, full width.
  *
  * The list form, for the category picker. Six stacked tiles read as a wall of equal
@@ -386,27 +323,6 @@ function listTile(icon: string, label: string, data: CardAction): unknown {
       },
     ],
   }
-}
-
-/** Lays tiles out two to a row. */
-function grid(tiles: unknown[]): unknown[] {
-  const rows: unknown[] = []
-  for (let index = 0; index < tiles.length; index += 2) {
-    const pair = [tiles[index], tiles[index + 1]]
-    rows.push({
-      type: 'ColumnSet',
-      spacing: 'Default',
-      // An odd tile keeps its half of the row rather than stretching across it. The
-      // menu loses a tile whenever something is already done for the day, and a lone
-      // double-width card in the last row reads as a different kind of thing.
-      columns: pair.map((item) => ({
-        type: 'Column',
-        width: 'stretch',
-        items: item ? [item] : [],
-      })),
-    })
-  }
-  return rows
 }
 
 /**
@@ -556,26 +472,234 @@ export function helloCard(): AdaptiveCard {
  *
  * Check in is still reachable: the nudge, and typing "check in".
  */
-export function welcomeCard(firstName: string): AdaptiveCard {
-  const tiles = [
-    tile('ticket', 'Raise a ticket', { kind: 'startTicket' }, 'File with HR'),
-    tile('list', 'My tickets', { kind: 'myTickets' }, 'See replies'),
-    tile('pulse', 'Monthly pulse', { kind: 'startPulse' }, 'Four quick questions'),
-    // Reachable from chat, not only the tabs: tabs do not open on Teams mobile.
-    tile('leave', 'Holidays', { kind: 'holidays' }, 'What is coming up'),
-    tile('something-else', 'Around the team', { kind: 'team' }, 'Birthdays and milestones'),
-  ]
+/**
+ * A menu row: icon, a title with a line of explanation, and a chevron.
+ *
+ * Wider than the stacked tile it replaces, and it earns the width — someone opening
+ * this for the first time does not know what "Pulse" is, and one line under the label
+ * answers that without them having to tap and find out.
+ *
+ * The chevron is a text character. Adaptive Cards has no such affordance, and an image
+ * for it would be a fourth network fetch to say "this is tappable".
+ */
+function menuRow(icon: string, title: string, description: string, data: CardAction): unknown {
+  return {
+    type: 'Container',
+    ...TILE_SURFACE,
+    selectAction: { type: 'Action.Submit', data: submit(data, title) },
+    spacing: 'Small',
+    items: [
+      {
+        type: 'Container',
+        ...whiteFill(),
+        items: [
+          {
+            type: 'ColumnSet',
+            columns: [
+              {
+                type: 'Column',
+                width: 'auto',
+                verticalContentAlignment: 'Center',
+                items: [
+                  { type: 'Image', url: iconUrl(icon), width: '40px', height: '40px', altText: title },
+                ],
+              },
+              {
+                type: 'Column',
+                width: 'stretch',
+                verticalContentAlignment: 'Center',
+                spacing: 'Medium',
+                items: [
+                  {
+                    type: 'TextBlock',
+                    text: title,
+                    weight: 'Bolder',
+                    size: 'Medium',
+                    wrap: true,
+                    spacing: 'None',
+                    ...TILE_TEXT,
+                  },
+                  {
+                    type: 'TextBlock',
+                    text: description,
+                    size: 'Small',
+                    isSubtle: true,
+                    wrap: true,
+                    spacing: 'None',
+                    ...TILE_TEXT,
+                  },
+                ],
+              },
+              {
+                type: 'Column',
+                width: 'auto',
+                verticalContentAlignment: 'Center',
+                items: [
+                  { type: 'TextBlock', text: '›', size: 'Large', isSubtle: true, spacing: 'None', ...TILE_TEXT },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  }
+}
 
+/**
+ * The questions people ask most, as one tap.
+ *
+ * Hard-coded until the backend can serve them from what is actually being asked.
+ * They are the shortest path to the thing this bot is mainly for — answering a
+ * question — and they teach that it answers questions at all, which a grid of tiles
+ * does not.
+ */
+const POPULAR_QUESTIONS = [
+  'How do I apply for leave?',
+  'Where can I find payroll info?',
+  'Who is my HRBP?',
+  'How do I update my details?',
+]
+
+export function welcomeCard(firstName: string): AdaptiveCard {
   return card([
-    header('Infinity Learn', `Hi ${firstName} 👋`, 'HR Genie · always on'),
+    /*
+     * The header carries the mascot.
+     *
+     * A face in the corner is what makes this read as somebody's assistant rather than
+     * a form. It sits in its own column so the greeting keeps its line length whatever
+     * the name is.
+     */
+    {
+      type: 'Container',
+      bleed: true,
+      spacing: 'None',
+      backgroundImage: { url: iconUrl('header'), fillMode: 'Cover' },
+      items: [
+        {
+          type: 'ColumnSet',
+          columns: [
+            {
+              type: 'Column',
+              width: 'stretch',
+              verticalContentAlignment: 'Center',
+              items: [
+                {
+                  type: 'TextBlock',
+                  text: 'INFINITY LEARN',
+                  size: 'Small',
+                  weight: 'Bolder',
+                  color: 'Light',
+                  spacing: 'None',
+                  wrap: true,
+                },
+                {
+                  type: 'TextBlock',
+                  text: `Hi ${firstName} 👋`,
+                  size: 'ExtraLarge',
+                  weight: 'Bolder',
+                  color: 'Light',
+                  wrap: true,
+                  spacing: 'None',
+                },
+                {
+                  type: 'TextBlock',
+                  text: 'HR Genie · always on',
+                  color: 'Light',
+                  wrap: true,
+                  spacing: 'Small',
+                },
+              ],
+            },
+            {
+              type: 'Column',
+              width: 'auto',
+              verticalContentAlignment: 'Center',
+              items: [
+                {
+                  type: 'Image',
+                  url: iconUrl('mascot'),
+                  width: '84px',
+                  height: '84px',
+                  altText: 'HR Genie',
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
     body([
       {
-        type: 'TextBlock',
-        text: 'Ask me about leave, insurance, payroll or policy — or pick one of these.',
-        wrap: true,
-        spacing: 'Default',
+        type: 'ColumnSet',
+        spacing: 'None',
+        columns: [
+          {
+            type: 'Column',
+            width: 'auto',
+            verticalContentAlignment: 'Center',
+            items: [{ type: 'TextBlock', text: '💬', size: 'Medium', spacing: 'None' }],
+          },
+          {
+            type: 'Column',
+            width: 'stretch',
+            verticalContentAlignment: 'Center',
+            spacing: 'Small',
+            items: [
+              {
+                type: 'TextBlock',
+                text: 'Ask me about leave, insurance, payroll or policy — or pick one of these.',
+                wrap: true,
+                spacing: 'None',
+              },
+            ],
+          },
+        ],
       },
-      ...grid(tiles),
+      menuRow('ticket', 'Raise a ticket', 'File a request or report an issue with HR', {
+        kind: 'startTicket',
+      }),
+      menuRow('list', 'My tickets', 'View your tickets and responses', { kind: 'myTickets' }),
+      menuRow('pulse', 'Monthly pulse', 'Answer 4 quick questions and share your mood', {
+        kind: 'startPulse',
+      }),
+      // Reachable from chat, not only the tabs: tabs do not open on Teams mobile.
+      menuRow('leave', 'Holidays', 'Check upcoming holidays and important dates', {
+        kind: 'holidays',
+      }),
+      menuRow(
+        'something-else',
+        'Around the team',
+        'See birthdays, work anniversaries and team milestones',
+        { kind: 'team' },
+      ),
+      {
+        type: 'TextBlock',
+        text: '💡 Popular questions',
+        size: 'Small',
+        weight: 'Bolder',
+        isSubtle: true,
+        wrap: true,
+        spacing: 'Medium',
+      },
+      {
+        type: 'ActionSet',
+        spacing: 'Small',
+        actions: POPULAR_QUESTIONS.map((question) => ({
+          type: 'Action.Submit',
+          title: question,
+          data: submit({ kind: 'ask', question }, question),
+        })),
+      },
+      {
+        type: 'TextBlock',
+        text: '🔒 Your conversations are private and secure.',
+        size: 'Small',
+        isSubtle: true,
+        horizontalAlignment: 'Center',
+        wrap: true,
+        spacing: 'Medium',
+      },
     ]),
   ])
 }
@@ -607,16 +731,45 @@ function iconFor(category: string): string {
  * anything. This replaces it and names the choice, so scrolling back shows the
  * decision rather than the menu.
  */
-export function subjectPromptCard(category: string): AdaptiveCard {
+export function subjectPromptCard(category: string, categories: string[] = []): AdaptiveCard {
+  // The chosen one first, so the dropdown opens on it, and never twice if the server
+  // already lists it.
+  const choices = [category, ...categories.filter((one) => one !== category)]
+
   return card(
     [
       header('New ticket', category, 'Category chosen — HR can move it later.'),
       body([
+        /*
+         * The category, as a dropdown on this card.
+         *
+         * Changing it used to send you back to the picker — a second card, below the
+         * one you were filling in, with whatever you had typed left behind on the
+         * first. Since the subject already lives in a box here, the category can too,
+         * and switching it costs nothing that was already written.
+         */
+        {
+          type: 'TextBlock',
+          text: 'Category',
+          size: 'Small',
+          weight: 'Bolder',
+          isSubtle: true,
+          wrap: true,
+          spacing: 'Default',
+        },
+        {
+          type: 'Input.ChoiceSet',
+          id: 'category',
+          value: category,
+          style: 'compact',
+          spacing: 'Small',
+          choices: choices.map((one) => ({ title: one, value: one })),
+        },
         {
           type: 'TextBlock',
           text: "Tell me what's happening in a line or two.",
           wrap: true,
-          spacing: 'Default',
+          spacing: 'Medium',
         },
         // A box, not an instruction to type into the chat. The line above used to be
         // the whole card, which left people looking at a message that asked for
@@ -640,13 +793,10 @@ export function subjectPromptCard(category: string): AdaptiveCard {
         },
       ]),
     ],
-    [
-      // First, and styled: it is what the card is for. Change category is the escape
-      // hatch — the alternative being to scroll back to a picker that may be several
-      // messages up, or worse, an older one from a previous attempt.
-      { type: 'Action.Submit', title: 'Continue', style: 'positive', data: { kind: 'describe' } },
-      { type: 'Action.Submit', title: 'Change category', data: { kind: 'startTicket' } },
-    ],
+    // One button. Both inputs ride along with it, so a changed category and a typed
+    // subject arrive together — there is nothing to change the category *to* without
+    // also saying what happened.
+    [{ type: 'Action.Submit', title: 'Continue', style: 'positive', data: { kind: 'describe' } }],
   )
 }
 
