@@ -44,7 +44,7 @@ answer, which is the same thing an employee would see if the service were down.
 ## Tests
 
 ```bash
-npm test          # 137 tests, no network, no accounts
+npm test          # 196 tests, no network, no accounts
 npm run test:images   # checks every card image actually loads
 ```
 
@@ -167,43 +167,38 @@ the employee still sees it in the app and in chat.
 
 ---
 
-## SSO — built, waiting on two things
+## SSO — live
 
-The bot no longer assumes one identity. Every turn runs inside `api.asEmployee(...)`,
-so each person's calls carry their own bearer, and `conversation.ts` never learns that
-identity exists. Turn it on by naming the Azure Bot's OAuth connection:
+Every employee is themselves. A turn runs inside `api.asEmployee(...)`, so each
+person's calls carry their own bearer, and `conversation.ts` never learns that identity
+exists. Verified end to end on 13 August 2026: Teams → Entra → this bot → the HR Genie
+API, no shared account and no password anywhere.
 
 ```bash
 SSO_CONNECTION_NAME=hrgenie-sso
 ```
 
-Leave it unset and the bot falls back to the single account in `.env`, which is what
-keeps the Emulator and `npm run try` working with no registration. It logs a warning
-when it does, because a shared identity is not something to discover later.
+**Leave it unset and nothing works** — there is no fallback identity to serve, and every
+turn refuses rather than quietly acting as somebody else. `npm run try` and the card
+preview use `HRGENIE_DEV_TOKEN`, a bearer you already hold; it is not an account the
+service can fall back to.
 
-Two things are still needed, neither of them code:
+The backend endpoint this depends on is specified in
+[docs/TEAMS_SSO_BACKEND.md](docs/TEAMS_SSO_BACKEND.md), and the Microsoft-side
+configuration is done — Azure Bot, app registration, OAuth connection, admin consent.
 
-1. **`POST /api/auth/teams` on the backend** — trades a verified Entra token for an HR
-   Genie session. Contract in [docs/TEAMS_SSO_BACKEND.md](../docs/TEAMS_SSO_BACKEND.md).
-2. **The Entra configuration** — App ID URI, scope, pre-authorised Teams client ids,
-   OAuth connection. All in [docs/IT_REQUEST.md](../docs/IT_REQUEST.md).
-
-**What is verified and what is not.** The identity scoping, the token exchange, the
-per-user cache and its expiry, and the refusal to fall back to the shared account are
-covered by `sso.test.ts` — including the case that matters most, two users' turns
-interleaving without leaking a bearer between them. The Teams handshake itself
-(`getUserToken`, the OAuth card, `signin/tokenExchange`) talks to Microsoft on every
-call and has never been run; it is isolated behind `TokenSource` for exactly that
-reason. Expect to debug that half on first contact with a real registration.
+One thing worth knowing if it is ever reconfigured: the **Scopes** on the OAuth
+connection decide the token's audience. Bare OIDC scopes return a Microsoft Graph token
+that no third party can validate, and Azure's own *Test Connection* passes anyway. It
+must name our API — `api://<host>/botid-<appid>/access_as_user`.
 
 ## What this is not, yet
-- **Proactive messages are built but unverified.** `POST /notify` and the conversation
-  store are done and tested offline; delivery itself goes through the Bot Connector,
-  which needs a real Azure Bot registration. Until then the endpoint answers `404` for
-  everyone, because no conversation has ever been recorded.
-- **State is in memory.** A restart forgets half-finished drafts.
-- **Placeholder icons.** `appPackage/*.png` are drawn by `scripts/make-icons.mjs`
-  because there was no image tooling to hand. Replace them with the real brand assets.
+- **State is in memory.** A restart forgets half-finished drafts, and a second instance
+  would not share them. Run one. See [docs/DEPLOY.md](docs/DEPLOY.md).
+- **Four category glyphs are generated**, not drawn. They work and they are the wrong
+  style beside the rest.
+- **Tabs do not open on Teams mobile.** Every feature is reachable from chat for that
+  reason.
 
 ---
 
