@@ -273,6 +273,20 @@ function submit(action: CardAction, label: string): Record<string, unknown> {
  * Only what is still ahead, and only a handful — a list of dates that have already
  * passed is a reference document, not an answer.
  */
+/**
+ * Enough to answer "what is next", not the whole year.
+ *
+ * The Holidays tab has the full calendar; a chat card that scrolls for a screen and a
+ * half is answering a question nobody asked.
+ */
+const HOLIDAYS_IN_CHAT = 4
+
+/** For the date chips. Short, because the chip is 40-odd pixels wide. */
+const MONTHS_SHORT = [
+  'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
+  'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
+]
+
 export function holidaysCard(holidays: Holiday[], todayIso: string): AdaptiveCard {
   const ahead = holidays.filter((one) => one.isoDate >= todayIso)
   const shown = ahead.slice(0, HOLIDAYS_IN_CHAT)
@@ -292,26 +306,58 @@ export function holidaysCard(holidays: Holiday[], todayIso: string): AdaptiveCar
     ])
   }
 
-  /**
-   * How far off the next one is.
-   *
-   * A date is a fact; "in 4 days" is the thing people actually want from a holiday
-   * list, and it is the only line here that changes meaning depending on when you
-   * read it. Same wording as the Holidays tab, so the two do not disagree.
-   */
   const next = shown[0]
-  const daysAway = Math.round(
-    (Date.parse(`${next.isoDate}T00:00:00Z`) - Date.parse(`${todayIso}T00:00:00Z`)) / 86_400_000,
-  )
-  const countdown =
-    daysAway <= 0 ? 'Today' : daysAway === 1 ? 'Tomorrow' : `In ${daysAway} days`
+  const daysTo = (isoDate: string): number =>
+    Math.round(
+      (Date.parse(`${isoDate}T00:00:00Z`) - Date.parse(`${todayIso}T00:00:00Z`)) / 86_400_000,
+    )
 
+  const away = daysTo(next.isoDate)
+  const countdown = away <= 0 ? 'Today' : away === 1 ? 'Tomorrow' : `In ${away} days`
   const subtitle =
-    daysAway <= 0
+    away <= 0
       ? `${ahead.length} still ahead · the next one is today`
-      : daysAway === 1
+      : away === 1
         ? `${ahead.length} still ahead · the next one is tomorrow`
-        : `${ahead.length} still ahead · next in ${daysAway} days`
+        : `${ahead.length} still ahead · next in ${away} days`
+
+  /**
+   * The date, as a chip.
+   *
+   * Every row needs something in its left column, and a coloured bar there is just
+   * decoration that Adaptive Cards cannot draw thin enough to look deliberate — it
+   * comes out as a pale block. A day and a month carry the same emphasis and are
+   * worth reading, which is what the Holidays tab does with the same list.
+   */
+  const dateChip = (isoDate: string, isNext: boolean): unknown => ({
+    type: 'Container',
+    style: isNext ? 'accent' : 'emphasis',
+    roundedCorners: true,
+    spacing: 'None',
+    minHeight: '54px',
+    verticalContentAlignment: 'Center',
+    items: [
+      {
+        type: 'TextBlock',
+        text: String(Number(isoDate.slice(8, 10))),
+        size: 'Large',
+        weight: 'Bolder',
+        horizontalAlignment: 'Center',
+        spacing: 'None',
+        wrap: false,
+      },
+      {
+        type: 'TextBlock',
+        text: MONTHS_SHORT[Number(isoDate.slice(5, 7)) - 1],
+        size: 'Small',
+        weight: 'Bolder',
+        isSubtle: true,
+        horizontalAlignment: 'Center',
+        spacing: 'None',
+        wrap: false,
+      },
+    ],
+  })
 
   return card([
     header('Holidays', 'What is coming up', subtitle),
@@ -324,57 +370,38 @@ export function holidaysCard(holidays: Holiday[], todayIso: string): AdaptiveCar
           spacing: 'Small',
           items: [
             {
-              // The next one gets the white fill and the accent bar; the rest keep the
-              // card's own surface. One highlighted row in a list of four is legible at
-              // a glance, which is the whole job of this card.
+              // Only the next one is filled. One marked row in a list of four reads at
+              // a glance; two would make the mark mean nothing.
               type: 'Container',
               ...(isNext ? whiteFill() : {}),
               items: [
                 {
                   type: 'ColumnSet',
                   columns: [
-                    ...(isNext
-                      ? [
-                          {
-                            type: 'Column',
-                            width: 'auto',
-                            spacing: 'None',
-                            items: [
-                              {
-                                // Adaptive Cards has no border-left, so the rule is a
-                                // container with an accent style and nothing in it but
-                                // a space — the only way to draw a vertical bar.
-                                type: 'Container',
-                                style: 'accent',
-                                items: [
-                                  {
-                                    type: 'TextBlock',
-                                    text: ' ',
-                                    size: 'Small',
-                                    spacing: 'None',
-                                  },
-                                ],
-                              },
-                            ],
-                          },
-                        ]
-                      : []),
+                    {
+                      type: 'Column',
+                      width: 'auto',
+                      verticalContentAlignment: 'Center',
+                      items: [dateChip(one.isoDate, isNext)],
+                    },
                     {
                       type: 'Column',
                       width: 'stretch',
-                      spacing: isNext ? 'Small' : 'None',
+                      verticalContentAlignment: 'Center',
+                      spacing: 'Medium',
                       items: [
                         {
                           type: 'TextBlock',
                           text: one.name,
                           weight: 'Bolder',
+                          size: 'Medium',
                           wrap: true,
                           spacing: 'None',
                           ...(isNext ? TILE_TEXT : {}),
                         },
                         {
                           type: 'TextBlock',
-                          text: `${prettyDate(one.isoDate)} · ${weekday(one.isoDate)} · ${one.region}`,
+                          text: `${weekday(one.isoDate)} · ${one.region}`,
                           size: 'Small',
                           isSubtle: true,
                           wrap: true,
@@ -384,14 +411,14 @@ export function holidaysCard(holidays: Holiday[], todayIso: string): AdaptiveCar
                         ...(isNext
                           ? [
                               {
-                                // Amber, because a countdown is a "soon" rather than a
-                                // status — the same reasoning as the tab.
+                                // Amber: a countdown is a "soon", not a status — the
+                                // same reasoning as the Holidays tab.
                                 type: 'TextBlock',
-                                text: countdown.toUpperCase(),
+                                text: countdown,
                                 size: 'Small',
                                 weight: 'Bolder',
                                 color: 'Warning',
-                                wrap: true,
+                                wrap: false,
                                 spacing: 'Small',
                               },
                             ]
@@ -404,20 +431,13 @@ export function holidaysCard(holidays: Holiday[], todayIso: string): AdaptiveCar
                       verticalContentAlignment: 'Center',
                       items: [
                         {
-                          type: 'Container',
-                          style: one.kind === 'OPTIONAL' ? 'warning' : 'good',
+                          type: 'TextBlock',
+                          text: one.kind === 'OPTIONAL' ? 'Optional' : 'Fixed',
+                          size: 'Small',
+                          weight: 'Bolder',
+                          color: one.kind === 'OPTIONAL' ? 'Warning' : 'Good',
                           spacing: 'None',
-                          items: [
-                            {
-                              type: 'TextBlock',
-                              text: one.kind === 'OPTIONAL' ? 'Optional' : 'Fixed',
-                              size: 'Small',
-                              weight: 'Bolder',
-                              color: one.kind === 'OPTIONAL' ? 'Warning' : 'Good',
-                              spacing: 'None',
-                              wrap: false,
-                            },
-                          ],
+                          wrap: false,
                         },
                       ],
                     },
@@ -444,16 +464,6 @@ export function holidaysCard(holidays: Holiday[], todayIso: string): AdaptiveCar
       ],
     },
   ])
-}
-
-/** Enough to answer "what is next", not the whole year. */
-const HOLIDAYS_IN_CHAT = 4
-
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
-function prettyDate(iso: string): string {
-  const [year, month, day] = iso.split('-')
-  return `${Number(day)} ${MONTHS[Number(month) - 1]} ${year}`
 }
 
 function weekday(iso: string): string {

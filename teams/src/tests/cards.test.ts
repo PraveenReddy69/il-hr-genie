@@ -517,7 +517,7 @@ describe('the holidays card', () => {
     // A date is a fact; "in 4 days" is what people actually want from this list.
     const card = JSON.stringify(holidaysCard(holidays, '2026-08-11'))
     assert.match(card, /next in 4 days/i, 'the header says how long')
-    assert.match(card, /IN 4 DAYS/, 'and so does the row')
+    assert.match(card, /"In 4 days"/, 'and so does the row')
   })
 
   it('says today and tomorrow rather than counting them', () => {
