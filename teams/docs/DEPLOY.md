@@ -171,3 +171,51 @@ In order, and steps 2–4 are a coordinated ten minutes rather than four separat
 5. **Teams admin** grants app upload to the other three testers.
 
 Between steps 2 and 3, sign-in is briefly broken — which is why they run together.
+
+---
+
+## Dev and prod
+
+Two environments, and the awkward part is not the hosting — it is that **one Entra
+application registration can only carry one Application ID URI**, and tab SSO ties that
+URI to the hostname. Dev and prod therefore cannot share a registration while both have
+working tabs.
+
+So: **two registrations, two bots, two Teams apps.**
+
+| | Dev | Prod |
+|---|---|---|
+| Host | The developer's tunnel | `hrgenie-bot.devinfinitylearn.in` |
+| Bot / app id | `7c9867c8-…` (the existing one) | New — created with IT |
+| App ID URI | `api://<tunnel>/botid-7c9867c8-…` | `api://<prod host>/botid-<new id>` |
+| OAuth connection | `hrgenie-sso` on the dev bot | `hrgenie-sso` on the prod bot |
+| Teams app | Sideloaded to the developer | Sideloaded to the four testers |
+| Backend | The same HR Genie API | The same HR Genie API |
+
+**Create prod fresh and leave dev alone.** Repointing the existing registration at the
+production hostname would break the developer's environment the moment it changed, and
+leaves no way to test anything without disturbing the people using it. Building the
+prod one alongside also means no coordinated downtime window — nothing is live on it
+until the app package ships.
+
+Both talk to the same backend. There is no separate HR Genie API for dev, so anything
+raised while testing is a real ticket. Worth knowing before demoing.
+
+### Running each
+
+Configuration is per environment, in files git never sees:
+
+```bash
+npm run start:dev     # reads .env.dev
+npm run start:prod    # reads .env.prod
+npm run package:dev   # a Teams package pointed at dev
+npm run package:prod  # a Teams package pointed at prod
+```
+
+`.env`, `.env.dev` and `.env.prod` are all gitignored. **On the server, use real
+environment variables rather than a file** — the scripts above are for a developer
+machine.
+
+The package a run produces carries that environment's bot id, hostname and App ID URI,
+so a dev package installed against prod simply will not authenticate. That is the
+intended behaviour: the two cannot be confused into talking to each other.
