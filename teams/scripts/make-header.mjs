@@ -16,7 +16,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { pngRect } from './png.mjs'
 
-const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'web', 'public', 'icons')
+const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'assets', 'icons')
 const WIDTH = 1200
 const HEIGHT = 240
 

@@ -83,6 +83,23 @@ const bot = new HrGenieBot(references, sso, ssoConnection)
 const server = express()
 server.use(express.json())
 
+/**
+ * The card artwork.
+ *
+ * Served from here rather than the console's Pages site, so the bot ships everything a
+ * card needs. Cached hard and busted by a version query — see ICON_VERSION in cards.ts
+ * — because Teams caches card images by URL and will otherwise show a redrawn glyph's
+ * predecessor indefinitely.
+ */
+server.use(
+  '/icons',
+  express.static(new URL('../assets/icons', import.meta.url).pathname, {
+    maxAge: '365d',
+    immutable: true,
+    fallthrough: false,
+  }),
+)
+
 server.post('/api/messages', async (request, response) => {
   await adapter.process(request, response, (context) => bot.run(context))
 })

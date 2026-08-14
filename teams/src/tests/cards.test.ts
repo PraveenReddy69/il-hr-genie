@@ -30,6 +30,10 @@ import {
 } from '../cards.js'
 import type { Ticket } from '../api.js'
 
+// Set before any card is built: the icon host comes from the environment, the way it
+// will in production. See iconBase in cards.ts.
+process.env.PUBLIC_BASE_URL = 'https://hrgenie-bot.example.com'
+
 const ticket = (status: Ticket['status'] = 'OPEN'): Ticket => ({
   id: 'HRG-0001',
   subject: 'My payslip is missing from the portal',

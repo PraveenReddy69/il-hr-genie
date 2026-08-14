@@ -10,11 +10,9 @@ Employees are identified by their own Teams sign-in (Entra SSO); there is no sha
 account and no password anywhere in this service. The endpoint the backend provides for
 that is specified in [docs/TEAMS_SSO_BACKEND.md](docs/TEAMS_SSO_BACKEND.md).
 
-> **Note on the icon scripts.** `scripts/make-*-icons.mjs` and `scripts/make-header.mjs`
-> write into the HRBP console's `web/public/icons`, which lives in the main HR Genie
-> repository rather than here. Card icons are served from that site over https, because
-> Adaptive Cards will not load an image any other way. Nothing at runtime depends on
-> those scripts — they are only for redrawing the glyphs.
+Card artwork lives in `assets/icons` and is served by this service at `/icons`, so the
+bot ships everything a card needs. `scripts/make-*.mjs` redraw the generated glyphs into
+that folder; nothing at runtime depends on them.
 
 What works today: the welcome card, knowledge-base answers, the full ticket flow
 (category → subject → preview → raise → receipt) and My tickets.

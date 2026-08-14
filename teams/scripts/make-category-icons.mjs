@@ -2,8 +2,7 @@
  * The category glyphs the Teams cards use.
  *
  * Adaptive Cards can only show an image from an https URL, so these are written into
- * `web/public/` and served by the console's GitHub Pages site — the one host we
- * already publish to.
+ * `assets/icons/` and served by this service, from the same host as the tabs.
  *
  * Drawn as coverage functions rather than traced from the Android vectors, because
  * rasterising SVG paths needs a library this environment does not have. Same shapes,
@@ -17,7 +16,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { png, blend, disc, rect, segment } from './png.mjs'
 
-const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'web', 'public', 'icons')
+const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'assets', 'icons')
 
 /**
  * 128, to match the hand-drawn set.

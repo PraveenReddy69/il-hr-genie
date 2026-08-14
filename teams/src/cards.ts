@@ -143,19 +143,28 @@ function body(items: unknown[]): unknown {
 }
 
 /**
- * Where the card artwork lives.
+ * Where the card artwork is served from.
  *
- * Adaptive Cards will only load an image over https, so the glyphs ride along with
- * the HRBP console on GitHub Pages rather than needing a host of their own. The
- * domain has to be listed in the app manifest's `validDomains` too.
+ * This service, from `assets/icons`, on the same host as the tabs. It used to be the
+ * HRBP console's GitHub Pages site, which meant a card could break because a different
+ * repository deployed — and meant the two had to be released together to change a
+ * glyph. A bot that ships its own artwork has neither problem.
+ *
+ * Adaptive Cards will only load an image over https, so `PUBLIC_BASE_URL` has to be a
+ * real https host. Unset — the Emulator, `npm run try` — the URLs are relative and the
+ * cards simply render without icons rather than failing.
  */
-const ICON_BASE = 'https://praveenreddy69.github.io/il-hr-genie/icons'
+function iconBase(): string {
+  // Read per call, not once at import: the host is configuration, and a module-level
+  // constant would freeze whatever happened to be set when the file first loaded.
+  return `${(process.env.PUBLIC_BASE_URL ?? '').replace(/\/$/, '')}/icons`
+}
 
 /**
  * Cache-buster for the glyphs.
  *
  * Teams caches card images by URL and holds them for a long time, so replacing a PNG
- * at the same path leaves everyone looking at the old artwork — the file on Pages is
+ * at the same path leaves everyone looking at the old artwork — the file on disk is
  * new, the client just never asks for it again. Bumping this number changes the URL
  * and forces a refetch.
  *
@@ -164,7 +173,7 @@ const ICON_BASE = 'https://praveenreddy69.github.io/il-hr-genie/icons'
 const ICON_VERSION = 3
 
 function iconUrl(name: string): string {
-  return `${ICON_BASE}/${name}.png?v=${ICON_VERSION}`
+  return `${iconBase()}/${name}.png?v=${ICON_VERSION}`
 }
 
 /**
@@ -184,7 +193,7 @@ function iconUrl(name: string): string {
  * reads as a permanent problem.
  *
  * Used by every tiled surface. For true white rather than the client's grey, see
- * [WHITE_TILE].
+ * [whiteFill].
  */
 const TILE_SURFACE = { style: 'default', showBorder: true, roundedCorners: true } as const
 
@@ -203,13 +212,17 @@ const TILE_SURFACE = { style: 'default', showBorder: true, roundedCorners: true 
  * the same container gets the fill and loses the outline. Nesting keeps them off each
  * other's edges.
  */
-const WHITE_FILL = {
-  backgroundImage: { url: `${ICON_BASE}/tile-white.png?v=${ICON_VERSION}`, fillMode: 'Cover' },
-  roundedCorners: true,
-} as const
+function whiteFill() {
+  // A function, not a constant: [iconUrl] reads the host from the environment, and a
+  // module-level value would freeze whatever was set the moment this file loaded.
+  return {
+    backgroundImage: { url: iconUrl('tile-white'), fillMode: 'Cover' },
+    roundedCorners: true,
+  } as const
+}
 
 /**
- * Pinned dark, because [WHITE_FILL] pins the background it sits on.
+ * Pinned dark, because [whiteFill] pins the background it sits on.
  *
  * An image does not follow the theme. Teams draws default text white in dark mode,
  * which on a pinned-white tile would be invisible. This is also why the white is
@@ -231,14 +244,14 @@ function tile(icon: string, label: string, data: CardAction, caption?: string): 
     type: 'Container',
     ...TILE_SURFACE,
     // The stroke is drawn out here and the white filled inside, because one container
-    // cannot do both — see [WHITE_FILL]. `selectAction` stays on the outer one so the
+    // cannot do both — see [whiteFill]. `selectAction` stays on the outer one so the
     // whole tile, border included, is the button.
     selectAction: { type: 'Action.Submit', data },
     spacing: 'Default',
     items: [
       {
         type: 'Container',
-        ...WHITE_FILL,
+        ...whiteFill(),
         items: [
           // Stacked and centred, two to a row. A horizontal version was tried against
           // a design mockup and looked worse: the polish in that mockup comes from
@@ -301,7 +314,7 @@ function listTile(icon: string, label: string, data: CardAction): unknown {
     items: [
       {
         type: 'Container',
-        ...WHITE_FILL,
+        ...whiteFill(),
         items: [
           {
             type: 'ColumnSet',
