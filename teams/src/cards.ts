@@ -292,69 +292,157 @@ export function holidaysCard(holidays: Holiday[], todayIso: string): AdaptiveCar
     ])
   }
 
+  /**
+   * How far off the next one is.
+   *
+   * A date is a fact; "in 4 days" is the thing people actually want from a holiday
+   * list, and it is the only line here that changes meaning depending on when you
+   * read it. Same wording as the Holidays tab, so the two do not disagree.
+   */
+  const next = shown[0]
+  const daysAway = Math.round(
+    (Date.parse(`${next.isoDate}T00:00:00Z`) - Date.parse(`${todayIso}T00:00:00Z`)) / 86_400_000,
+  )
+  const countdown =
+    daysAway <= 0 ? 'Today' : daysAway === 1 ? 'Tomorrow' : `In ${daysAway} days`
+
+  const subtitle =
+    daysAway <= 0
+      ? `${ahead.length} still ahead · the next one is today`
+      : daysAway === 1
+        ? `${ahead.length} still ahead · the next one is tomorrow`
+        : `${ahead.length} still ahead · next in ${daysAway} days`
+
   return card([
-    header('Holidays', 'What is coming up', `${ahead.length} still ahead this year`),
+    header('Holidays', 'What is coming up', subtitle),
     body(
-      shown.map((one) => ({
-        type: 'Container',
-        ...TILE_SURFACE,
-        spacing: 'Small',
-        items: [
-          {
-            type: 'ColumnSet',
-            columns: [
-              {
-                type: 'Column',
-                width: 'stretch',
-                items: [
-                  { type: 'TextBlock', text: one.name, weight: 'Bolder', wrap: true, spacing: 'None' },
-                  {
-                    type: 'TextBlock',
-                    text: `${prettyDate(one.isoDate)} · ${weekday(one.isoDate)} · ${one.region}`,
-                    size: 'Small',
-                    isSubtle: true,
-                    wrap: true,
-                    spacing: 'None',
-                  },
-                ],
-              },
-              {
-                type: 'Column',
-                width: 'auto',
-                verticalContentAlignment: 'Center',
-                items: [
-                  {
-                    type: 'Container',
-                    style: one.kind === 'OPTIONAL' ? 'warning' : 'good',
-                    spacing: 'None',
-                    items: [
-                      {
-                        type: 'TextBlock',
-                        text: one.kind === 'OPTIONAL' ? 'Optional' : 'Fixed',
-                        size: 'Small',
-                        weight: 'Bolder',
-                        color: one.kind === 'OPTIONAL' ? 'Warning' : 'Good',
-                        wrap: false,
-                        spacing: 'None',
-                      },
-                    ],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      })).concat([
+      shown.map((one) => {
+        const isNext = one.isoDate === next.isoDate
+        return {
+          type: 'Container',
+          ...TILE_SURFACE,
+          spacing: 'Small',
+          items: [
+            {
+              // The next one gets the white fill and the accent bar; the rest keep the
+              // card's own surface. One highlighted row in a list of four is legible at
+              // a glance, which is the whole job of this card.
+              type: 'Container',
+              ...(isNext ? whiteFill() : {}),
+              items: [
+                {
+                  type: 'ColumnSet',
+                  columns: [
+                    ...(isNext
+                      ? [
+                          {
+                            type: 'Column',
+                            width: 'auto',
+                            spacing: 'None',
+                            items: [
+                              {
+                                // Adaptive Cards has no border-left, so the rule is a
+                                // container with an accent style and nothing in it but
+                                // a space — the only way to draw a vertical bar.
+                                type: 'Container',
+                                style: 'accent',
+                                items: [
+                                  {
+                                    type: 'TextBlock',
+                                    text: ' ',
+                                    size: 'Small',
+                                    spacing: 'None',
+                                  },
+                                ],
+                              },
+                            ],
+                          },
+                        ]
+                      : []),
+                    {
+                      type: 'Column',
+                      width: 'stretch',
+                      spacing: isNext ? 'Small' : 'None',
+                      items: [
+                        {
+                          type: 'TextBlock',
+                          text: one.name,
+                          weight: 'Bolder',
+                          wrap: true,
+                          spacing: 'None',
+                          ...(isNext ? TILE_TEXT : {}),
+                        },
+                        {
+                          type: 'TextBlock',
+                          text: `${prettyDate(one.isoDate)} · ${weekday(one.isoDate)} · ${one.region}`,
+                          size: 'Small',
+                          isSubtle: true,
+                          wrap: true,
+                          spacing: 'None',
+                          ...(isNext ? TILE_TEXT : {}),
+                        },
+                        ...(isNext
+                          ? [
+                              {
+                                // Amber, because a countdown is a "soon" rather than a
+                                // status — the same reasoning as the tab.
+                                type: 'TextBlock',
+                                text: countdown.toUpperCase(),
+                                size: 'Small',
+                                weight: 'Bolder',
+                                color: 'Warning',
+                                wrap: true,
+                                spacing: 'Small',
+                              },
+                            ]
+                          : []),
+                      ],
+                    },
+                    {
+                      type: 'Column',
+                      width: 'auto',
+                      verticalContentAlignment: 'Center',
+                      items: [
+                        {
+                          type: 'Container',
+                          style: one.kind === 'OPTIONAL' ? 'warning' : 'good',
+                          spacing: 'None',
+                          items: [
+                            {
+                              type: 'TextBlock',
+                              text: one.kind === 'OPTIONAL' ? 'Optional' : 'Fixed',
+                              size: 'Small',
+                              weight: 'Bolder',
+                              color: one.kind === 'OPTIONAL' ? 'Warning' : 'Good',
+                              spacing: 'None',
+                              wrap: false,
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        }
+      }),
+    ),
+    {
+      type: 'Container',
+      spacing: 'Small',
+      items: [
         {
           type: 'TextBlock',
           text: 'Fixed days are paid holidays everyone gets. Optional days you choose from the published list, and some are state-specific.',
-          wrap: true,
           size: 'Small',
           isSubtle: true,
-          spacing: 'Default',
+          wrap: true,
+          spacing: 'None',
         },
-      ] as never),
-    ),
+      ],
+    },
   ])
 }
 

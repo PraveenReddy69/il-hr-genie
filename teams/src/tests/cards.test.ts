@@ -15,6 +15,7 @@ import {
   categoryCard,
   celebrationsCard,
   draftCard,
+  holidaysCard,
   moodCard,
   moodDetailCard,
   moodDoneCard,
@@ -502,5 +503,43 @@ describe('the category picker', () => {
     // The names come from the API, so one added server-side must still render.
     const card = JSON.stringify(categoryCard(['Relocation']))
     assert.match(card, /Relocation/)
+  })
+})
+
+describe('the holidays card', () => {
+  const holidays = [
+    { isoDate: '2026-08-15', name: 'Independence Day', region: 'All India', kind: 'FIXED' as const },
+    { isoDate: '2026-10-02', name: 'Gandhi Jayanti', region: 'All India', kind: 'FIXED' as const },
+    { isoDate: '2026-12-25', name: 'Christmas Day', region: 'All India', kind: 'FIXED' as const },
+  ]
+
+  it('counts down to the next one, in the header and on the row', () => {
+    // A date is a fact; "in 4 days" is what people actually want from this list.
+    const card = JSON.stringify(holidaysCard(holidays, '2026-08-11'))
+    assert.match(card, /next in 4 days/i, 'the header says how long')
+    assert.match(card, /IN 4 DAYS/, 'and so does the row')
+  })
+
+  it('says today and tomorrow rather than counting them', () => {
+    assert.match(JSON.stringify(holidaysCard(holidays, '2026-08-15')), /today/i)
+    assert.match(JSON.stringify(holidaysCard(holidays, '2026-08-14')), /tomorrow/i)
+  })
+
+  it('highlights exactly one row', () => {
+    // Two highlighted rows would be worse than none: the eye stops trusting it.
+    const card = holidaysCard(holidays, '2026-08-11')
+    // The header carries a background image too, so match the white tile fill only.
+    const highlighted = [...nodes(card)].filter((node) =>
+      String((node.backgroundImage as { url?: string } | undefined)?.url ?? '').includes(
+        'tile-white',
+      ),
+    )
+    assert.equal(highlighted.length, 1)
+  })
+
+  it('leaves the past behind', () => {
+    const card = JSON.stringify(holidaysCard(holidays, '2026-10-03'))
+    assert.doesNotMatch(card, /Independence Day/)
+    assert.match(card, /Christmas Day/)
   })
 })
