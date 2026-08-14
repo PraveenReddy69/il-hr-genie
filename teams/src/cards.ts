@@ -784,6 +784,30 @@ function hintFor(category: string): string {
 }
 
 /**
+ * An example of the kind of thing this category is for.
+ *
+ * A placeholder does more work than an instruction: it shows the length, the tone and
+ * the detail worth including, without asking anybody to read a sentence about how to
+ * write a sentence.
+ *
+ * Chosen when the card is sent, from the category that was picked. It cannot follow
+ * the dropdown afterwards — a sent card renders once, and nothing about a changed
+ * selection reaches us until Continue is pressed.
+ */
+const CATEGORY_EXAMPLE: Record<string, string> = {
+  Payroll: 'e.g. My March payslip is missing the shift allowance',
+  Leave: 'e.g. My leave balance shows 2 days, but I should have 8',
+  'IT & access': 'e.g. I have not been able to connect to the VPN since Monday',
+  Insurance: 'e.g. My spouse is not listed on the policy and needs to be added',
+  Facilities: 'e.g. The air conditioning on the third floor has been off all week',
+  'Something else': 'e.g. What happened, when, and anything HR will need to look it up',
+}
+
+function exampleFor(category: string): string {
+  return CATEGORY_EXAMPLE[category] ?? CATEGORY_EXAMPLE['Something else']
+}
+
+/**
  * What was picked, and what to do next.
  *
  * The picker itself is retired once a category is chosen, because a card cannot be
@@ -798,7 +822,15 @@ export function subjectPromptCard(category: string, categories: string[] = []): 
 
   return card(
     [
-      header('New ticket', category, 'Category chosen — HR can move it later.'),
+      /*
+       * No category in the header.
+       *
+       * It named the one that was picked, and then the dropdown below it could be
+       * changed — leaving a card that said Payroll over a field that said Leave. A
+       * sent card renders once, so the header cannot follow the dropdown; the only
+       * honest fix is to stop it claiming to.
+       */
+      header('New ticket', 'What is happening?', 'Pick a category and tell us in a line or two.'),
       body([
         /*
          * The category, as a dropdown on this card.
@@ -840,7 +872,7 @@ export function subjectPromptCard(category: string, categories: string[] = []): 
           type: 'Input.Text',
           id: 'subject',
           isMultiline: true,
-          placeholder: 'e.g. My March payslip is missing the shift allowance',
+          placeholder: exampleFor(category),
           spacing: 'Small',
         },
         {

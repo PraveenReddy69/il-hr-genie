@@ -298,14 +298,28 @@ describe('the Wish button', () => {
 })
 
 describe('choosing a category', () => {
-  it('names the choice, because the picker cannot show it', () => {
-    // A card is fixed once sent — the six tiles cannot be restyled to mark one. The
-    // picker is retired and this replaces it, so scrolling back shows the decision
-    // rather than the menu.
-    const card = subjectPromptCard('Leave')
+  it('keeps the category out of the header, because the dropdown can change it', () => {
+    // The header named the category that was picked, and the dropdown below it could
+    // then be changed — leaving a card that said Payroll over a field saying Leave. A
+    // sent card renders once, so the header cannot follow the dropdown.
+    const card = subjectPromptCard('Leave', ['Payroll', 'Leave'])
     const header = (card.body[0] as { items: { text: string }[] }).items.map((i) => i.text)
-    assert.deepEqual(header.slice(0, 2), ['NEW TICKET', 'Leave'])
+
+    assert.deepEqual(header.slice(0, 2), ['NEW TICKET', 'What is happening?'])
     assert.match(JSON.stringify(card), /Nothing goes to HR until you have seen it/)
+  })
+
+  it('shows an example of the category that was picked', () => {
+    // A placeholder does more work than an instruction: it shows the length, the tone
+    // and the detail worth including.
+    assert.match(JSON.stringify(subjectPromptCard('Leave')), /leave balance shows 2 days/)
+    assert.match(JSON.stringify(subjectPromptCard('Payroll')), /payslip is missing/)
+    assert.match(JSON.stringify(subjectPromptCard('IT & access')), /connect to the VPN/)
+  })
+
+  it('falls back to a general example for a category it does not know', () => {
+    // The names come from the API, so one added server-side must still get a hint.
+    assert.match(JSON.stringify(subjectPromptCard('Relocation')), /What happened, when/)
   })
 })
 
