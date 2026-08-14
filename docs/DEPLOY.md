@@ -225,3 +225,22 @@ machine.
 The package a run produces carries that environment's bot id, hostname and App ID URI,
 so a dev package installed against prod simply will not authenticate. That is the
 intended behaviour: the two cannot be confused into talking to each other.
+
+---
+
+## A container, if that helps
+
+A `Dockerfile` is in the repository root. Multi-stage, non-root, health-checked, and
+it carries the compiled output plus the card artwork — no TypeScript, no build
+toolchain in the running image.
+
+```bash
+docker build -t hrgenie-bot .
+docker run -p 3978:3978 --env-file .env.prod -v hrgenie-data:/var/lib/hrgenie hrgenie-bot
+```
+
+The volume is the one piece of state — see *A little persistent storage* above. Mount
+it anywhere; `REFERENCES_FILE` decides the path.
+
+Ignore all of this if systemd or your existing pipeline is easier. The service is
+`npm ci && npm run build && npm start` and nothing about it needs a container.
