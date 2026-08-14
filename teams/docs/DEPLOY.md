@@ -66,7 +66,9 @@ those. No autoscaling needed; **one instance** is right (see *State* below).
 | `login.microsoftonline.com` | Token validation and sign-in |
 | `*.botframework.com`, `token.botframework.com` | The Bot Connector and its token service |
 | `hrgenie-api.devinfinitylearn.in` | The HR Genie API |
-| `praveenreddy69.github.io` | Card icons (moving in-house later) |
+
+Card artwork is served by this service itself, from `assets/icons`, so there is no
+third-party image host to allow.
 
 ### 5. Configuration
 
@@ -164,13 +166,17 @@ ticket update.
 
 In order, and steps 2–4 are a coordinated ten minutes rather than four separate days:
 
-1. **You** deploy and confirm `https://<host>/healthz` answers.
-2. **Entra admin** changes the Application ID URI to `api://<host>/botid-7c9867c8-…`.
-3. **We** update the Azure Bot's messaging endpoint and its OAuth connection to match.
-4. **We** repackage the Teams app against the new hostname and reinstall it.
-5. **Teams admin** grants app upload to the other three testers.
+1. **You** deploy and confirm `https://<host>/healthz` answers, and that
+   `https://<host>/icons/ticket.png` returns an image.
+2. **Entra admin** creates the production app registration and sets its Application ID
+   URI to `api://<host>/botid-<the new id>`. See *Dev and prod* below — this is a new
+   registration, not a change to the existing one, so nothing in use breaks.
+3. **We** create the production Azure Bot against it, point its messaging endpoint at
+   `https://<host>/api/messages`, and add the OAuth connection.
+4. **We** build the production Teams package and the four testers install it.
+5. **Teams admin** grants app upload to the other three.
 
-Between steps 2 and 3, sign-in is briefly broken — which is why they run together.
+Nothing is live until step 4, so there is no downtime window to coordinate.
 
 ---
 
