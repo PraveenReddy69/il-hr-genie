@@ -792,14 +792,17 @@ function hintFor(category: string): string {
  * picked a moment ago goes stale the instant somebody changes it — showing a payroll
  * example under IT & access.
  *
- * It still does what a placeholder should, by showing the length, the tone and the
- * detail worth including, without claiming to know which category it is for.
+ * So it names the three things HR asks for on almost every ticket, whatever it is
+ * about: what happened, when it started, and any reference they can look up. That is
+ * more use than an example of somebody else's problem — it tells you what to write
+ * rather than showing you one sentence you then have to generalise from.
  *
  * Making it follow the dropdown needs Action.Execute, where the bot returns a
  * replacement card: a round trip on every change, and a different action model, for
  * one line of grey text.
  */
-const SUBJECT_PLACEHOLDER = 'What happened, when, and anything HR will need to look it up'
+const SUBJECT_PLACEHOLDER =
+  'What happened  ·  when it started  ·  any ID, date or reference'
 
 export function subjectPromptCard(category: string, categories: string[] = []): AdaptiveCard {
   // The chosen one first, so the dropdown opens on it, and never twice if the server
