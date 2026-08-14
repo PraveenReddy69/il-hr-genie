@@ -481,3 +481,26 @@ describe('tiles report themselves in the conversation', () => {
     assert.ok(labels.includes('My tickets'))
   })
 })
+
+describe('the category picker', () => {
+  it('says what each category covers', () => {
+    // "Payroll" and "Facilities" are clear to whoever wrote them, not to somebody
+    // choosing under mild stress. A ticket in the right queue is one HR need not move.
+    const card = JSON.stringify(
+      categoryCard(['Payroll', 'Leave', 'IT & access', 'Insurance', 'Facilities', 'Something else']),
+    )
+
+    assert.match(card, /Salary, payslips/)
+    assert.match(card, /Leave balance/)
+    assert.match(card, /Laptop, software/)
+    assert.match(card, /Health cover/)
+    assert.match(card, /Office, seating/)
+    assert.match(card, /does not fit the others/)
+  })
+
+  it('shows a category it has no line for rather than inventing one', () => {
+    // The names come from the API, so one added server-side must still render.
+    const card = JSON.stringify(categoryCard(['Relocation']))
+    assert.match(card, /Relocation/)
+  })
+})

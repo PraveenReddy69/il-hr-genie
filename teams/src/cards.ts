@@ -265,67 +265,6 @@ function submit(action: CardAction, label: string): Record<string, unknown> {
 }
 
 /**
- * A tappable row: icon beside the label, full width.
- *
- * The list form, for the category picker. Six stacked tiles read as a wall of equal
- * options to weigh up; six rows read as a list to scan down, which is what choosing a
- * category actually is. The grid earns its place on the welcome card, where the tiles
- * are destinations rather than a single choice — and where the captions under each
- * label need the room.
- */
-function listTile(icon: string, label: string, data: CardAction): unknown {
-  return {
-    type: 'Container',
-    ...TILE_SURFACE,
-    selectAction: { type: 'Action.Submit', data: submit(data, label) },
-    spacing: 'Small',
-    items: [
-      {
-        type: 'Container',
-        ...whiteFill(),
-        items: [
-          {
-            type: 'ColumnSet',
-            columns: [
-              {
-                type: 'Column',
-                width: 'auto',
-                verticalContentAlignment: 'Center',
-                items: [
-                  {
-                    type: 'Image',
-                    url: iconUrl(icon),
-                    width: '32px',
-                    height: '32px',
-                    altText: label,
-                  },
-                ],
-              },
-              {
-                type: 'Column',
-                width: 'stretch',
-                verticalContentAlignment: 'Center',
-                spacing: 'Medium',
-                items: [
-                  {
-                    type: 'TextBlock',
-                    text: label,
-                    weight: 'Bolder',
-                    wrap: true,
-                    spacing: 'None',
-                    ...TILE_TEXT,
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  }
-}
-
-/**
  * The holiday calendar, in chat.
  *
  * Chat works on every client; tabs do not. Anything an employee genuinely needs has
@@ -724,6 +663,29 @@ function iconFor(category: string): string {
 }
 
 /**
+ * What each category actually covers.
+ *
+ * "Payroll" and "Facilities" are clear to whoever wrote them and not to somebody
+ * choosing under mild stress about their salary. A line of examples turns a guess into
+ * a decision — and a ticket in the right queue is one HR does not have to move.
+ *
+ * Keyed by the names the API returns. A category added server-side gets no line rather
+ * than a wrong one.
+ */
+const CATEGORY_HINT: Record<string, string> = {
+  Payroll: 'Salary, payslips, reimbursements, tax and deductions',
+  Leave: 'Leave balance, applications, comp-offs and holidays',
+  'IT & access': 'Laptop, software, VPN, email and account access',
+  Insurance: 'Health cover, claims, dependants and policy cards',
+  Facilities: 'Office, seating, ID card, parking and workplace',
+  'Something else': 'Anything that does not fit the others — HR will route it',
+}
+
+function hintFor(category: string): string {
+  return CATEGORY_HINT[category] ?? ''
+}
+
+/**
  * What was picked, and what to do next.
  *
  * The picker itself is retired once a category is chosen, because a card cannot be
@@ -803,9 +765,14 @@ export function subjectPromptCard(category: string, categories: string[] = []): 
 export function categoryCard(names: string[]): AdaptiveCard {
   return card([
     header('New ticket', 'What\'s it about?', 'Pick the closest — HR can move it later.'),
+    // The same row the menu uses: a category is a choice, and a line of examples is
+    // what makes it one rather than a guess.
     body(
       names.map((category) =>
-        listTile(iconFor(category), category, { kind: 'pickCategory', category }),
+        menuRow(iconFor(category), category, hintFor(category), {
+          kind: 'pickCategory',
+          category,
+        }),
       ),
     ),
   ])
