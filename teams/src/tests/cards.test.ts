@@ -657,3 +657,24 @@ describe('every card follows the reader\'s theme', () => {
     assert.match(header, /header\.png/)
   })
 })
+
+describe('no card submits silently', () => {
+  // Teams shows "Your response was sent to the app" for a plain submit — a grey line
+  // most people never notice, on a card they just pressed. messageBack posts the
+  // label as a message from them instead, which is both the confirmation and no
+  // notice.
+  for (const [name, card] of ALL) {
+    it(`${name} posts a message for every action`, () => {
+      const silent = [...nodes(card)].filter(
+        (node) =>
+          node.type === 'Action.Submit' &&
+          !(node.data as Record<string, unknown> | undefined)?.msteams,
+      )
+      assert.deepEqual(
+        silent.map((node) => node.title ?? '(selectAction)'),
+        [],
+        'these would show the grey notice',
+      )
+    })
+  }
+})

@@ -225,6 +225,11 @@ const TILE_SURFACE = { style: 'default', showBorder: true, roundedCorners: true 
  * The action rides along twice on purpose: as the data itself, and JSON-encoded inside
  * `msteams.value`. Which of the two Teams delivers as `activity.value` depends on the
  * client, and [actionFrom] reads either.
+ *
+ * The buttons carrying form inputs — Continue, Raise it, Save, Send — were converted
+ * last and deliberately: if the inputs ever stop riding along, each degrades to a
+ * visible refusal rather than a silent loss. Raise it falls back to the subject
+ * already in state, the pulse refuses an empty answer, and the draft asks again.
  */
 function submit(action: CardAction, label: string): Record<string, unknown> {
   return {
@@ -841,7 +846,14 @@ export function subjectPromptCard(category: string, categories: string[] = []): 
     // One button. Both inputs ride along with it, so a changed category and a typed
     // subject arrive together — there is nothing to change the category *to* without
     // also saying what happened.
-    [{ type: 'Action.Submit', title: 'Continue', style: 'positive', data: { kind: 'describe' } }],
+    [
+      {
+        type: 'Action.Submit',
+        title: 'Continue',
+        style: 'positive',
+        data: submit({ kind: 'describe' }, 'Continue'),
+      },
+    ],
   )
 }
 
@@ -927,7 +939,12 @@ export function draftCard(subject: string, category: string, raisedBy: string): 
       ]),
     ],
     [
-      { type: 'Action.Submit', title: 'Raise it', style: 'positive', data: { kind: 'raise' } },
+      {
+        type: 'Action.Submit',
+        title: 'Raise it',
+        style: 'positive',
+        data: submit({ kind: 'raise' }, 'Raise it'),
+      },
       { type: 'Action.Submit', title: 'Cancel', data: submit({ kind: 'cancel' }, 'Cancel') },
     ],
   )
@@ -1605,7 +1622,12 @@ export function moodDetailCard(mood: Mood): AdaptiveCard {
       ]),
     ],
     [
-      { type: 'Action.Submit', title: 'Save', style: 'positive', data: { kind: 'saveMood' } },
+      {
+        type: 'Action.Submit',
+        title: 'Save',
+        style: 'positive',
+        data: submit({ kind: 'saveMood' }, 'Save'),
+      },
       { type: 'Action.Submit', title: 'Just the face', data: submit({ kind: 'skipMoodDetail' }, 'Just the face') },
     ],
   )
@@ -1739,7 +1761,14 @@ export function pulseCard(questions: PulseQuestion[]): AdaptiveCard {
         })),
       ),
     ],
-    [{ type: 'Action.Submit', title: 'Send', style: 'positive', data: { kind: 'savePulse' } }],
+    [
+      {
+        type: 'Action.Submit',
+        title: 'Send',
+        style: 'positive',
+        data: submit({ kind: 'savePulse' }, 'Send'),
+      },
+    ],
   )
 }
 
