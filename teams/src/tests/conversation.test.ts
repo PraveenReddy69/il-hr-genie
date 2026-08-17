@@ -116,7 +116,8 @@ describe('opening the conversation', () => {
   it('shows only the menu when nothing is outstanding', async () => {
     const replies = await greet()
     assert.equal(replies.length, 1)
-    assert.match(titleOf(replies[0]), /Hi Test/)
+    // Whichever half of the day the suite runs in — the greeting is time-of-day now.
+    assert.match(titleOf(replies[0]), /Good (morning|afternoon|evening), Test/)
   })
 
   it('nudges when today has no check-in', async () => {
