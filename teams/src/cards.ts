@@ -84,8 +84,7 @@ function card(body: unknown[], actions?: unknown[]): AdaptiveCard {
  * The branded band across the top of a card.
  *
  * `backgroundImage` is the only way to get a gradient — Adaptive Cards has no gradient
- * of its own — and `bleed` is what takes it edge to edge. Without bleed the band
- * floats inside the card's padding and reads as a box someone forgot to align.
+ * of its own.
  *
  * All three lines are `Light` and none are `isSubtle`: subtle renders white text at
  * partial opacity, which on a gradient is illegible rather than quiet. Hierarchy comes
@@ -95,17 +94,16 @@ function header(eyebrow: string, title: string, subtitle?: string): unknown {
   return {
     type: 'Container',
     /*
-     * `bleed` is a request, not a guarantee.
+     * Deliberately not `bleed`.
      *
-     * Where it is honoured the band runs to the card's edges. Some mobile clients
-     * ignore it and leave the card's own padding around it, so the band floats as a
-     * blue block with a white margin — which reads as a mistake rather than a choice.
+     * Bleed is a request, not a guarantee. Where it is honoured the band runs to the
+     * card's edges; several mobile clients ignore it and leave the card's own padding
+     * around the band, so it floats as a blue block in a white margin and reads as a
+     * mistake. Rounded corners were not enough to rescue that.
      *
-     * Rounded corners make the ignored case look intentional: a panel inset from the
-     * edge, rather than a bleed that failed. Where bleed does work the corners line up
-     * with the card's own, so nothing is lost either way.
+     * An inset rounded panel is the one result every client can actually produce, so
+     * the band looks the same everywhere. The edge-to-edge look is the price.
      */
-    bleed: true,
     roundedCorners: true,
     spacing: 'None',
     backgroundImage: { url: iconUrl('header'), fillMode: 'Cover' },
@@ -592,7 +590,9 @@ export function welcomeCard(firstName: string): AdaptiveCard {
      */
     {
       type: 'Container',
-      bleed: true,
+      // Inset and rounded, matching `header()` — see the note there for why bleed is
+      // not used.
+      roundedCorners: true,
       spacing: 'None',
       backgroundImage: { url: iconUrl('header'), fillMode: 'Cover' },
       items: [
