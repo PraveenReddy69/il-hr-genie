@@ -678,3 +678,18 @@ describe('no card submits silently', () => {
     })
   }
 })
+
+describe('no container asks for the default style', () => {
+  // The trap this file exists to catch, twice over. Setting `style` at all — even to
+  // "default" — makes the renderer paint that style's background from its host config,
+  // and Teams paints `default` white in dark theme. Omitting it is what actually means
+  // "no background", which is what a row needs to follow the reader's theme.
+  for (const [name, card] of ALL) {
+    it(`${name} leaves its rows transparent`, () => {
+      const painted = [...nodes(card)].filter(
+        (node) => node.type === 'Container' && node.style === 'default',
+      )
+      assert.equal(painted.length, 0, 'a "default" container is a white slab in dark mode')
+    })
+  }
+})

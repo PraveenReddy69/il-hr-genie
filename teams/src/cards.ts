@@ -180,23 +180,18 @@ function iconUrl(name: string): string {
 /**
  * The surface a tile sits on.
  *
- * `style` only — no background image. A remote PNG behind every tile means the whole
- * picker looks unstyled whenever the image is slow, blocked or cached badly, which is
- * exactly what happened on mobile: the tiles read as plain text on white. A style is
- * drawn by the Teams client itself, so it cannot fail to load and it follows the
- * user's light or dark theme for free.
+ * No `style`, deliberately — the same trap [body] documents. Setting it at all, even
+ * to `"default"`, makes the renderer paint that style's background from its host
+ * config, and in Teams' dark theme `default` is painted white. Every row came out a
+ * bright rectangle on a black screen, which is what happened here after the white
+ * background image was removed for exactly the same reason.
  *
- * A white tile outlined and rounded, rather than the grey `emphasis` block. Checked
- * against all seven backgrounds in the real client: `showBorder` and `roundedCorners`
- * are honoured, and the outline separates tiles as well as a fill does without the
- * weight. The tinted styles were rejected on meaning, not looks — `good`, `warning`
- * and `attention` say success, caution and error in Teams, so a permanent amber tile
- * reads as a permanent problem.
- *
- * Used by every tiled surface, and drawn by Teams — so it follows the reader's
- * theme, which is the whole reason nothing here paints its own background.
+ * Omitting it leaves the container transparent, so the row takes the card's own
+ * background in whichever theme the reader is using, and `showBorder` draws the
+ * outline that separates one row from the next. White with a stroke in light, dark
+ * with a stroke in dark, and nothing pinned either way.
  */
-const TILE_SURFACE = { style: 'default', showBorder: true, roundedCorners: true } as const
+const TILE_SURFACE = { showBorder: true, roundedCorners: true } as const
 
 /*
  * There is no forced white anywhere.
