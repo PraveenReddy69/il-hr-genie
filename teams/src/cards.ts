@@ -193,45 +193,22 @@ function iconUrl(name: string): string {
  * and `attention` say success, caution and error in Teams, so a permanent amber tile
  * reads as a permanent problem.
  *
- * Used by every tiled surface. For true white rather than the client's grey, see
- * [whiteFill].
+ * Used by every tiled surface, and drawn by Teams — so it follows the reader's
+ * theme, which is the whole reason nothing here paints its own background.
  */
 const TILE_SURFACE = { style: 'default', showBorder: true, roundedCorners: true } as const
 
-/**
- * The white fill for a picker tile.
+/*
+ * There is no forced white anywhere.
  *
- * There is no white container style — `default` inherits the card surface, and the
- * Teams client draws that as a light grey. An image is the only way to fix the fill.
- * It earns its keep here because the failure mode is mild: if it does not load the
- * tile keeps its border and rounded corners and merely falls back to the grey, rather
- * than collapsing to unstyled text the way the old image-backed tiles did on mobile.
+ * A tile used to carry a white background image with its text pinned dark. That looked
+ * right in light mode and wrong in dark: Teams paints the card dark, the image paints a
+ * white slab over it, and every row became a bright rectangle on a black screen. An
+ * image cannot follow the theme, so nothing that has to follow the theme can be one.
  *
- * This goes on a container *inside* the bordered one rather than on the bordered one
- * itself. Checked in the real client against four other arrangements: a background
- * image paints over the stroke `showBorder` draws, so a tile that asks for both on
- * the same container gets the fill and loses the outline. Nesting keeps them off each
- * other's edges.
+ * TILE_SURFACE is drawn by the client instead — outline and rounded corners, in
+ * whichever theme the reader is using.
  */
-function whiteFill() {
-  // A function, not a constant: [iconUrl] reads the host from the environment, and a
-  // module-level value would freeze whatever was set the moment this file loaded.
-  return {
-    backgroundImage: { url: iconUrl('tile-white'), fillMode: 'Cover' },
-    roundedCorners: true,
-  } as const
-}
-
-/**
- * Pinned dark, because [whiteFill] pins the background it sits on.
- *
- * An image does not follow the theme. Teams draws default text white in dark mode,
- * which on a pinned-white tile would be invisible. This is also why the white is
- * confined to the picker tiles and is not part of [TILE_SURFACE]: every other tiled
- * surface carries text this function does not own, and each would need the same
- * treatment to stay readable.
- */
-const TILE_TEXT = { color: 'Dark' } as const
 
 /**
  * A tap that leaves a trace in the conversation.
@@ -373,7 +350,6 @@ export function holidaysCard(holidays: Holiday[], todayIso: string): AdaptiveCar
               // Only the next one is filled. One marked row in a list of four reads at
               // a glance; two would make the mark mean nothing.
               type: 'Container',
-              ...(isNext ? whiteFill() : {}),
               items: [
                 {
                   type: 'ColumnSet',
@@ -397,7 +373,6 @@ export function holidaysCard(holidays: Holiday[], todayIso: string): AdaptiveCar
                           size: 'Medium',
                           wrap: true,
                           spacing: 'None',
-                          ...(isNext ? TILE_TEXT : {}),
                         },
                         {
                           type: 'TextBlock',
@@ -406,7 +381,6 @@ export function holidaysCard(holidays: Holiday[], todayIso: string): AdaptiveCar
                           isSubtle: true,
                           wrap: true,
                           spacing: 'None',
-                          ...(isNext ? TILE_TEXT : {}),
                         },
                         ...(isNext
                           ? [
@@ -528,7 +502,6 @@ function menuRow(icon: string, title: string, description: string, data: CardAct
     items: [
       {
         type: 'Container',
-        ...whiteFill(),
         items: [
           {
             type: 'ColumnSet',
@@ -554,7 +527,6 @@ function menuRow(icon: string, title: string, description: string, data: CardAct
                     size: 'Medium',
                     wrap: true,
                     spacing: 'None',
-                    ...TILE_TEXT,
                   },
                   {
                     type: 'TextBlock',
@@ -563,7 +535,6 @@ function menuRow(icon: string, title: string, description: string, data: CardAct
                     isSubtle: true,
                     wrap: true,
                     spacing: 'None',
-                    ...TILE_TEXT,
                   },
                 ],
               },
@@ -572,7 +543,7 @@ function menuRow(icon: string, title: string, description: string, data: CardAct
                 width: 'auto',
                 verticalContentAlignment: 'Center',
                 items: [
-                  { type: 'TextBlock', text: '›', size: 'Large', isSubtle: true, spacing: 'None', ...TILE_TEXT },
+                  { type: 'TextBlock', text: '›', size: 'Large', isSubtle: true, spacing: 'None' },
                 ],
               },
             ],
@@ -631,9 +602,12 @@ export function welcomeCard(firstName: string): AdaptiveCard {
                   wrap: true,
                 },
                 {
+                  // Large, not ExtraLarge. On a phone the bigger size wrapped the
+                  // greeting onto a second line, which pushed the band taller than the
+                  // artwork behind it and left a strip of card showing under it.
                   type: 'TextBlock',
                   text: `Hi ${firstName} 👋`,
-                  size: 'ExtraLarge',
+                  size: 'Large',
                   weight: 'Bolder',
                   color: 'Light',
                   wrap: true,
@@ -654,10 +628,11 @@ export function welcomeCard(firstName: string): AdaptiveCard {
               verticalContentAlignment: 'Center',
               items: [
                 {
+                  // 64, and it shrinks with the column rather than holding the header
+                  // open: at 84 the greeting had barely half the width on a phone.
                   type: 'Image',
                   url: iconUrl('mascot'),
-                  width: '84px',
-                  height: '84px',
+                  width: '64px',
                   altText: 'HR Genie',
                 },
               ],
@@ -1005,7 +980,6 @@ export function receiptCard(ticket: Ticket): AdaptiveCard {
               // The same white panel a ticket row uses, so the words that were filed
               // look the same here as they will in My tickets.
               type: 'Container',
-              ...whiteFill(),
               items: [
                 {
                   type: 'TextBlock',
@@ -1014,7 +988,6 @@ export function receiptCard(ticket: Ticket): AdaptiveCard {
                   weight: 'Bolder',
                   wrap: true,
                   spacing: 'None',
-                  ...TILE_TEXT,
                 },
                 {
                   // Reference, category and status on one line — the same three facts
@@ -1052,7 +1025,6 @@ export function receiptCard(ticket: Ticket): AdaptiveCard {
                           isSubtle: true,
                           spacing: 'None',
                           wrap: false,
-                          ...TILE_TEXT,
                         },
                       ],
                     },
@@ -1069,7 +1041,6 @@ export function receiptCard(ticket: Ticket): AdaptiveCard {
                           isSubtle: true,
                           spacing: 'None',
                           wrap: false,
-                          ...TILE_TEXT,
                         },
                       ],
                     },
@@ -1202,7 +1173,6 @@ function ticketRow(ticket: Ticket, index: number): unknown {
     items: [
       {
         type: 'Container',
-        ...whiteFill(),
         items: [
           {
             type: 'ColumnSet',
@@ -1251,7 +1221,6 @@ function ticketRow(ticket: Ticket, index: number): unknown {
                     wrap: true,
                     maxLines: 2,
                     spacing: 'None',
-                    ...TILE_TEXT,
                   },
                   {
                     // Status, reference and age on one line: three short facts that
@@ -1289,7 +1258,6 @@ function ticketRow(ticket: Ticket, index: number): unknown {
                             isSubtle: true,
                             spacing: 'None',
                             wrap: false,
-                            ...TILE_TEXT,
                           },
                         ],
                       },
@@ -1308,7 +1276,6 @@ function ticketRow(ticket: Ticket, index: number): unknown {
                             isSubtle: true,
                             spacing: 'None',
                             wrap: false,
-                            ...TILE_TEXT,
                           },
                         ],
                       },

@@ -540,16 +540,13 @@ describe('the holidays card', () => {
     assert.match(JSON.stringify(holidaysCard(holidays, '2026-08-14')), /tomorrow/i)
   })
 
-  it('highlights exactly one row', () => {
-    // Two highlighted rows would be worse than none: the eye stops trusting it.
+  it('marks exactly one row as next', () => {
+    // Two marked rows would be worse than none: the eye stops trusting the mark. The
+    // mark is the accent date chip now — nothing paints its own background, so that
+    // the card follows the reader's theme.
     const card = holidaysCard(holidays, '2026-08-11')
-    // The header carries a background image too, so match the white tile fill only.
-    const highlighted = [...nodes(card)].filter((node) =>
-      String((node.backgroundImage as { url?: string } | undefined)?.url ?? '').includes(
-        'tile-white',
-      ),
-    )
-    assert.equal(highlighted.length, 1)
+    const accented = [...nodes(card)].filter((node) => node.style === 'accent')
+    assert.equal(accented.length, 1)
   })
 
   it('leaves the past behind', () => {
@@ -621,13 +618,42 @@ describe('the three cards of a ticket read as one flow', () => {
     assert.doesNotMatch(JSON.stringify(receiptCard(filed)), /FactSet/)
   })
 
-  it('shows what was filed on the same white panel the list uses', () => {
-    assert.match(JSON.stringify(receiptCard(filed)), /tile-white/)
+  it('paints no background of its own, so it follows the theme', () => {
+    // A white panel with dark text read as a bright rectangle on a dark phone.
+    const receipt = JSON.stringify(receiptCard(filed))
+    assert.doesNotMatch(receipt, /tile-white/)
+    assert.doesNotMatch(receipt, /"color":"Dark"/)
   })
 
   it('keeps the draft editable, with the subject already in the box', () => {
     // Whatever is in this box when Raise it is pressed is what gets filed.
     const draft = JSON.stringify(draftCard('My payslip is missing', 'Payroll', 'Test'))
     assert.match(draft, /"type":"Input.Text","id":"subject","value":"My payslip is missing"/)
+  })
+})
+
+/**
+ * Nothing paints its own background.
+ *
+ * A white background image with dark text pinned over it looked right in light mode
+ * and wrong in dark: Teams paints the card dark, the image paints a white slab on top,
+ * and every row became a bright rectangle on a black phone. An image cannot follow the
+ * theme, so nothing that has to follow the theme can be one.
+ */
+describe('every card follows the reader\'s theme', () => {
+  for (const [name, card] of ALL) {
+    it(`${name} pins no colours of its own`, () => {
+      const json = JSON.stringify(card)
+      assert.doesNotMatch(json, /tile-white/, 'a forced white fill cannot go dark')
+      assert.doesNotMatch(json, /"color":"Dark"/, 'and text pinned dark cannot go light')
+    })
+  }
+
+  it('leaves the header alone, which is branded on purpose', () => {
+    // The band is the one place a fixed colour is right: it is the brand, it carries
+    // its own artwork, and its text is Light against that artwork in both themes.
+    const header = JSON.stringify((welcomeCard('Test').body[0] as Record<string, unknown>))
+    assert.match(header, /"color":"Light"/)
+    assert.match(header, /header\.png/)
   })
 })
