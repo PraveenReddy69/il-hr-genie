@@ -592,3 +592,40 @@ describe('a ticket row, as the Android list has it', () => {
     assert.match(card, /"text":"HRG-0012","size":"Small","fontType":"Monospace"/)
   })
 })
+
+describe('the three cards of a ticket read as one flow', () => {
+  const filed: Ticket = {
+    id: 'HRG-0042',
+    subject: 'My payslip is missing the shift allowance',
+    category: 'Payroll',
+    status: 'OPEN',
+    createdAtMillis: 1,
+    updatedAtMillis: 2,
+    comments: [],
+  }
+
+  it('says the same three facts the same way as the ticket list', () => {
+    // Reference, category and status, in that order, monospaced reference included.
+    const receipt = JSON.stringify(receiptCard(filed))
+    assert.match(receipt, /"text":"HRG-0042","size":"Small","fontType":"Monospace"/)
+    assert.match(receipt, /"text":"With HR"/)
+    assert.match(receipt, /"text":"Payroll"/)
+  })
+
+  it('uses a meta line rather than a FactSet', () => {
+    // A FactSet renders as a two-column table — a heavy way to say two short things,
+    // and it repeated the category the header already carries.
+    assert.doesNotMatch(JSON.stringify(draftCard('A subject', 'Payroll', 'Test')), /FactSet/)
+    assert.doesNotMatch(JSON.stringify(receiptCard(filed)), /FactSet/)
+  })
+
+  it('shows what was filed on the same white panel the list uses', () => {
+    assert.match(JSON.stringify(receiptCard(filed)), /tile-white/)
+  })
+
+  it('keeps the draft editable, with the subject already in the box', () => {
+    // Whatever is in this box when Raise it is pressed is what gets filed.
+    const draft = JSON.stringify(draftCard('My payslip is missing', 'Payroll', 'Test'))
+    assert.match(draft, /"type":"Input.Text","id":"subject","value":"My payslip is missing"/)
+  })
+})

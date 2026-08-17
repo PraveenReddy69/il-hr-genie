@@ -891,26 +891,19 @@ export function categoryCard(names: string[]): AdaptiveCard {
  *
  * Says plainly that nothing has been sent yet — an employee who assumes a ticket
  * exists will wait on HR instead of pressing the button.
+ *
+ * The category heads the card and what was typed sits in a box of its own. The
+ * subject used to be the heading, which read as a title someone had chosen rather
+ * than the words about to be sent to HR.
  */
 export function draftCard(subject: string, category: string, raisedBy: string): AdaptiveCard {
   return card(
     [
-      /*
-       * The category heads the card, and what was typed sits in a panel of its own.
-       *
-       * The subject used to be the heading, which read as a title someone had chosen
-       * rather than the words about to be sent to HR — and it left the category as an
-       * afterthought below. This way the band says what kind of thing this is, and the
-       * message is presented as the quotable thing it is, under a label saying so.
-       *
-       * It also matches the card the category picker leaves behind, so the two steps
-       * read as one flow rather than two designs.
-       */
       header('Ticket preview', category, 'Check it over — nothing has gone to HR yet.'),
       body([
         {
           type: 'TextBlock',
-          text: 'WHAT YOU TOLD ME — EDIT IT IF YOU LIKE',
+          text: 'YOUR CONCERN — EDIT IT IF YOU LIKE',
           size: 'Small',
           weight: 'Bolder',
           isSubtle: true,
@@ -921,8 +914,8 @@ export function draftCard(subject: string, category: string, raisedBy: string): 
          * Editable in place, rather than a read-only panel plus an Edit button.
          *
          * Whatever is in this box when Raise it is pressed is what gets filed —
-         * Adaptive Cards sends every input alongside the action. One less step, and
-         * no chance of the card showing one thing while another is sent.
+         * Adaptive Cards sends every input alongside the action. One less step, and no
+         * chance of the card showing one thing while another is sent.
          */
         {
           type: 'Input.Text',
@@ -930,15 +923,23 @@ export function draftCard(subject: string, category: string, raisedBy: string): 
           value: subject,
           isMultiline: true,
           spacing: 'Small',
-          placeholder: 'What is happening?',
+          placeholder: SUBJECT_PLACEHOLDER,
         },
+        /*
+         * A meta line rather than a FactSet.
+         *
+         * A FactSet renders as a two-column table, which is a heavy way to say two
+         * short things — and it repeated the category the header already carries. The
+         * ticket list says the same kind of thing on one line; this matches it, so the
+         * three cards of a ticket read as one flow.
+         */
         {
-          type: 'FactSet',
-          spacing: 'Default',
-          facts: [
-            { title: 'Category', value: category },
-            { title: 'Raised by', value: raisedBy },
-          ],
+          type: 'TextBlock',
+          text: `Raised by ${raisedBy}`,
+          size: 'Small',
+          isSubtle: true,
+          wrap: true,
+          spacing: 'Medium',
         },
         {
           type: 'TextBlock',
@@ -958,14 +959,11 @@ export function draftCard(subject: string, category: string, raisedBy: string): 
 }
 
 /**
- * The receipt.
+ * What was filed, and what happens next.
  *
- * Deliberately the same shape as the draft it replaces — reference in the band, the
- * words in their own panel under a label, facts beneath — so raising a ticket reads
- * as one card confirming rather than a second card starting over.
- *
- * It also answers the question people actually have at this moment, which is not
- * "did it save" but "what happens now". Hence the closing line and a way to track it.
+ * The reference is the thing to keep, so it is the heading and it is monospaced —
+ * HRG-0012 gets read aloud and typed into a search box, and proportional digits make
+ * that worse. The rest says plainly that nobody needs to check back.
  */
 export function receiptCard(ticket: Ticket): AdaptiveCard {
   return card(
@@ -973,8 +971,8 @@ export function receiptCard(ticket: Ticket): AdaptiveCard {
       header('Ticket raised', ticket.id, `${ticket.category} · ${statusLabel(ticket.status)}`),
       body([
         {
-          // Green for the one line reporting the outcome rather than the whole header
-          // — every card wears the same band now, and success is the exception worth
+          // Green on the one line reporting the outcome, rather than the whole header
+          // — every card wears the same band, and success is the exception worth
           // colouring.
           type: 'Container',
           style: 'good',
@@ -1004,22 +1002,81 @@ export function receiptCard(ticket: Ticket): AdaptiveCard {
           spacing: 'Small',
           items: [
             {
-              type: 'TextBlock',
-              text: ticket.subject,
-              size: 'Medium',
-              weight: 'Bolder',
-              wrap: true,
-              spacing: 'None',
+              // The same white panel a ticket row uses, so the words that were filed
+              // look the same here as they will in My tickets.
+              type: 'Container',
+              ...whiteFill(),
+              items: [
+                {
+                  type: 'TextBlock',
+                  text: ticket.subject,
+                  size: 'Medium',
+                  weight: 'Bolder',
+                  wrap: true,
+                  spacing: 'None',
+                  ...TILE_TEXT,
+                },
+                {
+                  // Reference, category and status on one line — the same three facts
+                  // the ticket list carries, in the same order.
+                  type: 'ColumnSet',
+                  spacing: 'Small',
+                  columns: [
+                    {
+                      type: 'Column',
+                      width: 'auto',
+                      verticalContentAlignment: 'Center',
+                      items: [
+                        {
+                          type: 'TextBlock',
+                          text: statusLabel(ticket.status),
+                          size: 'Small',
+                          weight: 'Bolder',
+                          color: statusColour(ticket.status),
+                          spacing: 'None',
+                          wrap: false,
+                        },
+                      ],
+                    },
+                    {
+                      type: 'Column',
+                      width: 'auto',
+                      spacing: 'Small',
+                      verticalContentAlignment: 'Center',
+                      items: [
+                        {
+                          type: 'TextBlock',
+                          text: ticket.id,
+                          size: 'Small',
+                          fontType: 'Monospace',
+                          isSubtle: true,
+                          spacing: 'None',
+                          wrap: false,
+                          ...TILE_TEXT,
+                        },
+                      ],
+                    },
+                    {
+                      type: 'Column',
+                      width: 'stretch',
+                      spacing: 'Small',
+                      verticalContentAlignment: 'Center',
+                      items: [
+                        {
+                          type: 'TextBlock',
+                          text: ticket.category,
+                          size: 'Small',
+                          isSubtle: true,
+                          spacing: 'None',
+                          wrap: false,
+                          ...TILE_TEXT,
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
             },
-          ],
-        },
-        {
-          type: 'FactSet',
-          spacing: 'Default',
-          facts: [
-            { title: 'Reference', value: ticket.id },
-            { title: 'Category', value: ticket.category },
-            { title: 'Status', value: statusLabel(ticket.status) },
           ],
         },
         {
@@ -1028,7 +1085,7 @@ export function receiptCard(ticket: Ticket): AdaptiveCard {
           wrap: true,
           size: 'Small',
           isSubtle: true,
-          spacing: 'Small',
+          spacing: 'Default',
         },
       ]),
     ],
