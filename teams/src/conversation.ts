@@ -51,6 +51,17 @@ const OPENS_MENU = /^(genie|hr ?genie|help|menu|main ?menu)[!.?\s]*$/i
  */
 const TICKET_REFERENCE = /\bHRG[-\s]?(\d{1,6})\b/i
 
+/**
+ * A reference-shaped thing with the wrong letters, and the word that gives it away.
+ *
+ * "I want to know about my ticket HRF-0024" is a question about a ticket however it
+ * is spelled, and sending it to the policy library — which is what happened — answers
+ * with every policy it has. Both halves are required: a bare code in a sentence about
+ * leave is not a reference, and the word "ticket" alone is not one either.
+ */
+const REFERENCE_SHAPED = /\b([A-Za-z]{2,5})[-\s]?(\d{1,6})\b/
+const ABOUT_A_TICKET = /\b(ticket|reference|status|complaint)\b/i
+
 /** "HRG", "HRG-", "HRG 1" — enough to mean a ticket, not enough to find one. */
 const MENTIONS_A_TICKET = /\bHRG\b/i
 
@@ -237,6 +248,30 @@ export async function handle(state: ConversationState, input: Input): Promise<Re
     return [
       { text: 'Give me the whole reference and I will look it up — they read like HRG-0024.' },
     ]
+  }
+
+  if (ABOUT_A_TICKET.test(text)) {
+    /*
+     * A ticket question with the reference mistyped, or with only a number.
+     *
+     * "my ticket HRF-0024" went to the policy library and came back with every policy
+     * we have — a long answer to a question nobody asked. A number on its own is
+     * taken as a reference, because "ticket 24" means HRG-0024 and nothing else.
+     */
+    const shaped = text.match(REFERENCE_SHAPED)
+    if (shaped) {
+      return [
+        {
+          text: `${shaped[0]} does not look like one of ours — references start with HRG, like HRG-0024. Send me the whole one, or say "my tickets" to see them all.`,
+        },
+      ]
+    }
+
+    const bare = text.match(/\b(\d{1,6})\b/)
+    if (bare) {
+      reset(state)
+      return showTicket(`HRG-${bare[1].padStart(4, '0')}`)
+    }
   }
 
   switch (state.stage) {

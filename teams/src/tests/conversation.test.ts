@@ -766,3 +766,43 @@ describe('looking a ticket up by its reference', () => {
     assert.equal(asked, false)
   })
 })
+
+describe('a ticket question with the reference mistyped', () => {
+  it('does not send it to the policy library', async () => {
+    // "my ticket HRF-0024" came back with every policy we have — a long answer to a
+    // question nobody asked.
+    let asked = false
+    stubAll({
+      askKnowledgeBase: async () => {
+        asked = true
+        return { text: 'a wall of policy', source: null }
+      },
+    })
+
+    const replies = await handle(newState(), {
+      text: 'I want to know about my ticket HRF-0024',
+    })
+
+    assert.equal(asked, false, 'a ticket question is not a policy question')
+    assert.match(titleOf(replies[0]), /does not look like one of ours/i)
+    assert.match(titleOf(replies[0]), /HRG-0024/, 'and shows the right shape')
+  })
+
+  it('takes a bare number as a reference when the message is about a ticket', async () => {
+    // "ticket 24" means HRG-0024 and nothing else.
+    stubAll({ myTickets: async () => [ticket('HRG-0024')] })
+    assert.match(JSON.stringify(await handle(newState(), { text: 'ticket 24' })), /HRG-0024/)
+  })
+
+  it('leaves an ordinary question alone', async () => {
+    // Both halves are required: a code in a sentence about leave is not a reference,
+    // and the word "ticket" alone is not one either.
+    const replies = await handle(newState(), { text: 'what is the leave policy' })
+    assert.match(JSON.stringify(replies), /Twelve days/)
+  })
+
+  it('does not treat a policy question with a number in it as a reference', async () => {
+    const replies = await handle(newState(), { text: 'how many leaves after 90 days' })
+    assert.match(JSON.stringify(replies), /Twelve days/)
+  })
+})
