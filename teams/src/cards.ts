@@ -126,16 +126,19 @@ function header(eyebrow: string, title: string, subtitle?: string): unknown {
   return {
     type: 'Container',
     /*
-     * Deliberately not `bleed`.
+     * `bleed` is a request, not a guarantee, and it is worth making anyway.
      *
-     * Bleed is a request, not a guarantee. Where it is honoured the band runs to the
-     * card's edges; several mobile clients ignore it and leave the card's own padding
-     * around the band, so it floats as a blue block in a white margin and reads as a
-     * mistake. Rounded corners were not enough to rescue that.
+     * Where it is honoured the band runs to the card's edges, which is the look this
+     * header is designed around. Some mobile clients ignore it and leave the card's own
+     * padding around the band. There is no card-side lever for that: the property is
+     * the whole mechanism, and a client that skips it cannot be made to comply.
      *
-     * An inset rounded panel is the one result every client can actually produce, so
-     * the band looks the same everywhere. The edge-to-edge look is the price.
+     * It was off for a while because of that inconsistency. Off meant nobody got the
+     * bleed, including the clients that do support it — which is strictly worse than
+     * some getting it. Rounded corners stay, so the ignored case reads as a panel inset
+     * on purpose rather than as a bleed that failed.
      */
+    bleed: true,
     roundedCorners: true,
     spacing: 'None',
     backgroundImage: { url: iconUrl('header'), fillMode: 'Cover' },
@@ -622,8 +625,9 @@ export function welcomeCard(firstName: string): AdaptiveCard {
      */
     {
       type: 'Container',
-      // Inset and rounded, matching `header()` — see the note there for why bleed is
-      // not used.
+      // Bleeding and rounded, matching `header()` — see the note there for what bleed
+      // does and does not guarantee.
+      bleed: true,
       roundedCorners: true,
       spacing: 'None',
       backgroundImage: { url: iconUrl('header'), fillMode: 'Cover' },
