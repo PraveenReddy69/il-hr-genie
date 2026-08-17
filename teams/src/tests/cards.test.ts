@@ -303,7 +303,11 @@ describe('choosing a category', () => {
     // then be changed — leaving a card that said Payroll over a field saying Leave. A
     // sent card renders once, so the header cannot follow the dropdown.
     const card = subjectPromptCard('Leave', ['Payroll', 'Leave'])
-    const header = (card.body[0] as { items: { text: string }[] }).items.map((i) => i.text)
+    // Walked rather than indexed: the band nests its text inside spacer columns to get
+    // an inset, so the lines are no longer the container's direct children.
+    const header = [...nodes(card.body[0])]
+      .filter((node) => node.type === 'TextBlock')
+      .map((node) => node.text)
 
     assert.deepEqual(header.slice(0, 2), ['NEW TICKET', 'What is happening?'])
     assert.match(JSON.stringify(card), /Nothing goes to HR until you have seen it/)

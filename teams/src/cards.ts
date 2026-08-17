@@ -81,6 +81,38 @@ function card(body: unknown[], actions?: unknown[]): AdaptiveCard {
 }
 
 /**
+ * Padding, drawn by hand.
+ *
+ * Adaptive Cards has no padding property. A container gets internal padding only when
+ * `style` is set — and `style` is the thing that paints a tile white in dark mode, so
+ * the band cannot use it. Without the inset, text sits flush against the band's edge,
+ * which the rounded corners make worse rather than better.
+ *
+ * So the inset is built: fixed-width columns either side, and an empty container of a
+ * fixed height above and below.
+ *
+ * The spacers hold nothing rather than a blank space. A whitespace TextBlock would do
+ * the same job, but the 'has no empty text' guard exists to catch a name that came back
+ * undefined and rendered as a mystery gap — a spacer that has to be exempted from that
+ * guard costs more than it saves.
+ */
+const GAP = 12
+
+function padded(items: unknown[]): unknown[] {
+  const above = { type: 'Container', minHeight: `${GAP}px`, spacing: 'None', items: [] }
+  const side = { type: 'Column', width: `${GAP}px`, items: [] }
+  return [
+    above,
+    {
+      type: 'ColumnSet',
+      spacing: 'None',
+      columns: [side, { type: 'Column', width: 'stretch', items }, side],
+    },
+    above,
+  ]
+}
+
+/**
  * The branded band across the top of a card.
  *
  * `backgroundImage` is the only way to get a gradient — Adaptive Cards has no gradient
@@ -107,7 +139,7 @@ function header(eyebrow: string, title: string, subtitle?: string): unknown {
     roundedCorners: true,
     spacing: 'None',
     backgroundImage: { url: iconUrl('header'), fillMode: 'Cover' },
-    items: [
+    items: padded([
       {
         type: 'TextBlock',
         text: eyebrow.toUpperCase(),
@@ -137,7 +169,7 @@ function header(eyebrow: string, title: string, subtitle?: string): unknown {
             },
           ]
         : []),
-    ],
+    ]),
   }
 }
 
@@ -595,7 +627,7 @@ export function welcomeCard(firstName: string): AdaptiveCard {
       roundedCorners: true,
       spacing: 'None',
       backgroundImage: { url: iconUrl('header'), fillMode: 'Cover' },
-      items: [
+      items: padded([
         {
           type: 'ColumnSet',
           columns: [
@@ -651,7 +683,7 @@ export function welcomeCard(firstName: string): AdaptiveCard {
             },
           ],
         },
-      ],
+      ]),
     },
     body([
       {
