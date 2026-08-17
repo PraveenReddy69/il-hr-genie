@@ -433,8 +433,10 @@ describe('the nudge and the menu are told apart', () => {
   it('the menu keeps the plain kinds, so it is never retired', () => {
     const kinds = kindsIn(welcomeCard('Test'))
 
+    // Both the once-a-day and the once-a-month errands are left to the nudge, which
+    // asks for them only while they are actually open.
     assert.ok(!kinds.includes('checkIn'), 'the menu leaves the check-in to the nudge')
-    assert.ok(kinds.includes('startPulse'), 'but it does start the pulse')
+    assert.ok(!kinds.includes('startPulse'), 'and the pulse too')
     assert.ok(
       !kinds.some((kind) => kind.startsWith('nudge')),
       'nothing on the menu is a nudge action',

@@ -697,9 +697,9 @@ export function welcomeCard(firstName: string): AdaptiveCard {
         kind: 'startTicket',
       }),
       menuRow('list', 'My tickets', 'View your tickets and responses', { kind: 'myTickets' }),
-      menuRow('pulse', 'Monthly pulse', 'Answer 4 quick questions and share your mood', {
-        kind: 'startPulse',
-      }),
+      // No pulse row. It is a once-a-month errand, and the nudge already asks for it
+      // in the month it is open — a permanent tile for it competes with the things
+      // people open this for. Typing "pulse" still works.
       // Reachable from chat, not only the tabs: tabs do not open on Teams mobile.
       menuRow('leave', 'Holidays', 'Check upcoming holidays and important dates', {
         kind: 'holidays',

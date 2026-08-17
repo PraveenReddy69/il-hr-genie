@@ -134,7 +134,7 @@ describe('opening the conversation', () => {
 
     assert.match(replies, /nudgeCheckIn/, 'the nudge asks')
     assert.doesNotMatch(replies, /"kind":"checkIn"/, 'the menu does not ask as well')
-    assert.match(replies, /Monthly pulse/, 'the rest of the menu is untouched')
+    assert.match(replies, /Raise a ticket/, 'the rest of the menu is untouched')
   })
 
   it('leaves no check-in button at all once today is answered', async () => {
@@ -459,7 +459,7 @@ describe('typing instead of pressing', () => {
     it(`"${opener}" opens the menu`, async () => {
       const replies = await handle(newState(), { text: opener })
       assert.match(JSON.stringify(replies), /Raise a ticket/)
-      assert.match(JSON.stringify(replies), /Monthly pulse/)
+      assert.match(JSON.stringify(replies), /Around the team/)
     })
   }
 
@@ -716,5 +716,6 @@ describe('the Teams command list', () => {
     const replies = JSON.stringify(await handle(newState(), { text: 'Main Menu' }))
     assert.match(replies, /Raise a ticket/)
     assert.match(replies, /Popular questions/)
+    assert.doesNotMatch(replies, /Monthly pulse/, "the pulse belongs to the nudge")
   })
 })
