@@ -28,56 +28,56 @@ import {
   type MoodCheckIn,
   type PulseQuestion,
   type Ticket,
-} from './api.js'
-import type { Holiday } from './holidays.js'
+} from "./api.js";
+import type { Holiday } from "./holidays.js";
 
-const SCHEMA = 'http://adaptivecards.io/schemas/adaptive-card.json'
-const VERSION = '1.5'
+const SCHEMA = "http://adaptivecards.io/schemas/adaptive-card.json";
+const VERSION = "1.5";
 
 /** Every card action carries one of these, so the flow can tell them apart. */
 export type CardAction =
-  | { kind: 'pickCategory'; category: string }
-  | { kind: 'checkIn' }
-  | { kind: 'pickMood'; mood: Mood }
-  | { kind: 'saveMood'; reasons?: string; note?: string }
-  | { kind: 'skipMoodDetail' }
-  | { kind: 'startPulse' }
-  | { kind: 'savePulse'; [answer: string]: string }
-  | { kind: 'dismissNudge' }
+  | { kind: "pickCategory"; category: string }
+  | { kind: "checkIn" }
+  | { kind: "pickMood"; mood: Mood }
+  | { kind: "saveMood"; reasons?: string; note?: string }
+  | { kind: "skipMoodDetail" }
+  | { kind: "startPulse" }
+  | { kind: "savePulse"; [answer: string]: string }
+  | { kind: "dismissNudge" }
   // The nudge's own buttons. Same errands as `checkIn` and `startPulse`, but a
   // distinct kind so the nudge can be retired when one is pressed without taking
   // the welcome menu — which fires the plain kinds — down with it.
-  | { kind: 'nudgeCheckIn' }
-  | { kind: 'nudgePulse' }
-  | { kind: 'raise'; subject?: string }
-  | { kind: 'describe'; subject?: string; category?: string }
-  | { kind: 'cancel' }
-  | { kind: 'myTickets' }
-  | { kind: 'startTicket' }
-  | { kind: 'holidays' }
-  | { kind: 'team' }
-  | { kind: 'ask'; question: string }
+  | { kind: "nudgeCheckIn" }
+  | { kind: "nudgePulse" }
+  | { kind: "raise"; subject?: string }
+  | { kind: "describe"; subject?: string; category?: string }
+  | { kind: "cancel" }
+  | { kind: "myTickets" }
+  | { kind: "startTicket" }
+  | { kind: "holidays" }
+  | { kind: "team" }
+  | { kind: "ask"; question: string };
 
 export interface AdaptiveCard {
-  $schema: string
-  type: 'AdaptiveCard'
-  version: string
-  body: unknown[]
-  actions?: unknown[]
-  msteams?: { width: 'Full' }
+  $schema: string;
+  type: "AdaptiveCard";
+  version: string;
+  body: unknown[];
+  actions?: unknown[];
+  msteams?: { width: "Full" };
 }
 
 function card(body: unknown[], actions?: unknown[]): AdaptiveCard {
   return {
     $schema: SCHEMA,
-    type: 'AdaptiveCard',
+    type: "AdaptiveCard",
     version: VERSION,
     // Teams shrink-wraps cards to their content otherwise, which leaves a grid of
     // tiles squeezed into half the conversation width.
-    msteams: { width: 'Full' },
+    msteams: { width: "Full" },
     body,
     ...(actions ? { actions } : {}),
-  }
+  };
 }
 
 /**
@@ -96,20 +96,25 @@ function card(body: unknown[], actions?: unknown[]): AdaptiveCard {
  * undefined and rendered as a mystery gap — a spacer that has to be exempted from that
  * guard costs more than it saves.
  */
-const GAP = 12
+const GAP = 12;
 
 function padded(items: unknown[]): unknown[] {
-  const above = { type: 'Container', minHeight: `${GAP}px`, spacing: 'None', items: [] }
-  const side = { type: 'Column', width: `${GAP}px`, items: [] }
+  const above = {
+    type: "Container",
+    minHeight: `${GAP}px`,
+    spacing: "None",
+    items: [],
+  };
+  const side = { type: "Column", width: `${GAP}px`, items: [] };
   return [
     above,
     {
-      type: 'ColumnSet',
-      spacing: 'None',
-      columns: [side, { type: 'Column', width: 'stretch', items }, side],
+      type: "ColumnSet",
+      spacing: "None",
+      columns: [side, { type: "Column", width: "stretch", items }, side],
     },
     above,
-  ]
+  ];
 }
 
 /**
@@ -124,7 +129,7 @@ function padded(items: unknown[]): unknown[] {
  */
 function header(eyebrow: string, title: string, subtitle?: string): unknown {
   return {
-    type: 'Container',
+    type: "Container",
     /*
      * Neither `bleed` nor `roundedCorners`, and both for the same reason: the client
      * decides whether to honour them, so either one makes the band look different on
@@ -144,40 +149,40 @@ function header(eyebrow: string, title: string, subtitle?: string): unknown {
      * A square inset panel is the one result every client actually produces. Both the
      * edge-to-edge look and the rounding are the price.
      */
-    spacing: 'None',
-    backgroundImage: { url: iconUrl('header'), fillMode: 'Cover' },
+    spacing: "None",
+    backgroundImage: { url: iconUrl("header"), fillMode: "Cover" },
     items: padded([
       {
-        type: 'TextBlock',
+        type: "TextBlock",
         text: eyebrow.toUpperCase(),
-        size: 'Small',
-        weight: 'Bolder',
-        color: 'Light',
-        spacing: 'None',
+        size: "Small",
+        weight: "Bolder",
+        color: "Light",
+        spacing: "None",
         wrap: true,
       },
       {
-        type: 'TextBlock',
+        type: "TextBlock",
         text: title,
-        size: 'Large',
-        weight: 'Bolder',
-        color: 'Light',
+        size: "Large",
+        weight: "Bolder",
+        color: "Light",
         wrap: true,
-        spacing: 'None',
+        spacing: "None",
       },
       ...(subtitle
         ? [
             {
-              type: 'TextBlock',
+              type: "TextBlock",
               text: subtitle,
               wrap: true,
-              color: 'Light',
-              spacing: 'Small',
+              color: "Light",
+              spacing: "Small",
             },
           ]
         : []),
     ]),
-  }
+  };
 }
 
 /**
@@ -188,8 +193,8 @@ function header(eyebrow: string, title: string, subtitle?: string): unknown {
  * default is a strong mustard. Omitting the property leaves the container transparent,
  * which is what "no styling" actually means here.
  */
-function body(items: unknown[]): unknown {
-  return { type: 'Container', spacing: 'Default', items }
+function body(items: unknown[], extra: Record<string, unknown> = {}): unknown {
+  return { type: "Container", spacing: "Default", ...extra, items };
 }
 
 /**
@@ -207,7 +212,7 @@ function body(items: unknown[]): unknown {
 function iconBase(): string {
   // Read per call, not once at import: the host is configuration, and a module-level
   // constant would freeze whatever happened to be set when the file first loaded.
-  return `${(process.env.PUBLIC_BASE_URL ?? '').replace(/\/$/, '')}/icons`
+  return `${(process.env.PUBLIC_BASE_URL ?? "").replace(/\/$/, "")}/icons`;
 }
 
 /**
@@ -220,10 +225,10 @@ function iconBase(): string {
  *
  * Bump it whenever an icon is redrawn.
  */
-const ICON_VERSION = 5
+const ICON_VERSION = 6;
 
 function iconUrl(name: string): string {
-  return `${iconBase()}/${name}.png?v=${ICON_VERSION}`
+  return `${iconBase()}/${name}.png?v=${ICON_VERSION}`;
 }
 
 /**
@@ -240,7 +245,7 @@ function iconUrl(name: string): string {
  * outline that separates one row from the next. White with a stroke in light, dark
  * with a stroke in dark, and nothing pinned either way.
  */
-const TILE_SURFACE = { showBorder: true, roundedCorners: true } as const
+const TILE_SURFACE = { showBorder: true, roundedCorners: true } as const;
 
 /*
  * There is no forced white anywhere.
@@ -279,7 +284,7 @@ function submit(action: CardAction, label: string): Record<string, unknown> {
   return {
     ...action,
     msteams: {
-      type: 'messageBack',
+      type: "messageBack",
       displayText: label,
       // Also delivered as activity.text. If the value ever fails to arrive, the typed
       // shortcuts catch the common labels — a worse outcome than the card working, and
@@ -287,7 +292,7 @@ function submit(action: CardAction, label: string): Record<string, unknown> {
       text: label,
       value: JSON.stringify(action),
     },
-  }
+  };
 }
 
 /**
@@ -305,47 +310,63 @@ function submit(action: CardAction, label: string): Record<string, unknown> {
  * The Holidays tab has the full calendar; a chat card that scrolls for a screen and a
  * half is answering a question nobody asked.
  */
-const HOLIDAYS_IN_CHAT = 4
+const HOLIDAYS_IN_CHAT = 4;
 
 /** For the date chips. Short, because the chip is 40-odd pixels wide. */
 const MONTHS_SHORT = [
-  'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
-  'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
-]
+  "JAN",
+  "FEB",
+  "MAR",
+  "APR",
+  "MAY",
+  "JUN",
+  "JUL",
+  "AUG",
+  "SEP",
+  "OCT",
+  "NOV",
+  "DEC",
+];
 
-export function holidaysCard(holidays: Holiday[], todayIso: string): AdaptiveCard {
-  const ahead = holidays.filter((one) => one.isoDate >= todayIso)
-  const shown = ahead.slice(0, HOLIDAYS_IN_CHAT)
+export function holidaysCard(
+  holidays: Holiday[],
+  todayIso: string,
+): AdaptiveCard {
+  const ahead = holidays.filter((one) => one.isoDate >= todayIso);
+  const shown = ahead.slice(0, HOLIDAYS_IN_CHAT);
 
   if (shown.length === 0) {
     return card([
-      header('Holidays', 'Nothing left this year'),
+      header("Holidays", "Nothing left this year"),
       body([
         {
-          type: 'TextBlock',
-          text: 'No more published dates for this year. The Holidays tab has the full calendar.',
+          type: "TextBlock",
+          text: "No more published dates for this year. The Holidays tab has the full calendar.",
           wrap: true,
           isSubtle: true,
-          spacing: 'Default',
+          spacing: "Default",
         },
       ]),
-    ])
+    ]);
   }
 
-  const next = shown[0]
+  const next = shown[0];
   const daysTo = (isoDate: string): number =>
     Math.round(
-      (Date.parse(`${isoDate}T00:00:00Z`) - Date.parse(`${todayIso}T00:00:00Z`)) / 86_400_000,
-    )
+      (Date.parse(`${isoDate}T00:00:00Z`) -
+        Date.parse(`${todayIso}T00:00:00Z`)) /
+        86_400_000,
+    );
 
-  const away = daysTo(next.isoDate)
-  const countdown = away <= 0 ? 'Today' : away === 1 ? 'Tomorrow' : `In ${away} days`
+  const away = daysTo(next.isoDate);
+  const countdown =
+    away <= 0 ? "Today" : away === 1 ? "Tomorrow" : `In ${away} days`;
   const subtitle =
     away <= 0
       ? `${ahead.length} still ahead · the next one is today`
       : away === 1
         ? `${ahead.length} still ahead · the next one is tomorrow`
-        : `${ahead.length} still ahead · next in ${away} days`
+        : `${ahead.length} still ahead · next in ${away} days`;
 
   /**
    * The date, as a chip.
@@ -356,110 +377,110 @@ export function holidaysCard(holidays: Holiday[], todayIso: string): AdaptiveCar
    * worth reading, which is what the Holidays tab does with the same list.
    */
   const dateChip = (isoDate: string, isNext: boolean): unknown => ({
-    type: 'Container',
-    style: isNext ? 'accent' : 'emphasis',
+    type: "Container",
+    style: isNext ? "accent" : "emphasis",
     roundedCorners: true,
-    spacing: 'None',
-    minHeight: '54px',
-    verticalContentAlignment: 'Center',
+    spacing: "None",
+    minHeight: "54px",
+    verticalContentAlignment: "Center",
     items: [
       {
-        type: 'TextBlock',
+        type: "TextBlock",
         text: String(Number(isoDate.slice(8, 10))),
-        size: 'Large',
-        weight: 'Bolder',
-        horizontalAlignment: 'Center',
-        spacing: 'None',
+        size: "Large",
+        weight: "Bolder",
+        horizontalAlignment: "Center",
+        spacing: "None",
         wrap: false,
       },
       {
-        type: 'TextBlock',
+        type: "TextBlock",
         text: MONTHS_SHORT[Number(isoDate.slice(5, 7)) - 1],
-        size: 'Small',
-        weight: 'Bolder',
+        size: "Small",
+        weight: "Bolder",
         isSubtle: true,
-        horizontalAlignment: 'Center',
-        spacing: 'None',
+        horizontalAlignment: "Center",
+        spacing: "None",
         wrap: false,
       },
     ],
-  })
+  });
 
   return card([
-    header('Holidays', 'What is coming up', subtitle),
+    header("Holidays", "What is coming up", subtitle),
     body(
       shown.map((one) => {
-        const isNext = one.isoDate === next.isoDate
+        const isNext = one.isoDate === next.isoDate;
         return {
-          type: 'Container',
+          type: "Container",
           ...TILE_SURFACE,
-          spacing: 'Small',
+          spacing: "Small",
           items: [
             {
               // Only the next one is filled. One marked row in a list of four reads at
               // a glance; two would make the mark mean nothing.
-              type: 'Container',
+              type: "Container",
               items: [
                 {
-                  type: 'ColumnSet',
+                  type: "ColumnSet",
                   columns: [
                     {
-                      type: 'Column',
-                      width: 'auto',
-                      verticalContentAlignment: 'Center',
+                      type: "Column",
+                      width: "auto",
+                      verticalContentAlignment: "Center",
                       items: [dateChip(one.isoDate, isNext)],
                     },
                     {
-                      type: 'Column',
-                      width: 'stretch',
-                      verticalContentAlignment: 'Center',
-                      spacing: 'Medium',
+                      type: "Column",
+                      width: "stretch",
+                      verticalContentAlignment: "Center",
+                      spacing: "Medium",
                       items: [
                         {
-                          type: 'TextBlock',
+                          type: "TextBlock",
                           text: one.name,
-                          weight: 'Bolder',
-                          size: 'Medium',
+                          weight: "Bolder",
+                          size: "Medium",
                           wrap: true,
-                          spacing: 'None',
+                          spacing: "None",
                         },
                         {
-                          type: 'TextBlock',
+                          type: "TextBlock",
                           text: `${weekday(one.isoDate)} · ${one.region}`,
-                          size: 'Small',
+                          size: "Small",
                           isSubtle: true,
                           wrap: true,
-                          spacing: 'None',
+                          spacing: "None",
                         },
                         ...(isNext
                           ? [
                               {
                                 // Amber: a countdown is a "soon", not a status — the
                                 // same reasoning as the Holidays tab.
-                                type: 'TextBlock',
+                                type: "TextBlock",
                                 text: countdown,
-                                size: 'Small',
-                                weight: 'Bolder',
-                                color: 'Warning',
+                                size: "Small",
+                                weight: "Bolder",
+                                color: "Warning",
                                 wrap: false,
-                                spacing: 'Small',
+                                spacing: "Small",
                               },
                             ]
                           : []),
                       ],
                     },
                     {
-                      type: 'Column',
-                      width: 'auto',
-                      verticalContentAlignment: 'Center',
+                      type: "Column",
+                      width: "auto",
+                      verticalContentAlignment: "Center",
                       items: [
                         {
-                          type: 'TextBlock',
-                          text: one.kind === 'OPTIONAL' ? 'Optional' : 'Fixed',
-                          size: 'Small',
-                          weight: 'Bolder',
-                          color: one.kind === 'OPTIONAL' ? 'Warning' : 'Good',
-                          spacing: 'None',
+                          type: "TextBlock",
+                          text: one.kind === "OPTIONAL" ? "Optional" : "Fixed",
+                          size: "Small",
+                          weight: "Bolder",
+                          color: one.kind === "OPTIONAL" ? "Warning" : "Good",
+                          spacing: "None",
                           wrap: false,
                         },
                       ],
@@ -469,28 +490,30 @@ export function holidaysCard(holidays: Holiday[], todayIso: string): AdaptiveCar
               ],
             },
           ],
-        }
+        };
       }),
     ),
     {
-      type: 'Container',
-      spacing: 'Small',
+      type: "Container",
+      spacing: "Small",
       items: [
         {
-          type: 'TextBlock',
-          text: 'Fixed days are paid holidays everyone gets. Optional days you choose from the published list, and some are state-specific.',
-          size: 'Small',
+          type: "TextBlock",
+          text: "Fixed days are paid holidays everyone gets. Optional days you choose from the published list, and some are state-specific.",
+          size: "Small",
           isSubtle: true,
           wrap: true,
-          spacing: 'None',
+          spacing: "None",
         },
       ],
     },
-  ])
+  ]);
 }
 
 function weekday(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'long' })
+  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", {
+    weekday: "long",
+  });
 }
 
 /**
@@ -502,24 +525,28 @@ function weekday(iso: string): string {
  */
 export function helloCard(): AdaptiveCard {
   return card([
-    header('Infinity Learn', "Hello! I'm HR Genie 👋", 'Here whenever you need HR'),
+    header(
+      "Infinity Learn",
+      "Hello! I'm HR Genie 👋",
+      "Here whenever you need HR",
+    ),
     body([
       {
-        type: 'TextBlock',
+        type: "TextBlock",
         text: "You can always start our conversation by typing **genie** or **help**.",
         wrap: true,
-        spacing: 'Default',
+        spacing: "Default",
       },
       {
-        type: 'TextBlock',
-        text: 'Or just ask me a question — leave, insurance, payroll, policy.',
+        type: "TextBlock",
+        text: "Or just ask me a question — leave, insurance, payroll, policy.",
         wrap: true,
-        size: 'Small',
+        size: "Small",
         isSubtle: true,
-        spacing: 'Small',
+        spacing: "Small",
       },
     ]),
-  ])
+  ]);
 }
 
 /**
@@ -542,57 +569,74 @@ export function helloCard(): AdaptiveCard {
  * The chevron is a text character. Adaptive Cards has no such affordance, and an image
  * for it would be a fourth network fetch to say "this is tappable".
  */
-function menuRow(icon: string, title: string, description: string, data: CardAction): unknown {
+function menuRow(
+  icon: string,
+  title: string,
+  description: string,
+  data: CardAction,
+): unknown {
   return {
-    type: 'Container',
+    type: "Container",
     ...TILE_SURFACE,
-    selectAction: { type: 'Action.Submit', data: submit(data, title) },
-    spacing: 'Small',
+    selectAction: { type: "Action.Submit", data: submit(data, title) },
+    spacing: "Small",
     items: [
       {
-        type: 'Container',
+        type: "Container",
         items: [
           {
-            type: 'ColumnSet',
+            type: "ColumnSet",
             columns: [
               {
-                type: 'Column',
-                width: 'auto',
-                verticalContentAlignment: 'Center',
+                type: "Column",
+                width: "auto",
+                verticalContentAlignment: "Center",
                 items: [
-                  { type: 'Image', url: iconUrl(icon), width: '40px', height: '40px', altText: title },
+                  {
+                    type: "Image",
+                    url: iconUrl(icon),
+                    width: "40px",
+                    height: "40px",
+                    altText: title,
+                  },
                 ],
               },
               {
-                type: 'Column',
-                width: 'stretch',
-                verticalContentAlignment: 'Center',
-                spacing: 'Medium',
+                type: "Column",
+                width: "stretch",
+                verticalContentAlignment: "Center",
+                spacing: "Medium",
                 items: [
                   {
-                    type: 'TextBlock',
+                    type: "TextBlock",
                     text: title,
-                    weight: 'Bolder',
-                    size: 'Medium',
+                    weight: "Bolder",
+                    size: "Medium",
                     wrap: true,
-                    spacing: 'None',
+                    spacing: "None",
                   },
                   {
-                    type: 'TextBlock',
+                    type: "TextBlock",
                     text: description,
-                    size: 'Small',
+                    size: "Small",
                     isSubtle: true,
                     wrap: true,
-                    spacing: 'None',
+                    spacing: "None",
                   },
                 ],
               },
               {
-                type: 'Column',
-                width: 'auto',
-                verticalContentAlignment: 'Center',
+                type: "Column",
+                width: "auto",
+                verticalContentAlignment: "Center",
                 items: [
-                  { type: 'TextBlock', text: '›', size: 'Large', isSubtle: true, spacing: 'None' },
+                  {
+                    type: "TextBlock",
+                    text: "›",
+                    size: "Large",
+                    isSubtle: true,
+                    spacing: "None",
+                  },
                 ],
               },
             ],
@@ -600,7 +644,7 @@ function menuRow(icon: string, title: string, description: string, data: CardAct
         ],
       },
     ],
-  }
+  };
 }
 
 /**
@@ -612,11 +656,11 @@ function menuRow(icon: string, title: string, description: string, data: CardAct
  * does not.
  */
 const POPULAR_QUESTIONS = [
-  'How do I apply for leave?',
-  'Where can I find payroll info?',
-  'Who is my HRBP?',
-  'How do I update my details?',
-]
+  "How do I apply for leave?",
+  "Where can I find payroll info?",
+  "Who is my HRBP?",
+  "How do I update my details?",
+];
 
 /**
  * Morning, afternoon or evening — on Indian time, not the server's.
@@ -628,202 +672,188 @@ const POPULAR_QUESTIONS = [
  * where the person is, and everybody using this is in the same office hours. It is the
  * one assumption here that would need revisiting if that stopped being true.
  */
-const OFFICE_TIME_ZONE = 'Asia/Kolkata'
+const OFFICE_TIME_ZONE = "Asia/Kolkata";
+
+/** "Monday, 17 August" — the same clock as the greeting, so the two never disagree. */
+export function officeDate(now: Date = new Date()): string {
+  const on = (options: Intl.DateTimeFormatOptions) =>
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: OFFICE_TIME_ZONE,
+      ...options,
+    }).format(now);
+
+  return `${on({ weekday: "long" })}, ${on({ day: "numeric", month: "long" })}`;
+}
 
 export function greeting(firstName: string, now: Date = new Date()): string {
   // `hourCycle: 'h23'` rather than `hour12: false`, which reports midnight as 24.
   const hour = Number(
-    new Intl.DateTimeFormat('en-GB', {
+    new Intl.DateTimeFormat("en-GB", {
       timeZone: OFFICE_TIME_ZONE,
-      hour: '2-digit',
-      hourCycle: 'h23',
+      hour: "2-digit",
+      hourCycle: "h23",
     }).format(now),
-  )
-  const part = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
-  return `${part}, ${firstName} 👋`
+  );
+  const part =
+    hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  return `${part}, ${firstName}`;
 }
 
-export function welcomeCard(firstName: string, now: Date = new Date()): AdaptiveCard {
+export function welcomeCard(
+  firstName: string,
+  now: Date = new Date(),
+): AdaptiveCard {
   return card([
     /*
-     * The greeting, and nothing competing with it.
+     * The greeting, on the card itself.
      *
-     * This carried a 64px mascot in its own column. It has gone: the band sits above
-     * four white rows that each already have an icon, and a fifth picture at the top
-     * was the busiest part of the busiest card. The name and the time of day do the
-     * work of feeling personal, and they do it without taking half the width on a
-     * phone — which is what the mascot cost.
+     * There is no band here, and that is the point. A painted header needs a
+     * `backgroundImage` — the only fill Adaptive Cards offers — and an image cannot
+     * follow the reader's theme, is not clipped to rounded corners by Android or the
+     * desktop client, and cannot be relied on to bleed. Each of those cost a deploy
+     * to learn.
+     *
+     * Type on the card surface has none of those problems: Teams draws the
+     * background, the corners and the divider, in whichever theme the reader is
+     * using. It also lifts the old ceiling on the greeting — that was pinned to Large
+     * because a wrapped second line outgrew the artwork behind it and left a strip of
+     * card showing. With no artwork there is nothing to outgrow, so the name can be
+     * the biggest thing here and wrap freely.
      */
     {
-      type: 'Container',
-      // Square and inset, matching `header()` — see the note there for why neither bleed
-      // nor rounded corners survive the trip across clients.
-      spacing: 'None',
-      backgroundImage: { url: iconUrl('header'), fillMode: 'Cover' },
-      items: padded([
+      type: "TextBlock",
+      text: officeDate(now),
+      size: "Small",
+      isSubtle: true,
+      wrap: true,
+      spacing: "None",
+    },
+    {
+      // No forced line break. It wraps after the comma on a phone by itself, and a
+      // hard break would spend a whole line on a short name at desktop width.
+      type: "TextBlock",
+      text: greeting(firstName, now),
+      size: "ExtraLarge",
+      weight: "Bolder",
+      wrap: true,
+      spacing: "Small",
+    },
+    {
+      // `isSubtle` works here and did not on the band: it dims against the card, in
+      // the host's own palette, rather than selecting the light palette's subtle
+      // entry — which is black at 20% and vanished on dark artwork.
+      type: "TextBlock",
+      text: "How can I help you today?",
+      isSubtle: true,
+      wrap: true,
+      spacing: "Small",
+    },
+    body(
+      [
         {
-          type: 'ColumnSet',
-          spacing: 'None',
+          type: "ColumnSet",
+          spacing: "None",
           columns: [
             {
-              type: 'Column',
-              width: 'auto',
-              verticalContentAlignment: 'Center',
+              type: "Column",
+              width: "auto",
+              verticalContentAlignment: "Center",
               items: [
                 {
-                  type: 'TextBlock',
-                  text: 'HR Genie',
-                  size: 'Small',
-                  weight: 'Bolder',
-                  color: 'Light',
-                  spacing: 'None',
-                  wrap: false,
+                  type: "TextBlock",
+                  text: "💬",
+                  size: "Medium",
+                  spacing: "None",
                 },
               ],
             },
             {
-              type: 'Column',
-              width: 'auto',
-              spacing: 'Small',
-              verticalContentAlignment: 'Center',
+              type: "Column",
+              width: "stretch",
+              verticalContentAlignment: "Center",
+              spacing: "Small",
               items: [
                 {
-                  /*
-                   * The status pill.
-                   *
-                   * `style: 'good'` rather than a colour of our own — Teams draws the
-                   * green and the text on it, so the pill follows light and dark
-                   * without a second asset. The same reason the date chips and the
-                   * ticket status discs are styled containers.
-                   *
-                   * It says something true and worth saying: there is no queue and no
-                   * office hours, which is most of the point of asking a bot rather
-                   * than emailing HR.
-                   */
-                  type: 'Container',
-                  style: 'good',
-                  roundedCorners: true,
-                  spacing: 'None',
-                  items: [
-                    {
-                      type: 'TextBlock',
-                      text: 'Online',
-                      size: 'Small',
-                      weight: 'Bolder',
-                      spacing: 'None',
-                      wrap: false,
-                    },
-                  ],
+                  type: "TextBlock",
+                  text: "Ask me about leave, insurance, payroll or policy — or pick one of these.",
+                  wrap: true,
+                  spacing: "None",
                 },
               ],
             },
-            // Holds the two above to the left instead of letting them centre.
-            { type: 'Column', width: 'stretch', items: [] },
           ],
         },
+        menuRow(
+          "ticket",
+          "Raise a ticket",
+          "File a request or report an issue with HR",
+          {
+            kind: "startTicket",
+          },
+        ),
+        menuRow("list", "My tickets", "View your tickets and responses", {
+          kind: "myTickets",
+        }),
+        // No pulse row. It is a once-a-month errand, and the nudge already asks for it
+        // in the month it is open — a permanent tile for it competes with the things
+        // people open this for. Typing "pulse" still works.
+        // Reachable from chat, not only the tabs: tabs do not open on Teams mobile.
+        menuRow(
+          "leave",
+          "Holidays",
+          "Check upcoming holidays and important dates",
+          {
+            kind: "holidays",
+          },
+        ),
+        menuRow(
+          "something-else",
+          "Around the team",
+          "See birthdays, work anniversaries and team milestones",
+          { kind: "team" },
+        ),
         {
-          // Large, not ExtraLarge. On a phone the bigger size wrapped the greeting onto
-          // a second line, which pushed the band taller than the artwork behind it and
-          // left a strip of card showing under it.
-          type: 'TextBlock',
-          text: greeting(firstName, now),
-          size: 'Large',
-          weight: 'Bolder',
-          color: 'Light',
+          type: "TextBlock",
+          text: "💡 Popular questions",
+          size: "Small",
+          weight: "Bolder",
+          isSubtle: true,
           wrap: true,
-          spacing: 'Small',
+          spacing: "Medium",
         },
         {
-          /*
-           * Not `isSubtle`, however much this line wants to be grey.
-           *
-           * `color: 'Light'` with `isSubtle` does not dim white — it selects the light
-           * palette's subtle entry, which the renderer defines as black at 20%. On this
-           * band that is invisible. Measured in the preview, not guessed.
-           *
-           * The hierarchy comes from the greeting above being Large and bold instead.
-           */
-          type: 'TextBlock',
-          text: 'How can I help you today?',
-          color: 'Light',
-          wrap: true,
-          spacing: 'Small',
+          type: "ActionSet",
+          spacing: "Small",
+          actions: POPULAR_QUESTIONS.map((question) => ({
+            type: "Action.Submit",
+            title: question,
+            data: submit({ kind: "ask", question }, question),
+          })),
         },
-      ]),
-    },
-    body([
-      {
-        type: 'ColumnSet',
-        spacing: 'None',
-        columns: [
-          {
-            type: 'Column',
-            width: 'auto',
-            verticalContentAlignment: 'Center',
-            items: [{ type: 'TextBlock', text: '💬', size: 'Medium', spacing: 'None' }],
-          },
-          {
-            type: 'Column',
-            width: 'stretch',
-            verticalContentAlignment: 'Center',
-            spacing: 'Small',
-            items: [
-              {
-                type: 'TextBlock',
-                text: 'Ask me about leave, insurance, payroll or policy — or pick one of these.',
-                wrap: true,
-                spacing: 'None',
-              },
-            ],
-          },
-        ],
-      },
-      menuRow('ticket', 'Raise a ticket', 'File a request or report an issue with HR', {
-        kind: 'startTicket',
-      }),
-      menuRow('list', 'My tickets', 'View your tickets and responses', { kind: 'myTickets' }),
-      // No pulse row. It is a once-a-month errand, and the nudge already asks for it
-      // in the month it is open — a permanent tile for it competes with the things
-      // people open this for. Typing "pulse" still works.
-      // Reachable from chat, not only the tabs: tabs do not open on Teams mobile.
-      menuRow('leave', 'Holidays', 'Check upcoming holidays and important dates', {
-        kind: 'holidays',
-      }),
-      menuRow(
-        'something-else',
-        'Around the team',
-        'See birthdays, work anniversaries and team milestones',
-        { kind: 'team' },
-      ),
-      {
-        type: 'TextBlock',
-        text: '💡 Popular questions',
-        size: 'Small',
-        weight: 'Bolder',
-        isSubtle: true,
-        wrap: true,
-        spacing: 'Medium',
-      },
-      {
-        type: 'ActionSet',
-        spacing: 'Small',
-        actions: POPULAR_QUESTIONS.map((question) => ({
-          type: 'Action.Submit',
-          title: question,
-          data: submit({ kind: 'ask', question }, question),
-        })),
-      },
-      {
-        type: 'TextBlock',
-        text: '🔒 Your conversations are private and secure.',
-        size: 'Small',
-        isSubtle: true,
-        horizontalAlignment: 'Center',
-        wrap: true,
-        spacing: 'Medium',
-      },
-    ]),
-  ])
+        {
+          type: "TextBlock",
+          text: "🔒 Your conversations are private and secure.",
+          size: "Small",
+          isSubtle: true,
+          horizontalAlignment: "Center",
+          wrap: true,
+          spacing: "Medium",
+        },
+      ],
+      /*
+       * The hairline under the greeting.
+       *
+       * `separator` rather than a rule of our own: Teams draws it in its own divider
+       * colour, so it stays a hairline in both themes where one fixed grey would be
+       * wrong against one of the two backgrounds.
+       *
+       * It sits on this container and not on the first row inside it, because a
+       * separator on the first child of a container is suppressed — which is why the
+       * first attempt drew nothing at all.
+       */
+      { separator: true, spacing: "Medium" },
+    ),
+  ]);
 }
 
 /**
@@ -833,16 +863,16 @@ export function welcomeCard(firstName: string, now: Date = new Date()): Adaptive
  * broken image — the names come from the API, not from here.
  */
 const CATEGORY_ICON: Record<string, string> = {
-  Payroll: 'payroll',
-  Leave: 'leave',
-  'IT & access': 'it-access',
-  Insurance: 'insurance',
-  Facilities: 'facilities',
-  'Something else': 'something-else',
-}
+  Payroll: "payroll",
+  Leave: "leave",
+  "IT & access": "it-access",
+  Insurance: "insurance",
+  Facilities: "facilities",
+  "Something else": "something-else",
+};
 
 function iconFor(category: string): string {
-  return CATEGORY_ICON[category] ?? 'something-else'
+  return CATEGORY_ICON[category] ?? "something-else";
 }
 
 /**
@@ -856,16 +886,16 @@ function iconFor(category: string): string {
  * than a wrong one.
  */
 const CATEGORY_HINT: Record<string, string> = {
-  Payroll: 'Salary, payslips, reimbursements, tax and deductions',
-  Leave: 'Leave balance, applications, comp-offs and holidays',
-  'IT & access': 'Laptop, software, VPN, email and account access',
-  Insurance: 'Health cover, claims, dependants and policy cards',
-  Facilities: 'Office, seating, ID card, parking and workplace',
-  'Something else': 'Anything that does not fit the others — HR will route it',
-}
+  Payroll: "Salary, payslips, reimbursements, tax and deductions",
+  Leave: "Leave balance, applications, comp-offs and holidays",
+  "IT & access": "Laptop, software, VPN, email and account access",
+  Insurance: "Health cover, claims, dependants and policy cards",
+  Facilities: "Office, seating, ID card, parking and workplace",
+  "Something else": "Anything that does not fit the others — HR will route it",
+};
 
 function hintFor(category: string): string {
-  return CATEGORY_HINT[category] ?? ''
+  return CATEGORY_HINT[category] ?? "";
 }
 
 /**
@@ -876,12 +906,15 @@ function hintFor(category: string): string {
  * bot until a button is pressed, so a per-category example goes stale the instant
  * somebody changes it — showing a payroll example under IT & access.
  */
-const SUBJECT_PLACEHOLDER = 'Please describe your concern here'
+const SUBJECT_PLACEHOLDER = "Please describe your concern here";
 
-export function subjectPromptCard(category: string, categories: string[] = []): AdaptiveCard {
+export function subjectPromptCard(
+  category: string,
+  categories: string[] = [],
+): AdaptiveCard {
   // The chosen one first, so the dropdown opens on it, and never twice if the server
   // already lists it.
-  const choices = [category, ...categories.filter((one) => one !== category)]
+  const choices = [category, ...categories.filter((one) => one !== category)];
 
   return card(
     [
@@ -893,7 +926,11 @@ export function subjectPromptCard(category: string, categories: string[] = []): 
        * sent card renders once, so the header cannot follow the dropdown; the only
        * honest fix is to stop it claiming to.
        */
-      header('New ticket', 'What is happening?', 'Pick a category and tell us in a line or two.'),
+      header(
+        "New ticket",
+        "What is happening?",
+        "Pick a category and tell us in a line or two.",
+      ),
       body([
         /*
          * The category, as a dropdown on this card.
@@ -904,27 +941,27 @@ export function subjectPromptCard(category: string, categories: string[] = []): 
          * and switching it costs nothing that was already written.
          */
         {
-          type: 'TextBlock',
-          text: 'Category',
-          size: 'Small',
-          weight: 'Bolder',
+          type: "TextBlock",
+          text: "Category",
+          size: "Small",
+          weight: "Bolder",
           isSubtle: true,
           wrap: true,
-          spacing: 'Default',
+          spacing: "Default",
         },
         {
-          type: 'Input.ChoiceSet',
-          id: 'category',
+          type: "Input.ChoiceSet",
+          id: "category",
           value: category,
-          style: 'compact',
-          spacing: 'Small',
+          style: "compact",
+          spacing: "Small",
           choices: choices.map((one) => ({ title: one, value: one })),
         },
         {
-          type: 'TextBlock',
+          type: "TextBlock",
           text: "Tell me what's happening in a line or two.",
           wrap: true,
-          spacing: 'Medium',
+          spacing: "Medium",
         },
         // A box, not an instruction to type into the chat. The line above used to be
         // the whole card, which left people looking at a message that asked for
@@ -932,19 +969,19 @@ export function subjectPromptCard(category: string, categories: string[] = []): 
         // through the same path as "hi", where a stray word became the subject. A
         // field makes the ask and the answer the same object.
         {
-          type: 'Input.Text',
-          id: 'subject',
+          type: "Input.Text",
+          id: "subject",
           isMultiline: true,
           placeholder: SUBJECT_PLACEHOLDER,
-          spacing: 'Small',
+          spacing: "Small",
         },
         {
-          type: 'TextBlock',
-          text: 'Nothing goes to HR until you have seen it and chosen Raise it.',
+          type: "TextBlock",
+          text: "Nothing goes to HR until you have seen it and chosen Raise it.",
           wrap: true,
-          size: 'Small',
+          size: "Small",
           isSubtle: true,
-          spacing: 'Small',
+          spacing: "Small",
         },
       ]),
     ],
@@ -953,29 +990,33 @@ export function subjectPromptCard(category: string, categories: string[] = []): 
     // also saying what happened.
     [
       {
-        type: 'Action.Submit',
-        title: 'Continue',
-        style: 'positive',
-        data: submit({ kind: 'describe' }, 'Continue'),
+        type: "Action.Submit",
+        title: "Continue",
+        style: "positive",
+        data: submit({ kind: "describe" }, "Continue"),
       },
     ],
-  )
+  );
 }
 
 export function categoryCard(names: string[]): AdaptiveCard {
   return card([
-    header('New ticket', 'What\'s it about?', 'Pick the closest — HR can move it later.'),
+    header(
+      "New ticket",
+      "What's it about?",
+      "Pick the closest — HR can move it later.",
+    ),
     // The same row the menu uses: a category is a choice, and a line of examples is
     // what makes it one rather than a guess.
     body(
       names.map((category) =>
         menuRow(iconFor(category), category, hintFor(category), {
-          kind: 'pickCategory',
+          kind: "pickCategory",
           category,
         }),
       ),
     ),
-  ])
+  ]);
 }
 
 /**
@@ -988,19 +1029,27 @@ export function categoryCard(names: string[]): AdaptiveCard {
  * subject used to be the heading, which read as a title someone had chosen rather
  * than the words about to be sent to HR.
  */
-export function draftCard(subject: string, category: string, raisedBy: string): AdaptiveCard {
+export function draftCard(
+  subject: string,
+  category: string,
+  raisedBy: string,
+): AdaptiveCard {
   return card(
     [
-      header('Ticket preview', category, 'Check it over — nothing has gone to HR yet.'),
+      header(
+        "Ticket preview",
+        category,
+        "Check it over — nothing has gone to HR yet.",
+      ),
       body([
         {
-          type: 'TextBlock',
-          text: 'YOUR CONCERN — EDIT IT IF YOU LIKE',
-          size: 'Small',
-          weight: 'Bolder',
+          type: "TextBlock",
+          text: "YOUR CONCERN — EDIT IT IF YOU LIKE",
+          size: "Small",
+          weight: "Bolder",
           isSubtle: true,
           wrap: true,
-          spacing: 'Default',
+          spacing: "Default",
         },
         /*
          * Editable in place, rather than a read-only panel plus an Edit button.
@@ -1010,11 +1059,11 @@ export function draftCard(subject: string, category: string, raisedBy: string): 
          * chance of the card showing one thing while another is sent.
          */
         {
-          type: 'Input.Text',
-          id: 'subject',
+          type: "Input.Text",
+          id: "subject",
           value: subject,
           isMultiline: true,
-          spacing: 'Small',
+          spacing: "Small",
           placeholder: SUBJECT_PLACEHOLDER,
         },
         /*
@@ -1026,33 +1075,37 @@ export function draftCard(subject: string, category: string, raisedBy: string): 
          * three cards of a ticket read as one flow.
          */
         {
-          type: 'TextBlock',
+          type: "TextBlock",
           text: `Raised by ${raisedBy}`,
-          size: 'Small',
+          size: "Small",
           isSubtle: true,
           wrap: true,
-          spacing: 'Medium',
+          spacing: "Medium",
         },
         {
-          type: 'TextBlock',
-          text: 'Choose Raise it and it goes straight to your HRBP. Cancel drops it.',
+          type: "TextBlock",
+          text: "Choose Raise it and it goes straight to your HRBP. Cancel drops it.",
           wrap: true,
-          size: 'Small',
+          size: "Small",
           isSubtle: true,
-          spacing: 'Small',
+          spacing: "Small",
         },
       ]),
     ],
     [
       {
-        type: 'Action.Submit',
-        title: 'Raise it',
-        style: 'positive',
-        data: submit({ kind: 'raise' }, 'Raise it'),
+        type: "Action.Submit",
+        title: "Raise it",
+        style: "positive",
+        data: submit({ kind: "raise" }, "Raise it"),
       },
-      { type: 'Action.Submit', title: 'Cancel', data: submit({ kind: 'cancel' }, 'Cancel') },
+      {
+        type: "Action.Submit",
+        title: "Cancel",
+        data: submit({ kind: "cancel" }, "Cancel"),
+      },
     ],
-  )
+  );
 }
 
 /**
@@ -1065,103 +1118,107 @@ export function draftCard(subject: string, category: string, raisedBy: string): 
 export function receiptCard(ticket: Ticket): AdaptiveCard {
   return card(
     [
-      header('Ticket raised', ticket.id, `${ticket.category} · ${statusLabel(ticket.status)}`),
+      header(
+        "Ticket raised",
+        ticket.id,
+        `${ticket.category} · ${statusLabel(ticket.status)}`,
+      ),
       body([
         {
           // Green on the one line reporting the outcome, rather than the whole header
           // — every card wears the same band, and success is the exception worth
           // colouring.
-          type: 'Container',
-          style: 'good',
-          spacing: 'Default',
+          type: "Container",
+          style: "good",
+          spacing: "Default",
           items: [
             {
-              type: 'TextBlock',
-              text: '✅ Filed with HR',
-              weight: 'Bolder',
+              type: "TextBlock",
+              text: "✅ Filed with HR",
+              weight: "Bolder",
               wrap: true,
-              spacing: 'None',
+              spacing: "None",
             },
           ],
         },
         {
-          type: 'TextBlock',
-          text: 'WHAT HR RECEIVED',
-          size: 'Small',
-          weight: 'Bolder',
+          type: "TextBlock",
+          text: "WHAT HR RECEIVED",
+          size: "Small",
+          weight: "Bolder",
           isSubtle: true,
           wrap: true,
-          spacing: 'Default',
+          spacing: "Default",
         },
         {
-          type: 'Container',
+          type: "Container",
           ...TILE_SURFACE,
-          spacing: 'Small',
+          spacing: "Small",
           items: [
             {
               // The same white panel a ticket row uses, so the words that were filed
               // look the same here as they will in My tickets.
-              type: 'Container',
+              type: "Container",
               items: [
                 {
-                  type: 'TextBlock',
+                  type: "TextBlock",
                   text: ticket.subject,
-                  size: 'Medium',
-                  weight: 'Bolder',
+                  size: "Medium",
+                  weight: "Bolder",
                   wrap: true,
-                  spacing: 'None',
+                  spacing: "None",
                 },
                 {
                   // Reference, category and status on one line — the same three facts
                   // the ticket list carries, in the same order.
-                  type: 'ColumnSet',
-                  spacing: 'Small',
+                  type: "ColumnSet",
+                  spacing: "Small",
                   columns: [
                     {
-                      type: 'Column',
-                      width: 'auto',
-                      verticalContentAlignment: 'Center',
+                      type: "Column",
+                      width: "auto",
+                      verticalContentAlignment: "Center",
                       items: [
                         {
-                          type: 'TextBlock',
+                          type: "TextBlock",
                           text: statusLabel(ticket.status),
-                          size: 'Small',
-                          weight: 'Bolder',
+                          size: "Small",
+                          weight: "Bolder",
                           color: statusColour(ticket.status),
-                          spacing: 'None',
+                          spacing: "None",
                           wrap: false,
                         },
                       ],
                     },
                     {
-                      type: 'Column',
-                      width: 'auto',
-                      spacing: 'Small',
-                      verticalContentAlignment: 'Center',
+                      type: "Column",
+                      width: "auto",
+                      spacing: "Small",
+                      verticalContentAlignment: "Center",
                       items: [
                         {
-                          type: 'TextBlock',
+                          type: "TextBlock",
                           text: ticket.id,
-                          size: 'Small',
-                          fontType: 'Monospace',
+                          size: "Small",
+                          fontType: "Monospace",
                           isSubtle: true,
-                          spacing: 'None',
+                          spacing: "None",
                           wrap: false,
                         },
                       ],
                     },
                     {
-                      type: 'Column',
-                      width: 'stretch',
-                      spacing: 'Small',
-                      verticalContentAlignment: 'Center',
+                      type: "Column",
+                      width: "stretch",
+                      spacing: "Small",
+                      verticalContentAlignment: "Center",
                       items: [
                         {
-                          type: 'TextBlock',
+                          type: "TextBlock",
                           text: ticket.category,
-                          size: 'Small',
+                          size: "Small",
                           isSubtle: true,
-                          spacing: 'None',
+                          spacing: "None",
                           wrap: false,
                         },
                       ],
@@ -1173,17 +1230,23 @@ export function receiptCard(ticket: Ticket): AdaptiveCard {
           ],
         },
         {
-          type: 'TextBlock',
+          type: "TextBlock",
           text: "I'll message you here as soon as HR moves it — you do not need to check back.",
           wrap: true,
-          size: 'Small',
+          size: "Small",
           isSubtle: true,
-          spacing: 'Default',
+          spacing: "Default",
         },
       ]),
     ],
-    [{ type: 'Action.Submit', title: 'My tickets', data: submit({ kind: 'myTickets' }, 'My tickets') }],
-  )
+    [
+      {
+        type: "Action.Submit",
+        title: "My tickets",
+        data: submit({ kind: "myTickets" }, "My tickets"),
+      },
+    ],
+  );
 }
 
 /**
@@ -1194,36 +1257,42 @@ export function receiptCard(ticket: Ticket): AdaptiveCard {
  */
 export function oneTicketCard(ticket: Ticket): AdaptiveCard {
   return card([
-    header('Ticket', ticket.id, `${ticket.category} · ${statusLabel(ticket.status)}`),
+    header(
+      "Ticket",
+      ticket.id,
+      `${ticket.category} · ${statusLabel(ticket.status)}`,
+    ),
     body([ticketRow(ticket, 0)]),
-  ])
+  ]);
 }
 
 export function ticketsCard(tickets: Ticket[]): AdaptiveCard {
   if (tickets.length === 0) {
     return card([
-      header('My tickets', 'Nothing with HR right now'),
+      header("My tickets", "Nothing with HR right now"),
       body([
         {
-          type: 'TextBlock',
-          text: 'When you raise a ticket it will show here, with whatever HR has done to it.',
+          type: "TextBlock",
+          text: "When you raise a ticket it will show here, with whatever HR has done to it.",
           wrap: true,
           isSubtle: true,
-          spacing: 'Default',
+          spacing: "Default",
         },
       ]),
-    ])
+    ]);
   }
 
-  const open = tickets.filter((ticket) => ticket.status !== 'RESOLVED').length
+  const open = tickets.filter((ticket) => ticket.status !== "RESOLVED").length;
   return card([
     header(
-      'My tickets',
+      "My tickets",
       `${tickets.length} with HR`,
       `${open} still open · newest first`,
     ),
     body([
-      ...tickets.slice(0, TICKETS_IN_CHAT).map((ticket, index) => ticketRow(ticket, index)),
+      ...tickets
+        .slice(0, TICKETS_IN_CHAT)
+        .map((ticket, index) => ticketRow(ticket, index)),
       /*
        * The rest expand here, in the card.
        *
@@ -1233,44 +1302,56 @@ export function ticketsCard(tickets: Ticket[]): AdaptiveCard {
        */
       ...(tickets.length > TICKETS_IN_CHAT
         ? (() => {
-            const hidden = tickets.slice(TICKETS_IN_CHAT, 10)
-            const ids = hidden.map((_, offset) => `older-${TICKETS_IN_CHAT + offset}`)
-            const both = [...ids, 'older-more', 'older-less']
+            const hidden = tickets.slice(TICKETS_IN_CHAT, 10);
+            const ids = hidden.map(
+              (_, offset) => `older-${TICKETS_IN_CHAT + offset}`,
+            );
+            const both = [...ids, "older-more", "older-less"];
             const button = (id: string, title: string, visible: boolean) => ({
-              type: 'ActionSet',
+              type: "ActionSet",
               id,
-              spacing: 'Small',
+              spacing: "Small",
               ...(visible ? {} : { isVisible: false }),
-              actions: [{ type: 'Action.ToggleVisibility', title, targetElements: both }],
-            })
+              actions: [
+                {
+                  type: "Action.ToggleVisibility",
+                  title,
+                  targetElements: both,
+                },
+              ],
+            });
             return [
               ...hidden.map((ticket, offset) => ({
                 ...(ticketRow(ticket, TICKETS_IN_CHAT + offset) as object),
                 id: ids[offset],
                 isVisible: false,
               })),
-              button('older-more', `Show ${hidden.length} older`, true),
-              button('older-less', 'Show fewer', false),
-            ]
+              button("older-more", `Show ${hidden.length} older`, true),
+              button("older-less", "Show fewer", false),
+            ];
           })()
         : []),
     ]),
-  ])
+  ]);
 }
 
 /** The badge tint behind a status. `good` for done, `warning` for waiting. */
-function statusStyle(status: Ticket['status']): string {
-  return status === 'RESOLVED' ? 'good' : status === 'IN_PROGRESS' ? 'accent' : 'warning'
+function statusStyle(status: Ticket["status"]): string {
+  return status === "RESOLVED"
+    ? "good"
+    : status === "IN_PROGRESS"
+      ? "accent"
+      : "warning";
 }
 
 /** "today", "4 days ago" — how long this has been sitting with HR. */
 function ago(millis: number): string {
-  const days = Math.floor((Date.now() - millis) / 86400000)
-  if (days <= 0) return 'today'
-  if (days === 1) return 'yesterday'
-  if (days < 30) return `${days} days ago`
-  const months = Math.floor(days / 30)
-  return months === 1 ? 'a month ago' : `${months} months ago`
+  const days = Math.floor((Date.now() - millis) / 86400000);
+  if (days <= 0) return "today";
+  if (days === 1) return "yesterday";
+  if (days < 30) return `${days} days ago`;
+  const months = Math.floor(days / 30);
+  return months === 1 ? "a month ago" : `${months} months ago`;
 }
 
 /**
@@ -1286,43 +1367,47 @@ function ago(millis: number): string {
  */
 function ticketRow(ticket: Ticket, index: number): unknown {
   const glyph =
-    ticket.status === 'RESOLVED' ? '✓' : ticket.status === 'IN_PROGRESS' ? '⋯' : '!'
+    ticket.status === "RESOLVED"
+      ? "✓"
+      : ticket.status === "IN_PROGRESS"
+        ? "⋯"
+        : "!";
 
   return {
-    type: 'Container',
+    type: "Container",
     ...TILE_SURFACE,
-    spacing: 'Default',
+    spacing: "Default",
     items: [
       {
-        type: 'Container',
+        type: "Container",
         items: [
           {
-            type: 'ColumnSet',
+            type: "ColumnSet",
             columns: [
               {
-                type: 'Column',
-                width: 'auto',
-                verticalContentAlignment: 'Center',
+                type: "Column",
+                width: "auto",
+                verticalContentAlignment: "Center",
                 items: [
                   {
                     // A tinted disc with the status in it. Container styles are the
                     // only fill Adaptive Cards offers, and Teams draws the tint — so
                     // it follows light and dark without a second palette.
-                    type: 'Container',
+                    type: "Container",
                     style: statusStyle(ticket.status),
                     roundedCorners: true,
-                    minHeight: '38px',
-                    verticalContentAlignment: 'Center',
-                    spacing: 'None',
+                    minHeight: "38px",
+                    verticalContentAlignment: "Center",
+                    spacing: "None",
                     items: [
                       {
-                        type: 'TextBlock',
+                        type: "TextBlock",
                         text: glyph,
-                        size: 'Medium',
-                        weight: 'Bolder',
+                        size: "Medium",
+                        weight: "Bolder",
                         color: statusColour(ticket.status),
-                        horizontalAlignment: 'Center',
-                        spacing: 'None',
+                        horizontalAlignment: "Center",
+                        spacing: "None",
                         wrap: false,
                       },
                     ],
@@ -1330,73 +1415,73 @@ function ticketRow(ticket: Ticket, index: number): unknown {
                 ],
               },
               {
-                type: 'Column',
-                width: 'stretch',
-                spacing: 'Medium',
-                verticalContentAlignment: 'Center',
+                type: "Column",
+                width: "stretch",
+                spacing: "Medium",
+                verticalContentAlignment: "Center",
                 items: [
                   {
-                    type: 'TextBlock',
+                    type: "TextBlock",
                     text: ticket.subject,
-                    weight: 'Bolder',
-                    size: 'Medium',
+                    weight: "Bolder",
+                    size: "Medium",
                     wrap: true,
                     maxLines: 2,
-                    spacing: 'None',
+                    spacing: "None",
                   },
                   {
                     // Status, reference and age on one line: three short facts that
                     // only mean anything together.
-                    type: 'ColumnSet',
-                    spacing: 'Small',
+                    type: "ColumnSet",
+                    spacing: "Small",
                     columns: [
                       {
-                        type: 'Column',
-                        width: 'auto',
-                        verticalContentAlignment: 'Center',
+                        type: "Column",
+                        width: "auto",
+                        verticalContentAlignment: "Center",
                         items: [
                           {
-                            type: 'TextBlock',
+                            type: "TextBlock",
                             text: statusLabel(ticket.status),
-                            size: 'Small',
-                            weight: 'Bolder',
+                            size: "Small",
+                            weight: "Bolder",
                             color: statusColour(ticket.status),
-                            spacing: 'None',
+                            spacing: "None",
                             wrap: false,
                           },
                         ],
                       },
                       {
-                        type: 'Column',
-                        width: 'auto',
-                        spacing: 'Small',
-                        verticalContentAlignment: 'Center',
+                        type: "Column",
+                        width: "auto",
+                        spacing: "Small",
+                        verticalContentAlignment: "Center",
                         items: [
                           {
-                            type: 'TextBlock',
+                            type: "TextBlock",
                             text: ticket.id,
-                            size: 'Small',
-                            fontType: 'Monospace',
+                            size: "Small",
+                            fontType: "Monospace",
                             isSubtle: true,
-                            spacing: 'None',
+                            spacing: "None",
                             wrap: false,
                           },
                         ],
                       },
                       {
-                        type: 'Column',
-                        width: 'stretch',
-                        spacing: 'Small',
-                        verticalContentAlignment: 'Center',
+                        type: "Column",
+                        width: "stretch",
+                        spacing: "Small",
+                        verticalContentAlignment: "Center",
                         items: [
                           {
-                            type: 'TextBlock',
+                            type: "TextBlock",
                             // Age rather than a date: "4 days ago" is what tells you
                             // whether HR is being slow.
                             text: `${ticket.category} · ${ago(ticket.createdAtMillis)}`,
-                            size: 'Small',
+                            size: "Small",
                             isSubtle: true,
-                            spacing: 'None',
+                            spacing: "None",
                             wrap: false,
                           },
                         ],
@@ -1414,11 +1499,11 @@ function ticketRow(ticket: Ticket, index: number): unknown {
         ],
       },
     ],
-  }
+  };
 }
 
 /** How many fit in a chat card before it stops being readable. */
-const TICKETS_IN_CHAT = 3
+const TICKETS_IN_CHAT = 3;
 
 /**
  * A ticket's journey, hidden behind a toggle.
@@ -1435,7 +1520,9 @@ const TICKETS_IN_CHAT = 3
  * journey yet, and a button promising one would be a lie.
  */
 function replyBlock(ticket: Ticket, index: number): unknown[] {
-  const comments = [...(ticket.comments ?? [])].sort((a, b) => a.atMillis - b.atMillis)
+  const comments = [...(ticket.comments ?? [])].sort(
+    (a, b) => a.atMillis - b.atMillis,
+  );
   /*
    * A comment's time where there is one; otherwise `updatedAtMillis` for the stop the
    * ticket is sitting on right now.
@@ -1444,95 +1531,105 @@ function replyBlock(ticket: Ticket, index: number): unknown[] {
    * move has only one timestamp — so it dates the current stop and nothing earlier.
    */
   const at = (status: string) => {
-    const commented = comments.find((one) => one.status === status)?.atMillis
-    if (commented) return commented
-    return status === ticket.status ? ticket.updatedAtMillis : undefined
-  }
-  const stops: { label: string; millis?: number; colour: string; reached: boolean }[] = [
-    { label: 'Raised', millis: ticket.createdAtMillis, colour: 'Warning', reached: true },
+    const commented = comments.find((one) => one.status === status)?.atMillis;
+    if (commented) return commented;
+    return status === ticket.status ? ticket.updatedAtMillis : undefined;
+  };
+  const stops: {
+    label: string;
+    millis?: number;
+    colour: string;
+    reached: boolean;
+  }[] = [
     {
-      label: 'Picked up by HR',
-      millis: at('IN_PROGRESS'),
-      colour: 'Warning',
-      reached: ticket.status !== 'OPEN',
+      label: "Raised",
+      millis: ticket.createdAtMillis,
+      colour: "Warning",
+      reached: true,
     },
     {
-      label: 'Resolved',
-      millis: at('RESOLVED'),
-      colour: 'Good',
-      reached: ticket.status === 'RESOLVED',
+      label: "Picked up by HR",
+      millis: at("IN_PROGRESS"),
+      colour: "Warning",
+      reached: ticket.status !== "OPEN",
     },
-  ]
+    {
+      label: "Resolved",
+      millis: at("RESOLVED"),
+      colour: "Good",
+      reached: ticket.status === "RESOLVED",
+    },
+  ];
 
-  const latest = [...comments].reverse().find((one) => one.text?.trim())
-  if (!latest && ticket.status === 'OPEN') return []
+  const latest = [...comments].reverse().find((one) => one.text?.trim());
+  if (!latest && ticket.status === "OPEN") return [];
 
-  const id = `reply-${index}`
+  const id = `reply-${index}`;
   return [
     {
-      type: 'ActionSet',
-      spacing: 'Small',
+      type: "ActionSet",
+      spacing: "Small",
       actions: [
         {
-          type: 'Action.ToggleVisibility',
+          type: "Action.ToggleVisibility",
           title: `Track this ticket · ${statusLabel(ticket.status)}`,
           targetElements: [id],
         },
       ],
     },
     {
-      type: 'Container',
+      type: "Container",
       id,
       isVisible: false,
-      spacing: 'Small',
+      spacing: "Small",
       items: [
         ...stops.map((stop) => ({
-          type: 'ColumnSet',
-          spacing: 'Small',
+          type: "ColumnSet",
+          spacing: "Small",
           columns: [
             {
-              type: 'Column',
-              width: 'auto',
-              verticalContentAlignment: 'Center',
+              type: "Column",
+              width: "auto",
+              verticalContentAlignment: "Center",
               items: [
                 {
                   // A filled marker for what has happened, hollow for what has not —
                   // the same distinction the ring in the design carries.
-                  type: 'TextBlock',
-                  text: stop.reached ? '◉' : '○',
-                  size: 'Medium',
-                  color: stop.reached ? stop.colour : 'Default',
+                  type: "TextBlock",
+                  text: stop.reached ? "◉" : "○",
+                  size: "Medium",
+                  color: stop.reached ? stop.colour : "Default",
                   isSubtle: !stop.reached,
-                  spacing: 'None',
+                  spacing: "None",
                 },
               ],
             },
             {
-              type: 'Column',
-              width: 'stretch',
+              type: "Column",
+              width: "stretch",
               items: [
                 {
-                  type: 'TextBlock',
+                  type: "TextBlock",
                   text: stop.label,
-                  weight: 'Bolder',
+                  weight: "Bolder",
                   wrap: true,
                   isSubtle: !stop.reached,
-                  spacing: 'None',
+                  spacing: "None",
                 },
                 {
-                  type: 'TextBlock',
+                  type: "TextBlock",
                   // Reached but untimed is a different thing from not reached: HR can
                   // resolve a ticket without commenting at the in-progress stage, and
                   // "Not yet" under a filled marker contradicts itself.
                   text: stop.millis
                     ? stamp(stop.millis)
                     : stop.reached
-                      ? 'No comment recorded'
-                      : 'Not yet',
-                  size: 'Small',
+                      ? "No comment recorded"
+                      : "Not yet",
+                  size: "Small",
                   isSubtle: true,
                   wrap: true,
-                  spacing: 'None',
+                  spacing: "None",
                 },
               ],
             },
@@ -1541,27 +1638,32 @@ function replyBlock(ticket: Ticket, index: number): unknown[] {
         ...(latest
           ? [
               {
-                type: 'TextBlock',
-                text: 'WHAT HR SAID',
-                size: 'Small',
-                weight: 'Bolder',
+                type: "TextBlock",
+                text: "WHAT HR SAID",
+                size: "Small",
+                weight: "Bolder",
                 isSubtle: true,
                 wrap: true,
-                spacing: 'Default',
+                spacing: "Default",
               },
               {
-                type: 'Container',
+                type: "Container",
                 ...TILE_SURFACE,
-                spacing: 'Small',
+                spacing: "Small",
                 items: [
-                  { type: 'TextBlock', text: latest.text, wrap: true, spacing: 'None' },
                   {
-                    type: 'TextBlock',
+                    type: "TextBlock",
+                    text: latest.text,
+                    wrap: true,
+                    spacing: "None",
+                  },
+                  {
+                    type: "TextBlock",
                     text: `${employeeLabel(latest.authorId)} · ${stamp(latest.atMillis)}`,
-                    size: 'Small',
+                    size: "Small",
                     isSubtle: true,
                     wrap: true,
-                    spacing: 'Small',
+                    spacing: "Small",
                   },
                 ],
               },
@@ -1569,20 +1671,28 @@ function replyBlock(ticket: Ticket, index: number): unknown[] {
           : []),
       ],
     },
-  ]
+  ];
 }
 
 /** "12 May 2025 · 09:15 AM" — the format the Android app uses. */
 function stamp(millis: number): string {
-  const when = new Date(millis)
-  const date = when.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-  const time = when.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
-  return `${date} · ${time}`
+  const when = new Date(millis);
+  const date = when.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+  const time = when.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+  return `${date} · ${time}`;
 }
 
 /** HR authors show as HR; anything else is the id, which is better than nothing. */
 function employeeLabel(authorId: string): string {
-  return /^HR/i.test(authorId) ? 'HR' : authorId
+  return /^HR/i.test(authorId) ? "HR" : authorId;
 }
 
 /**
@@ -1593,15 +1703,15 @@ function employeeLabel(authorId: string): string {
  * 32px would read as a worse version of what the reader already knows.
  */
 const MOOD_FACE: Record<Mood, { face: string; label: string }> = {
-  GREAT: { face: '😄', label: 'Great' },
-  GOOD: { face: '🙂', label: 'Good' },
-  OKAY: { face: '😐', label: 'Okay' },
-  STRESSED: { face: '😟', label: 'Stressed' },
-  BURNT_OUT: { face: '😩', label: 'Burnt out' },
-}
+  GREAT: { face: "😄", label: "Great" },
+  GOOD: { face: "🙂", label: "Good" },
+  OKAY: { face: "😐", label: "Okay" },
+  STRESSED: { face: "😟", label: "Stressed" },
+  BURNT_OUT: { face: "😩", label: "Burnt out" },
+};
 
 export function moodLabel(mood: Mood): string {
-  return MOOD_FACE[mood].label
+  return MOOD_FACE[mood].label;
 }
 
 /**
@@ -1613,16 +1723,14 @@ export function moodLabel(mood: Mood): string {
 export function moodCard(existing: MoodCheckIn | null): AdaptiveCard {
   return card([
     header(
-      'Check-in',
-      'How are you today?',
+      "Check-in",
+      "How are you today?",
       existing
         ? `You said ${MOOD_FACE[existing.mood].label.toLowerCase()} earlier — pick again to change it.`
-        : 'Your HRBP sees the check-in as part of a team trend. Your note stays with you.',
+        : "Your HRBP sees the check-in as part of a team trend. Your note stays with you.",
     ),
-    body([
-      ...faceRow(),
-    ]),
-  ])
+    body([...faceRow()]),
+  ]);
 }
 
 /**
@@ -1639,21 +1747,24 @@ export function moodCard(existing: MoodCheckIn | null): AdaptiveCard {
  */
 function faceRow(): unknown[] {
   return (Object.keys(MOOD_FACE) as Mood[]).map((mood) => ({
-    type: 'Container',
+    type: "Container",
     ...TILE_SURFACE,
-    spacing: 'Small',
-    selectAction: { type: 'Action.Submit', data: submit({ kind: 'pickMood', mood }, MOOD_FACE[mood].label) },
+    spacing: "Small",
+    selectAction: {
+      type: "Action.Submit",
+      data: submit({ kind: "pickMood", mood }, MOOD_FACE[mood].label),
+    },
     items: [
       {
-        type: 'TextBlock',
+        type: "TextBlock",
         text: `${MOOD_FACE[mood].face}  ${MOOD_FACE[mood].label}`,
-        size: 'Medium',
-        weight: 'Bolder',
+        size: "Medium",
+        weight: "Bolder",
         wrap: true,
-        spacing: 'None',
+        spacing: "None",
       },
     ],
-  }))
+  }));
 }
 
 /**
@@ -1667,19 +1778,23 @@ function faceRow(): unknown[] {
  */
 export function checkInReminderCard(firstName: string): AdaptiveCard {
   return card([
-    header('Check-in', `How are you today, ${firstName}?`, 'One tap. Your note stays with you.'),
+    header(
+      "Check-in",
+      `How are you today, ${firstName}?`,
+      "One tap. Your note stays with you.",
+    ),
     body([
       ...faceRow(),
       {
-        type: 'TextBlock',
-        text: 'Your HRBP sees the check-in as part of a team trend. Your manager never sees it.',
+        type: "TextBlock",
+        text: "Your HRBP sees the check-in as part of a team trend. Your manager never sees it.",
         wrap: true,
         isSubtle: true,
-        size: 'Small',
-        spacing: 'Default',
+        size: "Small",
+        spacing: "Default",
       },
     ]),
-  ])
+  ]);
 }
 
 /**
@@ -1691,72 +1806,104 @@ export function checkInReminderCard(firstName: string): AdaptiveCard {
 export function moodDetailCard(mood: Mood): AdaptiveCard {
   return card(
     [
-      header('Check-in', `${MOOD_FACE[mood].face} ${MOOD_FACE[mood].label}`, 'Anything behind it?'),
+      header(
+        "Check-in",
+        `${MOOD_FACE[mood].face} ${MOOD_FACE[mood].label}`,
+        "Anything behind it?",
+      ),
       body([
         {
-          type: 'Container',
+          type: "Container",
           ...TILE_SURFACE,
-          spacing: 'Default',
+          spacing: "Default",
           items: [
-            { type: 'TextBlock', text: 'What is behind it?', weight: 'Bolder', wrap: true, spacing: 'None' },
             {
-              type: 'Input.ChoiceSet',
-              id: 'reasons',
+              type: "TextBlock",
+              text: "What is behind it?",
+              weight: "Bolder",
+              wrap: true,
+              spacing: "None",
+            },
+            {
+              type: "Input.ChoiceSet",
+              id: "reasons",
               isMultiSelect: true,
-              style: 'expanded',
-              spacing: 'Small',
-              choices: MOOD_REASONS.map((reason) => ({ title: reason, value: reason })),
+              style: "expanded",
+              spacing: "Small",
+              choices: MOOD_REASONS.map((reason) => ({
+                title: reason,
+                value: reason,
+              })),
             },
           ],
         },
         {
-          type: 'Input.Text',
-          id: 'note',
+          type: "Input.Text",
+          id: "note",
           isMultiline: true,
-          placeholder: 'Anything you want to add? Only you will see this.',
-          spacing: 'Default',
+          placeholder: "Anything you want to add? Only you will see this.",
+          spacing: "Default",
         },
         {
-          type: 'TextBlock',
-          text: 'HR sees the face, never the note.',
-          size: 'Small',
+          type: "TextBlock",
+          text: "HR sees the face, never the note.",
+          size: "Small",
           isSubtle: true,
           wrap: true,
-          spacing: 'Small',
+          spacing: "Small",
         },
       ]),
     ],
     [
       {
-        type: 'Action.Submit',
-        title: 'Save',
-        style: 'positive',
-        data: submit({ kind: 'saveMood' }, 'Save'),
+        type: "Action.Submit",
+        title: "Save",
+        style: "positive",
+        data: submit({ kind: "saveMood" }, "Save"),
       },
-      { type: 'Action.Submit', title: 'Just the face', data: submit({ kind: 'skipMoodDetail' }, 'Just the face') },
+      {
+        type: "Action.Submit",
+        title: "Just the face",
+        data: submit({ kind: "skipMoodDetail" }, "Just the face"),
+      },
     ],
-  )
+  );
 }
 
-export function moodDoneCard(mood: Mood, reasons: string[], note: string | null): AdaptiveCard {
+export function moodDoneCard(
+  mood: Mood,
+  reasons: string[],
+  note: string | null,
+): AdaptiveCard {
   return card([
-    header('Checked in', `${MOOD_FACE[mood].face} ${MOOD_FACE[mood].label}`, 'Thanks — that helps.'),
+    header(
+      "Checked in",
+      `${MOOD_FACE[mood].face} ${MOOD_FACE[mood].label}`,
+      "Thanks — that helps.",
+    ),
     body([
       ...(reasons.length > 0
-        ? [{ type: 'TextBlock', text: reasons.join(' · '), wrap: true, spacing: 'Default' }]
+        ? [
+            {
+              type: "TextBlock",
+              text: reasons.join(" · "),
+              wrap: true,
+              spacing: "Default",
+            },
+          ]
         : []),
       {
-        type: 'TextBlock',
+        type: "TextBlock",
         text: note
-          ? 'Your note is saved and stays with you.'
-          : 'You can check in again any time — the latest answer replaces the last.',
+          ? "Your note is saved and stays with you."
+          : "You can check in again any time — the latest answer replaces the last.",
         wrap: true,
         isSubtle: true,
-        size: 'Small',
-        spacing: 'Small',
+        size: "Small",
+        spacing: "Small",
       },
     ]),
-  ])
+  ]);
 }
 
 /**
@@ -1772,28 +1919,30 @@ export function nudgeCard(
   firstName: string,
   outstanding: { mood: boolean; pulse: boolean },
 ): AdaptiveCard | null {
-  if (!outstanding.mood && !outstanding.pulse) return null
+  if (!outstanding.mood && !outstanding.pulse) return null;
 
-  const both = outstanding.mood && outstanding.pulse
-  const title = outstanding.mood ? `Hi ${firstName} — how are you today?` : `Hi ${firstName} 👋`
+  const both = outstanding.mood && outstanding.pulse;
+  const title = outstanding.mood
+    ? `Hi ${firstName} — how are you today?`
+    : `Hi ${firstName} 👋`;
   const line = both
     ? `Two things open: today’s check-in, and this month’s pulse. Neither takes long.`
     : outstanding.mood
       ? `You haven’t checked in today. It takes ten seconds, and the check-in is the only thing your HRBP sees from you.`
-      : `This month’s pulse is still open — four questions, and answers roll up to a department average.`
+      : `This month’s pulse is still open — four questions, and answers roll up to a department average.`;
 
   return card(
     [
-      header('HR Genie', title, 'Infinity Learn'),
+      header("HR Genie", title, "Infinity Learn"),
       body([
-        { type: 'TextBlock', text: line, wrap: true, spacing: 'Default' },
+        { type: "TextBlock", text: line, wrap: true, spacing: "Default" },
         {
-          type: 'TextBlock',
-          text: 'Your HRBP sees trends, never your note. Your manager never sees any of it.',
+          type: "TextBlock",
+          text: "Your HRBP sees trends, never your note. Your manager never sees any of it.",
           wrap: true,
           isSubtle: true,
-          size: 'Small',
-          spacing: 'Small',
+          size: "Small",
+          spacing: "Small",
         },
       ]),
     ],
@@ -1801,26 +1950,30 @@ export function nudgeCard(
       ...(outstanding.mood
         ? [
             {
-              type: 'Action.Submit',
-              title: 'Check in',
-              style: 'positive',
-              data: submit({ kind: 'nudgeCheckIn' }, 'Check in'),
+              type: "Action.Submit",
+              title: "Check in",
+              style: "positive",
+              data: submit({ kind: "nudgeCheckIn" }, "Check in"),
             },
           ]
         : []),
       ...(outstanding.pulse
         ? [
             {
-              type: 'Action.Submit',
-              title: 'Take the pulse',
-              ...(outstanding.mood ? {} : { style: 'positive' }),
-              data: submit({ kind: 'nudgePulse' }, 'Take the pulse'),
+              type: "Action.Submit",
+              title: "Take the pulse",
+              ...(outstanding.mood ? {} : { style: "positive" }),
+              data: submit({ kind: "nudgePulse" }, "Take the pulse"),
             },
           ]
         : []),
-      { type: 'Action.Submit', title: 'Not today', data: submit({ kind: 'dismissNudge' }, 'Not today') },
+      {
+        type: "Action.Submit",
+        title: "Not today",
+        data: submit({ kind: "dismissNudge" }, "Not today"),
+      },
     ],
-  )
+  );
 }
 
 /**
@@ -1833,34 +1986,47 @@ export function nudgeCard(
 export function pulseCard(questions: PulseQuestion[]): AdaptiveCard {
   return card(
     [
-      header('Monthly pulse', 'Four questions', 'Answers roll up to a department average.'),
+      header(
+        "Monthly pulse",
+        "Four questions",
+        "Answers roll up to a department average.",
+      ),
       body(
         // One block per question, so four questions read as four things to answer
         // rather than one long column of radio buttons.
         questions.map((question) => ({
-          type: 'Container',
+          type: "Container",
           ...TILE_SURFACE,
-          spacing: 'Default',
+          spacing: "Default",
           items: [
-            { type: 'TextBlock', text: question.text, wrap: true, weight: 'Bolder', spacing: 'None' },
+            {
+              type: "TextBlock",
+              text: question.text,
+              wrap: true,
+              weight: "Bolder",
+              spacing: "None",
+            },
             ...(question.hint
               ? [
                   {
-                    type: 'TextBlock',
+                    type: "TextBlock",
                     text: question.hint,
                     wrap: true,
                     isSubtle: true,
-                    size: 'Small',
-                    spacing: 'None',
+                    size: "Small",
+                    spacing: "None",
                   },
                 ]
               : []),
             {
-              type: 'Input.ChoiceSet',
+              type: "Input.ChoiceSet",
               id: question.id,
-              style: 'expanded',
-              spacing: 'Small',
-              choices: question.options.map((option) => ({ title: option, value: option })),
+              style: "expanded",
+              spacing: "Small",
+              choices: question.options.map((option) => ({
+                title: option,
+                value: option,
+              })),
             },
           ],
         })),
@@ -1868,31 +2034,35 @@ export function pulseCard(questions: PulseQuestion[]): AdaptiveCard {
     ],
     [
       {
-        type: 'Action.Submit',
-        title: 'Send',
-        style: 'positive',
-        data: submit({ kind: 'savePulse' }, 'Send'),
+        type: "Action.Submit",
+        title: "Send",
+        style: "positive",
+        data: submit({ kind: "savePulse" }, "Send"),
       },
     ],
-  )
+  );
 }
 
 export function pulseDoneCard(answered: number, total: number): AdaptiveCard {
   return card([
-    header('Pulse sent', 'Thanks — that helps', `${answered} of ${total} answered`),
+    header(
+      "Pulse sent",
+      "Thanks — that helps",
+      `${answered} of ${total} answered`,
+    ),
     body([
       {
-        type: 'TextBlock',
+        type: "TextBlock",
         text:
           `It goes into this month’s department averages. Nothing here is attributed to ` +
           `you by name.`,
         wrap: true,
         isSubtle: true,
-        size: 'Small',
-        spacing: 'Default',
+        size: "Small",
+        spacing: "Default",
       },
     ]),
-  ])
+  ]);
 }
 
 /**
@@ -1904,59 +2074,63 @@ export function pulseDoneCard(answered: number, total: number): AdaptiveCard {
  * notification, so this is where the answer reaches them.
  */
 export function updatesCard(tickets: Ticket[]): AdaptiveCard {
-  const one = tickets.length === 1
+  const one = tickets.length === 1;
   return card([
     header(
-      'While you were away',
-      one ? 'HR moved your ticket' : `HR moved ${tickets.length} of your tickets`,
-      one ? undefined : 'Newest first',
+      "While you were away",
+      one
+        ? "HR moved your ticket"
+        : `HR moved ${tickets.length} of your tickets`,
+      one ? undefined : "Newest first",
     ),
     body(
       tickets.map((ticket) => {
         // The comment attached to the move that was made, not the oldest one.
-        const latest = [...ticket.comments].sort((a, b) => b.atMillis - a.atMillis)[0]
+        const latest = [...ticket.comments].sort(
+          (a, b) => b.atMillis - a.atMillis,
+        )[0];
         return {
-          type: 'Container',
+          type: "Container",
           ...TILE_SURFACE,
-          spacing: 'Default',
+          spacing: "Default",
           items: [
             {
-              type: 'ColumnSet',
+              type: "ColumnSet",
               columns: [
                 {
-                  type: 'Column',
-                  width: 'stretch',
+                  type: "Column",
+                  width: "stretch",
                   items: [
                     {
-                      type: 'TextBlock',
+                      type: "TextBlock",
                       text: ticket.subject,
                       wrap: true,
-                      weight: 'Bolder',
-                      spacing: 'None',
+                      weight: "Bolder",
+                      spacing: "None",
                     },
                     {
-                      type: 'TextBlock',
+                      type: "TextBlock",
                       text: `${ticket.id} · ${ticket.category}`,
                       wrap: true,
                       isSubtle: true,
-                      size: 'Small',
-                      spacing: 'None',
+                      size: "Small",
+                      spacing: "None",
                     },
                   ],
                 },
                 {
-                  type: 'Column',
-                  width: 'auto',
-                  verticalContentAlignment: 'Center',
+                  type: "Column",
+                  width: "auto",
+                  verticalContentAlignment: "Center",
                   items: [
                     {
-                      type: 'TextBlock',
+                      type: "TextBlock",
                       text: statusLabel(ticket.status),
-                      size: 'Small',
-                      weight: 'Bolder',
+                      size: "Small",
+                      weight: "Bolder",
                       color: statusColour(ticket.status),
                       wrap: false,
-                      spacing: 'None',
+                      spacing: "None",
                     },
                   ],
                 },
@@ -1965,18 +2139,18 @@ export function updatesCard(tickets: Ticket[]): AdaptiveCard {
             ...(latest?.text
               ? [
                   {
-                    type: 'TextBlock',
+                    type: "TextBlock",
                     text: `“${latest.text}”`,
                     wrap: true,
-                    spacing: 'Small',
+                    spacing: "Small",
                   },
                 ]
               : []),
           ],
-        }
+        };
       }),
     ),
-  ])
+  ]);
 }
 
 /**
@@ -1987,48 +2161,59 @@ export function updatesCard(tickets: Ticket[]): AdaptiveCard {
  * offers the list, rather than reciting several tickets they did not ask about.
  */
 export function ticketMovedCard(moved: {
-  ticketId: string
-  status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED'
-  comment?: string
-  subject?: string
-  category?: string
+  ticketId: string;
+  status: "OPEN" | "IN_PROGRESS" | "RESOLVED";
+  comment?: string;
+  subject?: string;
+  category?: string;
 }): AdaptiveCard {
   const headline =
-    moved.status === 'RESOLVED'
+    moved.status === "RESOLVED"
       ? `HR closed ${moved.ticketId}`
-      : moved.status === 'IN_PROGRESS'
+      : moved.status === "IN_PROGRESS"
         ? `HR picked up ${moved.ticketId}`
-        : `${moved.ticketId} is back with HR`
+        : `${moved.ticketId} is back with HR`;
 
   return card(
     [
-      header('Ticket update', headline, moved.subject),
+      header("Ticket update", headline, moved.subject),
       body([
         ...(moved.comment
           ? [
               {
-                type: 'Container',
+                type: "Container",
                 ...TILE_SURFACE,
-                spacing: 'Default',
+                spacing: "Default",
                 items: [
-                  { type: 'TextBlock', text: `“${moved.comment}”`, wrap: true, spacing: 'None' },
+                  {
+                    type: "TextBlock",
+                    text: `“${moved.comment}”`,
+                    wrap: true,
+                    spacing: "None",
+                  },
                 ],
               },
             ]
           : []),
         {
-          type: 'TextBlock',
-          text: `${moved.category ? `${moved.category} · ` : ''}${statusLabel(moved.status)}`,
-          size: 'Small',
-          weight: 'Bolder',
+          type: "TextBlock",
+          text: `${moved.category ? `${moved.category} · ` : ""}${statusLabel(moved.status)}`,
+          size: "Small",
+          weight: "Bolder",
           color: statusColour(moved.status),
           wrap: true,
-          spacing: 'Default',
+          spacing: "Default",
         },
       ]),
     ],
-    [{ type: 'Action.Submit', title: 'My tickets', data: submit({ kind: 'myTickets' }, 'My tickets') }],
-  )
+    [
+      {
+        type: "Action.Submit",
+        title: "My tickets",
+        data: submit({ kind: "myTickets" }, "My tickets"),
+      },
+    ],
+  );
 }
 
 /**
@@ -2044,7 +2229,7 @@ export function ticketMovedCard(moved: {
  * is also unkind — a name in the middle of a run of eleven has not really been
  * mentioned. Three each, then a count.
  */
-const CELEBRANTS_SHOWN = 3
+const CELEBRANTS_SHOWN = 3;
 
 /**
  * Today, around the team.
@@ -2054,8 +2239,10 @@ const CELEBRANTS_SHOWN = 3
  * name are otherwise indistinguishable. Adaptive Cards has no tabs, so the sections
  * stack.
  */
-export function celebrationsCard(celebrations: Celebrations): AdaptiveCard | null {
-  const sections: unknown[] = []
+export function celebrationsCard(
+  celebrations: Celebrations,
+): AdaptiveCard | null {
+  const sections: unknown[] = [];
 
   const add = (
     key: string,
@@ -2065,7 +2252,7 @@ export function celebrationsCard(celebrations: Celebrations): AdaptiveCard | nul
     detail: (one: Celebrant) => string,
     greeting: (one: Celebrant) => string,
   ) => {
-    if (people.length === 0) return
+    if (people.length === 0) return;
 
     /**
      * "Wish" — opens a Teams chat with that person, message already typed.
@@ -2079,51 +2266,66 @@ export function celebrationsCard(celebrations: Celebrations): AdaptiveCard | nul
      * alternative — the bot messaging them directly — would.
      */
     const wish = (one: Celebrant): unknown[] => {
-      if (!one.email) return []
+      if (!one.email) return [];
       const link =
-        'https://teams.microsoft.com/l/chat/0/0' +
+        "https://teams.microsoft.com/l/chat/0/0" +
         `?users=${encodeURIComponent(one.email)}` +
-        `&message=${encodeURIComponent(greeting(one))}`
+        `&message=${encodeURIComponent(greeting(one))}`;
       return [
         {
-          type: 'ActionSet',
-          spacing: 'None',
-          horizontalAlignment: 'Right',
-          actions: [{ type: 'Action.OpenUrl', title: 'Wish', url: link }],
+          type: "ActionSet",
+          spacing: "None",
+          horizontalAlignment: "Right",
+          actions: [{ type: "Action.OpenUrl", title: "Wish", url: link }],
         },
-      ]
-    }
+      ];
+    };
 
     /** One person, as their own surface — a row you can pick out at a glance. */
     const row = (one: Celebrant, index: number): unknown => ({
-      type: 'Container',
+      type: "Container",
       ...TILE_SURFACE,
-      spacing: 'Small',
+      spacing: "Small",
       // Only the overflow carries an id; ToggleVisibility needs one to target.
-      ...(index < CELEBRANTS_SHOWN ? {} : { id: `${key}-${index}`, isVisible: false }),
+      ...(index < CELEBRANTS_SHOWN
+        ? {}
+        : { id: `${key}-${index}`, isVisible: false }),
       items: [
         {
-          type: 'ColumnSet',
-          spacing: 'None',
+          type: "ColumnSet",
+          spacing: "None",
           columns: [
             {
-              type: 'Column',
-              width: 'auto',
-              verticalContentAlignment: 'Center',
-              items: [{ type: 'TextBlock', text: emoji, size: 'Large', spacing: 'None' }],
+              type: "Column",
+              width: "auto",
+              verticalContentAlignment: "Center",
+              items: [
+                {
+                  type: "TextBlock",
+                  text: emoji,
+                  size: "Large",
+                  spacing: "None",
+                },
+              ],
             },
             {
-              type: 'Column',
-              width: 'stretch',
+              type: "Column",
+              width: "stretch",
               items: [
-                { type: 'TextBlock', text: one.name, weight: 'Bolder', wrap: true, spacing: 'None' },
                 {
-                  type: 'TextBlock',
+                  type: "TextBlock",
+                  text: one.name,
+                  weight: "Bolder",
+                  wrap: true,
+                  spacing: "None",
+                },
+                {
+                  type: "TextBlock",
                   text: detail(one),
-                  size: 'Small',
+                  size: "Small",
                   isSubtle: true,
                   wrap: true,
-                  spacing: 'None',
+                  spacing: "None",
                 },
               ],
             },
@@ -2133,9 +2335,9 @@ export function celebrationsCard(celebrations: Celebrations): AdaptiveCard | nul
             ...(one.email
               ? [
                   {
-                    type: 'Column',
-                    width: 'auto',
-                    verticalContentAlignment: 'Center',
+                    type: "Column",
+                    width: "auto",
+                    verticalContentAlignment: "Center",
                     items: wish(one),
                   },
                 ]
@@ -2143,21 +2345,21 @@ export function celebrationsCard(celebrations: Celebrations): AdaptiveCard | nul
           ],
         },
       ],
-    })
+    });
 
-    const hidden = people.length - CELEBRANTS_SHOWN
+    const hidden = people.length - CELEBRANTS_SHOWN;
     sections.push({
-      type: 'Container',
-      spacing: 'Default',
+      type: "Container",
+      spacing: "Default",
       items: [
         {
-          type: 'TextBlock',
+          type: "TextBlock",
           text: label.toUpperCase(),
-          size: 'Small',
-          weight: 'Bolder',
+          size: "Small",
+          weight: "Bolder",
           isSubtle: true,
           wrap: true,
-          spacing: 'None',
+          spacing: "None",
         },
         ...people.map(row),
         /*
@@ -2172,55 +2374,79 @@ export function celebrationsCard(celebrations: Celebrations): AdaptiveCard | nul
           ? (() => {
               const rows = people
                 .slice(CELEBRANTS_SHOWN)
-                .map((_, offset) => `${key}-${CELEBRANTS_SHOWN + offset}`)
-              const both = [...rows, `${key}-more`, `${key}-less`]
+                .map((_, offset) => `${key}-${CELEBRANTS_SHOWN + offset}`);
+              const both = [...rows, `${key}-more`, `${key}-less`];
               const button = (id: string, title: string, visible: boolean) => ({
-                type: 'ActionSet',
+                type: "ActionSet",
                 id,
-                spacing: 'Small',
+                spacing: "Small",
                 ...(visible ? {} : { isVisible: false }),
-                actions: [{ type: 'Action.ToggleVisibility', title, targetElements: both }],
-              })
+                actions: [
+                  {
+                    type: "Action.ToggleVisibility",
+                    title,
+                    targetElements: both,
+                  },
+                ],
+              });
               return [
                 button(`${key}-more`, `+${hidden} more`, true),
-                button(`${key}-less`, 'Show less', false),
-              ]
+                button(`${key}-less`, "Show less", false),
+              ];
             })()
           : []),
       ],
-    })
-  }
+    });
+  };
 
   /** People are wished by first name; the directory holds the full one. */
-  const firstNameOf = (one: Celebrant): string => one.name.split(' ')[0] || one.name
+  const firstNameOf = (one: Celebrant): string =>
+    one.name.split(" ")[0] || one.name;
 
   /** Id and title, skipping either if the directory has not got it. */
   const who = (one: Celebrant): string =>
-    [one.employeeId, one.designation].filter(Boolean).join(' · ') || 'Infinity Learn'
+    [one.employeeId, one.designation].filter(Boolean).join(" · ") ||
+    "Infinity Learn";
 
-  add('bday', '🎂', 'Birthdays', celebrations.birthdays, who, (one) =>
-    `Happy birthday, ${firstNameOf(one)}! 🎂`,
-  )
   add(
-    'anniv',
-    '🎉',
-    'Work anniversaries',
+    "bday",
+    "🎂",
+    "Birthdays",
+    celebrations.birthdays,
+    who,
+    (one) => `Happy birthday, ${firstNameOf(one)}! 🎂`,
+  );
+  add(
+    "anniv",
+    "🎉",
+    "Work anniversaries",
     celebrations.anniversaries,
     (one) =>
-      [one.years ? `${one.years} ${one.years === 1 ? 'year' : 'years'}` : '', who(one)]
+      [
+        one.years ? `${one.years} ${one.years === 1 ? "year" : "years"}` : "",
+        who(one),
+      ]
         .filter(Boolean)
-        .join(' · '),
+        .join(" · "),
     (one) =>
       one.years
-        ? `Congratulations on ${one.years} ${one.years === 1 ? 'year' : 'years'} at Infinity Learn, ${firstNameOf(one)}! 🎉`
+        ? `Congratulations on ${one.years} ${one.years === 1 ? "year" : "years"} at Infinity Learn, ${firstNameOf(one)}! 🎉`
         : `Congratulations on your work anniversary, ${firstNameOf(one)}! 🎉`,
-  )
-  add('joiner', '👋', 'New joiners', celebrations.newJoiners, who, (one) =>
-    `Welcome to Infinity Learn, ${firstNameOf(one)}! 👋`,
-  )
+  );
+  add(
+    "joiner",
+    "👋",
+    "New joiners",
+    celebrations.newJoiners,
+    who,
+    (one) => `Welcome to Infinity Learn, ${firstNameOf(one)}! 👋`,
+  );
 
-  if (sections.length === 0) return null
-  return card([header('Around the team', 'Today at Infinity Learn'), body(sections)])
+  if (sections.length === 0) return null;
+  return card([
+    header("Around the team", "Today at Infinity Learn"),
+    body(sections),
+  ]);
 }
 
 /**
@@ -2231,27 +2457,31 @@ export function celebrationsCard(celebrations: Celebrations): AdaptiveCard | nul
  * distinction, and it is the difference between quoting HR and guessing.
  */
 export function answerCard(text: string, source: string | null): AdaptiveCard {
-  const body: unknown[] = [{ type: 'TextBlock', text, wrap: true }]
+  const body: unknown[] = [{ type: "TextBlock", text, wrap: true }];
   if (source) {
     body.push({
-      type: 'Container',
-      style: 'accent',
-      spacing: 'Default',
+      type: "Container",
+      style: "accent",
+      spacing: "Default",
       items: [
         {
-          type: 'TextBlock',
+          type: "TextBlock",
           text: `📄 From ${source}`,
           wrap: true,
-          size: 'Small',
-          weight: 'Bolder',
-          spacing: 'None',
+          size: "Small",
+          weight: "Bolder",
+          spacing: "None",
         },
       ],
-    })
+    });
   }
   return card(body, [
-    { type: 'Action.Submit', title: 'Raise a ticket instead', data: submit({ kind: 'startTicket' }, 'Raise a ticket') },
-  ])
+    {
+      type: "Action.Submit",
+      title: "Raise a ticket instead",
+      data: submit({ kind: "startTicket" }, "Raise a ticket"),
+    },
+  ]);
 }
 
 /**
@@ -2261,25 +2491,25 @@ export function answerCard(text: string, source: string | null): AdaptiveCard {
  * the ticket. "With HR" says who is holding it, which is the thing the reader
  * actually wants to know.
  */
-function statusLabel(status: Ticket['status']): string {
+function statusLabel(status: Ticket["status"]): string {
   switch (status) {
-    case 'OPEN':
-      return 'With HR'
-    case 'IN_PROGRESS':
-      return 'In progress'
-    case 'RESOLVED':
-      return 'Resolved'
+    case "OPEN":
+      return "With HR";
+    case "IN_PROGRESS":
+      return "In progress";
+    case "RESOLVED":
+      return "Resolved";
   }
 }
 
 /** Status is the one place colour carries meaning, so it is the only place it is used. */
-function statusColour(status: Ticket['status']): string {
+function statusColour(status: Ticket["status"]): string {
   switch (status) {
-    case 'OPEN':
-      return 'Warning'
-    case 'IN_PROGRESS':
-      return 'Accent'
-    case 'RESOLVED':
-      return 'Good'
+    case "OPEN":
+      return "Warning";
+    case "IN_PROGRESS":
+      return "Accent";
+    case "RESOLVED":
+      return "Good";
   }
 }
