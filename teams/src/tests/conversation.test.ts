@@ -646,40 +646,61 @@ describe('leaving a half-finished ticket', () => {
   })
 })
 
-describe('changing the category without leaving the card', () => {
-  it('offers the other categories as a dropdown on the same card', async () => {
+describe('changing the category', () => {
+  it('names the chosen one on the card, with no control the OS draws', async () => {
+    // An Input.ChoiceSet is an Android bottom sheet, and a bottom sheet is a surface
+    // no card property reaches. The row is ours; the sheet was not.
     const state = newState()
     const replies = await handle(state, { action: { kind: 'pickCategory', category: 'Payroll' } })
     const card = JSON.stringify(replies)
 
-    assert.match(card, /"type":"Input.ChoiceSet","id":"category"/, 'a dropdown, not a second card')
-    assert.match(card, /"value":"Payroll"/, 'opening on the one already chosen')
-    assert.match(card, /"title":"Leave"/, 'and offering the others')
-    assert.doesNotMatch(card, /Change category/, 'the escape hatch is gone')
+    assert.doesNotMatch(card, /Input.ChoiceSet/, 'nothing that opens a picker we cannot style')
+    assert.match(card, /"text":"Payroll"/, 'the chosen category, named')
+    assert.match(card, /"kind":"changeCategory"/, 'and a way back to the others')
   })
 
-  it('takes the category from the dropdown when Continue is pressed', async () => {
-    // The point of the dropdown: switching category costs nothing that was typed.
+  it('carries the typed subject through the change and back', async () => {
+    // The whole reason the dropdown existed. Change is a submit, so the box rides
+    // along with it — losing a half-written complaint to a mis-tap is the one failure
+    // this flow cannot afford.
     const state = newState()
     await handle(state, { action: { kind: 'pickCategory', category: 'Payroll' } })
 
-    await handle(state, {
-      action: { kind: 'describe', subject: 'My laptop will not start', category: 'Leave' },
+    const picker = await handle(state, {
+      action: { kind: 'changeCategory', subject: 'My laptop will not start' },
     })
 
-    assert.equal(state.category, 'Leave', 'the dropdown wins')
-    assert.equal(state.subject, 'My laptop will not start', 'and nothing typed is lost')
+    assert.equal(state.stage, 'awaitingCategory')
+    assert.equal(state.subject, 'My laptop will not start', 'held while the picker is open')
+    assert.match(JSON.stringify(picker), /pickCategory/, 'the categories, as rows')
+
+    const back = await handle(state, { action: { kind: 'pickCategory', category: 'Leave' } })
+
+    assert.equal(state.category, 'Leave', 'the new category')
+    assert.match(
+      JSON.stringify(back),
+      /My laptop will not start/,
+      'and the box comes back filled in',
+    )
   })
 
-  it('keeps the chosen category when the dropdown is left alone', async () => {
+  it('survives a change made before anything was typed', async () => {
     const state = newState()
     await handle(state, { action: { kind: 'pickCategory', category: 'Payroll' } })
+    await handle(state, { action: { kind: 'changeCategory' } })
+    const back = await handle(state, { action: { kind: 'pickCategory', category: 'Leave' } })
 
-    await handle(state, {
-      action: { kind: 'describe', subject: 'My payslip is missing', category: 'Payroll' },
-    })
+    assert.equal(state.category, 'Leave')
+    assert.doesNotMatch(JSON.stringify(back), /"value":"undefined"/, 'an empty box, not the word')
+  })
+
+  it('keeps the chosen category through Continue', async () => {
+    const state = newState()
+    await handle(state, { action: { kind: 'pickCategory', category: 'Payroll' } })
+    await handle(state, { action: { kind: 'describe', subject: 'My payslip is missing' } })
 
     assert.equal(state.category, 'Payroll')
+    assert.equal(state.subject, 'My payslip is missing')
   })
 })
 

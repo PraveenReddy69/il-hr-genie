@@ -371,13 +371,31 @@ async function handleAction(state: ConversationState, action: CardAction): Promi
     case 'pickCategory': {
       state.stage = 'awaitingSubject'
       state.category = action.category
-      // The full list rides along so the card can offer a dropdown. A failed read is
-      // not worth blocking on: the card falls back to the one already chosen.
-      const names = await api.gateway.categories().catch(() => [])
       // A card, not a line. The picker above is retired once a category is chosen —
       // a card cannot be restyled after submit, so six identical tiles are no record
       // of the decision. This names it instead.
-      return [{ card: subjectPromptCard(action.category, names) }]
+      //
+      // The subject comes back with it. Empty on the way in from the menu; on the way
+      // back from Change it is whatever was already typed, which is the entire reason
+      // reopening the picker is no longer expensive.
+      return [{ card: subjectPromptCard(action.category, state.subject ?? '') }]
+    }
+
+    /*
+     * Change, on the subject card.
+     *
+     * The category used to be a dropdown here, so that switching it cost nothing
+     * already written. On Android that dropdown is an OS bottom sheet, which no card
+     * property reaches — so it is a row again, and this is what keeps the swap cheap:
+     * the subject box rides along with the press and is held until a category comes
+     * back, rather than being abandoned on a card nobody returns to.
+     */
+    case 'changeCategory': {
+      const typed = (action.subject ?? '').trim()
+      if (typed) state.subject = typed
+      state.stage = 'awaitingCategory'
+      const names = await api.gateway.categories().catch(() => [])
+      return [{ card: categoryCard(names.length ? names : [state.category ?? 'Something else']) }]
     }
 
     case 'cancel': {
@@ -397,11 +415,10 @@ async function handleAction(state: ConversationState, action: CardAction): Promi
     // The box on the subject card. Typing into the chat still works and lands in the
     // same place — see [takeSubject] — so nobody who ignores the field is stuck.
     case 'describe': {
-      // The dropdown rides along with Continue, so a category changed on the card is
-      // simply the category now — no second card, and nothing typed is lost.
-      const chosen = (action.category ?? '').trim()
-      if (chosen) state.category = chosen
-
+      // The category is whatever the flow already settled on — the card names it and
+      // offers Change, which is a round trip through `changeCategory`, so there is
+      // nothing on this card that could disagree with `state` by the time Continue is
+      // pressed.
       const typed = (action.subject ?? '').trim()
       if (!typed) {
         return [{ text: 'Add a line about what is happening and press Continue.' }]

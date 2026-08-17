@@ -206,6 +206,11 @@ export class HrGenieBot extends ActivityHandler {
     // at describing a ticket that already exists. Kept when the text was rejected —
     // see [retireCard].
     'describe',
+    // Change replaces this card with the picker, and the subject travels with it. The
+    // box left behind would hold a copy of words that now live in state — edit that
+    // one and the edit is lost, because the card that comes back is the one that
+    // counts.
+    'changeCategory',
     // The nudge is a prompt, and a prompt that has been answered is a decoy: its
     // buttons stay pressable, so the same nudge could be acted on again tomorrow from
     // a scroll-back. Retired whichever of the three is pressed. The welcome menu is
@@ -375,9 +380,13 @@ function actionFrom(activity: Partial<Activity>): CardAction | undefined {
       return {
         kind: 'describe',
         subject: value.subject === undefined ? undefined : String(value.subject),
-        // The dropdown on the same card. Whatever it says when Continue is pressed
-        // is the category, whether or not it was the one picked a moment ago.
-        category: value.category === undefined ? undefined : String(value.category),
+      }
+    case 'changeCategory':
+      // Change is a submit, so the subject box rides along with it. That is the whole
+      // mechanism: without this line, reopening the picker throws away what was typed.
+      return {
+        kind: 'changeCategory',
+        subject: value.subject === undefined ? undefined : String(value.subject),
       }
     case 'savePulse':
       // Every other key is a question id — see savePulse in conversation.ts.

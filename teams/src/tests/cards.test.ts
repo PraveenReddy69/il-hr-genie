@@ -53,6 +53,11 @@ const questions = [
 const ALL: [string, AdaptiveCard][] = [
   ['welcome', welcomeCard('Test')],
   ['categories', categoryCard(['Payroll', 'Leave', 'IT & access', 'Something else'])],
+  // In here because its Change row carries an action, and an unmapped kind is exactly
+  // the bug this battery exists to catch. It was outside it while the category was a
+  // dropdown, which carried no action at all.
+  ['subject prompt', subjectPromptCard('Payroll')],
+  ['subject prompt (refilled)', subjectPromptCard('Leave', 'My laptop will not start')],
   ['draft', draftCard('A subject', 'Payroll', 'Test · EMP1')],
   ['receipt', receiptCard(ticket())],
   ['tickets', ticketsCard([ticket(), ticket('RESOLVED')])],
@@ -110,6 +115,8 @@ const MAPPED_KINDS = new Set([
   'nudgeCheckIn',
   'nudgePulse',
   'describe',
+  // Change, on the subject card.
+  'changeCategory',
   // The popular-question pills on the welcome card.
   'ask',
 ])
@@ -298,11 +305,11 @@ describe('the Wish button', () => {
 })
 
 describe('choosing a category', () => {
-  it('keeps the category out of the header, because the dropdown can change it', () => {
-    // The header named the category that was picked, and the dropdown below it could
+  it('keeps the category out of the header, because Change can still move it', () => {
+    // The header named the category that was picked, and the control below it could
     // then be changed — leaving a card that said Payroll over a field saying Leave. A
-    // sent card renders once, so the header cannot follow the dropdown.
-    const card = subjectPromptCard('Leave', ['Payroll', 'Leave'])
+    // sent card renders once, so the header cannot follow what sits under it.
+    const card = subjectPromptCard('Leave')
     // Walked rather than indexed: the band nests its text inside spacer columns to get
     // an inset, so the lines are no longer the container's direct children.
     const header = [...nodes(card.body[0])]
@@ -314,11 +321,11 @@ describe('choosing a category', () => {
   })
 
   it('uses one placeholder for every category', () => {
-    // A sent card cannot react to its own dropdown — Adaptive Cards has no change
-    // event — so a per-category example goes stale the moment somebody changes the
-    // selection, showing a payroll example under IT & access.
-    const payroll = JSON.stringify(subjectPromptCard('Payroll', ['Payroll', 'Leave']))
-    const access = JSON.stringify(subjectPromptCard('IT & access', ['Payroll', 'Leave']))
+    // A sent card cannot react to a category change — Adaptive Cards has no change
+    // event — so a per-category example goes stale the moment somebody swaps it,
+    // showing a payroll example under IT & access.
+    const payroll = JSON.stringify(subjectPromptCard('Payroll'))
+    const access = JSON.stringify(subjectPromptCard('IT & access'))
 
     assert.match(payroll, /Please describe your concern here/)
     assert.match(access, /Please describe your concern here/)

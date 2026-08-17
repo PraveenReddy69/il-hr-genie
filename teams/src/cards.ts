@@ -50,7 +50,10 @@ export type CardAction =
   | { kind: 'nudgeCheckIn' }
   | { kind: 'nudgePulse' }
   | { kind: 'raise'; subject?: string }
-  | { kind: 'describe'; subject?: string; category?: string }
+  | { kind: 'describe'; subject?: string }
+  // Change, on the subject card. Carries whatever is in the subject box, because the
+  // whole point of it is that reopening the category list costs nothing already typed.
+  | { kind: 'changeCategory'; subject?: string }
   | { kind: 'cancel' }
   | { kind: 'myTickets' }
   | { kind: 'startTicket' }
@@ -593,6 +596,92 @@ function menuRow(icon: string, title: string, description: string, data: CardAct
 }
 
 /**
+ * The chosen category, shown as the row it was chosen from.
+ *
+ * Same shape as `menuRow` on purpose: the thing you picked should look like the thing
+ * you picked it out of. The chevron becomes "Change", because this row does not open a
+ * category — it reopens all of them.
+ *
+ * The whole row is the target, not the word. A four-letter tap target beside a
+ * multiline text box is a mis-tap waiting to happen on a phone.
+ */
+function categoryRow(category: string): unknown {
+  return {
+    type: 'Container',
+    ...TILE_SURFACE,
+    selectAction: { type: 'Action.Submit', data: submit({ kind: 'changeCategory' }, 'Change') },
+    spacing: 'Small',
+    items: [
+      {
+        type: 'ColumnSet',
+        columns: [
+          {
+            type: 'Column',
+            width: 'auto',
+            verticalContentAlignment: 'Center',
+            items: [
+              {
+                type: 'Image',
+                url: iconUrl(iconFor(category)),
+                width: '32px',
+                height: '32px',
+                altText: category,
+              },
+            ],
+          },
+          {
+            type: 'Column',
+            width: 'stretch',
+            verticalContentAlignment: 'Center',
+            spacing: 'Medium',
+            items: [
+              {
+                type: 'TextBlock',
+                text: category,
+                weight: 'Bolder',
+                wrap: true,
+                spacing: 'None',
+              },
+              // Dropped rather than blank when the category is one we have no line
+              // for — the API owns that list, so a name we do not recognise is
+              // expected, not a bug. An empty TextBlock renders as a mystery gap.
+              ...(hintFor(category)
+                ? [
+                    {
+                      type: 'TextBlock',
+                      text: hintFor(category),
+                      size: 'Small',
+                      isSubtle: true,
+                      wrap: true,
+                      spacing: 'None',
+                    },
+                  ]
+                : []),
+            ],
+          },
+          {
+            type: 'Column',
+            width: 'auto',
+            verticalContentAlignment: 'Center',
+            items: [
+              {
+                type: 'TextBlock',
+                text: 'Change',
+                size: 'Small',
+                color: 'Accent',
+                weight: 'Bolder',
+                wrap: false,
+                spacing: 'None',
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  }
+}
+
+/**
  * The questions people ask most, as one tap.
  *
  * Hard-coded until the backend can serve them from what is actually being asked.
@@ -809,11 +898,7 @@ function hintFor(category: string): string {
  */
 const SUBJECT_PLACEHOLDER = 'Please describe your concern here'
 
-export function subjectPromptCard(category: string, categories: string[] = []): AdaptiveCard {
-  // The chosen one first, so the dropdown opens on it, and never twice if the server
-  // already lists it.
-  const choices = [category, ...categories.filter((one) => one !== category)]
-
+export function subjectPromptCard(category: string, subject = ''): AdaptiveCard {
   return card(
     [
       /*
@@ -827,12 +912,16 @@ export function subjectPromptCard(category: string, categories: string[] = []): 
       header('New ticket', 'What is happening?', 'Pick a category and tell us in a line or two.'),
       body([
         /*
-         * The category, as a dropdown on this card.
+         * The category, as a row we draw rather than a control the client draws.
          *
-         * Changing it used to send you back to the picker — a second card, below the
-         * one you were filling in, with whatever you had typed left behind on the
-         * first. Since the subject already lives in a box here, the category can too,
-         * and switching it costs nothing that was already written.
+         * This was an `Input.ChoiceSet`. On Android that hands the choice to the OS,
+         * which opens a bottom sheet — a surface no card property, host config or
+         * style reaches. The only way to make that moment ours is to not summon it.
+         *
+         * So the chosen category is the same row the picker uses, and Change reopens
+         * the picker. That was the arrangement before the dropdown, and it lost
+         * whatever had been typed. It does not any more: Change is a submit, so the
+         * subject box rides along with it and comes back filled in.
          */
         {
           type: 'TextBlock',
@@ -843,14 +932,7 @@ export function subjectPromptCard(category: string, categories: string[] = []): 
           wrap: true,
           spacing: 'Default',
         },
-        {
-          type: 'Input.ChoiceSet',
-          id: 'category',
-          value: category,
-          style: 'compact',
-          spacing: 'Small',
-          choices: choices.map((one) => ({ title: one, value: one })),
-        },
+        categoryRow(category),
         {
           type: 'TextBlock',
           text: "Tell me what's happening in a line or two.",
@@ -865,6 +947,9 @@ export function subjectPromptCard(category: string, categories: string[] = []): 
         {
           type: 'Input.Text',
           id: 'subject',
+          // Filled in when this card is a second visit — Change carried the words here
+          // and back, which is the only reason reopening the picker is now cheap.
+          value: subject,
           isMultiline: true,
           placeholder: SUBJECT_PLACEHOLDER,
           spacing: 'Small',
