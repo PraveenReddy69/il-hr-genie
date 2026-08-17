@@ -1093,6 +1093,19 @@ export function receiptCard(ticket: Ticket): AdaptiveCard {
   )
 }
 
+/**
+ * One named ticket, looked up by its reference.
+ *
+ * The same row the list uses, so a ticket looks the same however it was reached — and
+ * the timeline behind its toggle comes along unchanged.
+ */
+export function oneTicketCard(ticket: Ticket): AdaptiveCard {
+  return card([
+    header('Ticket', ticket.id, `${ticket.category} · ${statusLabel(ticket.status)}`),
+    body([ticketRow(ticket, 0)]),
+  ])
+}
+
 export function ticketsCard(tickets: Ticket[]): AdaptiveCard {
   if (tickets.length === 0) {
     return card([

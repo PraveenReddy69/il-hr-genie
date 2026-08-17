@@ -719,3 +719,50 @@ describe('the Teams command list', () => {
     assert.doesNotMatch(replies, /Monthly pulse/, "the pulse belongs to the nudge")
   })
 })
+
+describe('looking a ticket up by its reference', () => {
+  it('shows that ticket when the reference is complete', async () => {
+    stubAll({ myTickets: async () => [ticket('HRG-0024', 'IN_PROGRESS', 'Chasing payroll.')] })
+    const replies = JSON.stringify(await handle(newState(), { text: 'HRG-0024' }))
+
+    assert.match(replies, /HRG-0024/)
+    assert.match(replies, /Chasing payroll/, 'and what HR said about it')
+  })
+
+  it('finds it inside a sentence, and pads a short number', async () => {
+    // People write "what is happening with HRG-24", not just the reference.
+    stubAll({ myTickets: async () => [ticket('HRG-0024')] })
+    const replies = JSON.stringify(
+      await handle(newState(), { text: 'any update on HRG-24 please?' }),
+    )
+    assert.match(replies, /HRG-0024/)
+  })
+
+  it('asks for the whole reference when it is not one', async () => {
+    const replies = await handle(newState(), { text: 'HRG-' })
+    assert.match(titleOf(replies[0]), /whole reference/i)
+    assert.match(titleOf(replies[0]), /HRG-0024/, 'showing the shape')
+  })
+
+  it('says plainly when it is not one of theirs', async () => {
+    // Only ever the caller's own list: a reference is easy to guess, and HRG-0024 is
+    // one away from HRG-0023.
+    stubAll({ myTickets: async () => [ticket('HRG-0001')] })
+    const replies = await handle(newState(), { text: 'HRG-0099' })
+
+    assert.match(titleOf(replies[0]), /cannot find HRG-0099/i)
+  })
+
+  it('never asks the policy library about a reference', async () => {
+    let asked = false
+    stubAll({
+      myTickets: async () => [ticket('HRG-0024')],
+      askKnowledgeBase: async () => {
+        asked = true
+        return { text: 'nope', source: null }
+      },
+    })
+    await handle(newState(), { text: 'HRG-0024' })
+    assert.equal(asked, false)
+  })
+})

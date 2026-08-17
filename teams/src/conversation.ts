@@ -24,6 +24,7 @@ import {
   moodDoneCard,
   receiptCard,
   ticketsCard,
+  oneTicketCard,
   holidaysCard,
   helloCard,
   subjectPromptCard,
@@ -40,6 +41,18 @@ import {
  * because it is what everybody tries first anyway.
  */
 const OPENS_MENU = /^(genie|hr ?genie|help|menu|main ?menu)[!.?\s]*$/i
+
+/**
+ * A ticket reference, anywhere in what was typed.
+ *
+ * People paste "HRG-0024", and they also write "what is happening with HRG-24" — so
+ * this looks anywhere in the message rather than anchoring, and pads a short number
+ * to the four digits the service issues.
+ */
+const TICKET_REFERENCE = /\bHRG[-\s]?(\d{1,6})\b/i
+
+/** "HRG", "HRG-", "HRG 1" — enough to mean a ticket, not enough to find one. */
+const MENTIONS_A_TICKET = /\bHRG\b/i
 
 /**
  * Words people type without asking for anything.
@@ -207,6 +220,23 @@ export async function handle(state: ConversationState, input: Input): Promise<Re
   if (/^holidays?$/i.test(text) || /\bholiday list\b/i.test(text)) {
     reset(state)
     return showHolidays()
+  }
+
+  /*
+   * A ticket reference is a question about that ticket.
+   *
+   * Someone who types HRG-0024 wants to know where it got to, and asking the policy
+   * library about it — which is where it used to go — answers nothing at all.
+   */
+  const reference = text.match(TICKET_REFERENCE)
+  if (reference) {
+    reset(state)
+    return showTicket(`HRG-${reference[1].padStart(4, '0')}`)
+  }
+  if (MENTIONS_A_TICKET.test(text)) {
+    return [
+      { text: 'Give me the whole reference and I will look it up — they read like HRG-0024.' },
+    ]
   }
 
   switch (state.stage) {
@@ -436,6 +466,31 @@ async function savePulse(action: { kind: string; [id: string]: string }): Promis
     return [{ card: pulseDoneCard(Object.keys(answers).length, Math.max(total, 1)) }]
   } catch (error) {
     return [{ text: `I couldn’t send that just then, so nothing was recorded. (${message(error)})` }]
+  }
+}
+
+/**
+ * One ticket, by reference.
+ *
+ * Only ever from the caller's own list. The service would happily return somebody
+ * else's ticket if asked by id, and a reference is easy to guess — HRG-0024 is one
+ * away from HRG-0023 — so the lookup happens here, against tickets already known to
+ * belong to this person.
+ */
+async function showTicket(id: string): Promise<Reply[]> {
+  try {
+    const mine = await api.gateway.myTickets()
+    const found = mine.find((ticket) => ticket.id.toUpperCase() === id.toUpperCase())
+    if (!found) {
+      return [
+        {
+          text: `I cannot find ${id} among your tickets. Check the reference, or say "my tickets" to see them all.`,
+        },
+      ]
+    }
+    return [{ card: oneTicketCard(found) }]
+  } catch (error) {
+    return [{ text: `I could not reach your tickets just then. (${message(error)})` }]
   }
 }
 
