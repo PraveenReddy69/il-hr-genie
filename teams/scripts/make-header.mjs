@@ -21,18 +21,19 @@ const WIDTH = 1200
 const HEIGHT = 240
 
 /**
- * Deep blue into navy.
+ * Slate navy, barely graded.
  *
- * Both ends are dark enough to carry white text: the first attempt started at the
- * brand blue and the eyebrow sat on the lightest part of it, which is exactly where
- * small text needs the most contrast.
+ * This was a deep blue into navy, which is a lot of colour for something sitting above
+ * four white rows — the band won the card. A near-flat dark slate lets the greeting be
+ * the loud thing instead, and white text has more contrast on it than it had on the
+ * light end of the blue.
  *
- * This was briefly a near-flat slate. It went back: the welcome card stopped having a
- * band at all, and on the cards that still have one the blue is the brand rather than
- * a compromise with a greeting that is no longer there.
+ * Not flat, though: two shades a few points apart, so the band has some depth rather
+ * than reading as a printed rectangle. The difference is small enough that a phone
+ * scaling the image cannot band it.
  */
-const FROM = [0x1a, 0x6f, 0xd6]
-const TO = [0x0a, 0x14, 0x30]
+const FROM = [0x1b, 0x28, 0x3a]
+const TO = [0x0e, 0x17, 0x25]
 
 mkdirSync(OUT, { recursive: true })
 writeFileSync(

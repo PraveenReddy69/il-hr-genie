@@ -660,36 +660,27 @@ describe('every card follows the reader\'s theme', () => {
     // that the server's own hour would get right.
     const at = (utc: string) => greeting('Gunapati', new Date(utc))
 
-    assert.equal(at('2026-08-17T06:00:00Z'), 'Good morning, Gunapati')
-    assert.equal(at('2026-08-17T07:00:00Z'), 'Good afternoon, Gunapati')
-    assert.equal(at('2026-08-17T12:00:00Z'), 'Good evening, Gunapati')
+    assert.equal(at('2026-08-17T06:00:00Z'), 'Good morning, Gunapati 👋')
+    assert.equal(at('2026-08-17T07:00:00Z'), 'Good afternoon, Gunapati 👋')
+    assert.equal(at('2026-08-17T12:00:00Z'), 'Good evening, Gunapati 👋')
 
     // Midnight IST is the case `hour12: false` gets wrong, reporting hour 24.
-    assert.equal(at('2026-08-16T18:30:00Z'), 'Good morning, Gunapati')
+    assert.equal(at('2026-08-16T18:30:00Z'), 'Good morning, Gunapati 👋')
   })
 
-  it('greets on the card surface, with no band to fight the theme', () => {
-    // The whole reason this header has no artwork: a backgroundImage is one fixed
-    // colour serving two themes, and it forced every line of text to be pinned Light
-    // to stay legible on it. Nothing here is pinned, so Teams draws all of it.
-    const card = welcomeCard('Gunapati', new Date('2026-08-17T07:00:00Z'))
-    const header = JSON.stringify(card.body.slice(0, 3))
+  it('puts the greeting and the status pill on the welcome card', () => {
+    const header = JSON.stringify(welcomeCard('Gunapati').body[0])
 
-    assert.match(header, /Monday, 17 August/)
-    assert.match(header, /Good afternoon, Gunapati/)
-    assert.match(header, /"size":"ExtraLarge"/, 'with no artwork behind it, the name can be big')
-
-    assert.doesNotMatch(header, /backgroundImage/, 'no band on this card')
-    assert.doesNotMatch(header, /"color":"Light"/, 'and so nothing pinned to one theme')
-    assert.doesNotMatch(header, /mascot/)
+    assert.match(header, /Good (morning|afternoon|evening), Gunapati/)
+    assert.match(header, /"text":"Online"/)
+    assert.match(header, /"style":"good"/, 'the pill is drawn by Teams, so it follows the theme')
+    assert.doesNotMatch(header, /mascot/, 'the mascot came out of this header')
   })
 
-  it('keeps the band on the cards that still have one', () => {
-    // Not every card is the greeting. Where a heading has to separate itself from a
-    // list below it, the branded band still earns its place — and there its text is
-    // Light against its own artwork in both themes, which is the one place that is
-    // the right call.
-    const header = JSON.stringify(subjectPromptCard('Leave', ['Leave']).body[0])
+  it('leaves the header alone, which is branded on purpose', () => {
+    // The band is the one place a fixed colour is right: it is the brand, it carries
+    // its own artwork, and its text is Light against that artwork in both themes.
+    const header = JSON.stringify((welcomeCard('Test').body[0] as Record<string, unknown>))
     assert.match(header, /"color":"Light"/)
     assert.match(header, /header\.png/)
   })

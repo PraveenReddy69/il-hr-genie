@@ -83,10 +83,9 @@ after(() => {
 /**
  * The headline of a card, wherever it sits.
  *
- * Walks the whole body rather than indexing into it. The welcome card's headline has
- * been the first element, then nested in a ColumnSet beside a mascot, and is now the
- * second element under a date line — a fixed path broke on each of those. The headline
- * is the first Large-or-bigger TextBlock, which is what a header is.
+ * Walks rather than indexing: the welcome card's header nests its text in a ColumnSet
+ * so the mascot can sit beside it, and a fixed path broke the moment it did. The
+ * headline is the first Large-or-bigger TextBlock, which is what a header is.
  */
 const titleOf = (reply: Reply): string => {
   if ('text' in reply) return reply.text
@@ -105,7 +104,7 @@ const titleOf = (reply: Reply): string => {
     }
     Object.values(item).forEach(walk)
   }
-  walk(reply.card.body)
+  walk(reply.card.body[0])
   return found[0] ?? ''
 }
 
