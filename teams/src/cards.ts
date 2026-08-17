@@ -94,7 +94,19 @@ function card(body: unknown[], actions?: unknown[]): AdaptiveCard {
 function header(eyebrow: string, title: string, subtitle?: string): unknown {
   return {
     type: 'Container',
+    /*
+     * `bleed` is a request, not a guarantee.
+     *
+     * Where it is honoured the band runs to the card's edges. Some mobile clients
+     * ignore it and leave the card's own padding around it, so the band floats as a
+     * blue block with a white margin — which reads as a mistake rather than a choice.
+     *
+     * Rounded corners make the ignored case look intentional: a panel inset from the
+     * edge, rather than a bleed that failed. Where bleed does work the corners line up
+     * with the card's own, so nothing is lost either way.
+     */
     bleed: true,
+    roundedCorners: true,
     spacing: 'None',
     backgroundImage: { url: iconUrl('header'), fillMode: 'Cover' },
     items: [
