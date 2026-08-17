@@ -126,24 +126,17 @@ function header(eyebrow: string, title: string, subtitle?: string): unknown {
   return {
     type: 'Container',
     /*
-     * Neither `bleed` nor `roundedCorners`, and both for the same reason: the client
-     * decides whether to honour them, so either one makes the band look different on
-     * different phones.
+     * Deliberately not `bleed`.
      *
-     * Bleed is ignored by several mobile clients, which leave the card's own padding
-     * around the band so it floats as a blue block in a margin.
+     * Bleed is a request, not a guarantee. Where it is honoured the band runs to the
+     * card's edges; several mobile clients ignore it and leave the card's own padding
+     * around the band, so it floats as a blue block in a white margin and reads as a
+     * mistake. Rounded corners were not enough to rescue that.
      *
-     * Rounded corners are honoured — the menu rows below round correctly everywhere —
-     * but Android and the desktop client do not clip a `backgroundImage` to the radius.
-     * The container rounds and the gradient paints square on top of it, so the band came
-     * out rounded on iOS and square on the other two. Baking the curve into the artwork
-     * does not rescue it either: `fillMode: 'Cover'` crops the excess dimension, and on
-     * a phone the band is tall enough that the sides are cropped away entirely, taking
-     * the corners with them.
-     *
-     * A square inset panel is the one result every client actually produces. Both the
-     * edge-to-edge look and the rounding are the price.
+     * An inset rounded panel is the one result every client can actually produce, so
+     * the band looks the same everywhere. The edge-to-edge look is the price.
      */
+    roundedCorners: true,
     spacing: 'None',
     backgroundImage: { url: iconUrl('header'), fillMode: 'Cover' },
     items: padded([
@@ -629,8 +622,9 @@ export function welcomeCard(firstName: string): AdaptiveCard {
      */
     {
       type: 'Container',
-      // Square and inset, matching `header()` — see the note there for why neither bleed
-      // nor rounded corners survive the trip across clients.
+      // Inset and rounded, matching `header()` — see the note there for why bleed is
+      // not used.
+      roundedCorners: true,
       spacing: 'None',
       backgroundImage: { url: iconUrl('header'), fillMode: 'Cover' },
       items: padded([
