@@ -81,35 +81,28 @@ function card(body: unknown[], actions?: unknown[]): AdaptiveCard {
 }
 
 /**
- * Padding, drawn by hand.
+ * Vertical breathing room inside the band. Vertical only, deliberately.
  *
- * Adaptive Cards has no padding property. A container gets internal padding only when
- * `style` is set — and `style` is the thing that paints a tile white in dark mode, so
- * the band cannot use it. Without the inset, text sits flush against the band's edge,
- * which the rounded corners make worse rather than better.
+ * Adaptive Cards has no padding property, so this used to add a horizontal inset too —
+ * fixed-width spacer columns either side. That inset is what pushed the band's text
+ * out of line with the menu rows below it: the band bleeds to the card's edge, and the
+ * renderer already indents a container's contents by the card's own padding, so a
+ * spacer column added a second indent on top of the first.
  *
- * So the inset is built: fixed-width columns either side, and an empty container of a
- * fixed height above and below.
+ * Left to the renderer, the band's text lands exactly where the body's text lands,
+ * because both are one card-padding in from the same edge. Measured at 15px against
+ * 15px in the preview.
  *
- * The spacers hold nothing rather than a blank space. A whitespace TextBlock would do
- * the same job, but the 'has no empty text' guard exists to catch a name that came back
- * undefined and rendered as a mystery gap — a spacer that has to be exempted from that
- * guard costs more than it saves.
+ * Height still has to be built by hand — nothing indents the top of a bleeding band.
+ * The spacers hold nothing rather than a blank space: the `has no empty text` guard
+ * exists to catch a name that came back undefined and rendered as a mystery gap, and a
+ * spacer needing an exemption from that guard costs more than it saves.
  */
 const GAP = 12
 
 function padded(items: unknown[]): unknown[] {
   const above = { type: 'Container', minHeight: `${GAP}px`, spacing: 'None', items: [] }
-  const side = { type: 'Column', width: `${GAP}px`, items: [] }
-  return [
-    above,
-    {
-      type: 'ColumnSet',
-      spacing: 'None',
-      columns: [side, { type: 'Column', width: 'stretch', items }, side],
-    },
-    above,
-  ]
+  return [above, ...items, above]
 }
 
 /**
