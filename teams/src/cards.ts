@@ -220,7 +220,7 @@ function iconBase(): string {
  *
  * Bump it whenever an icon is redrawn.
  */
-const ICON_VERSION = 5
+const ICON_VERSION = 4
 
 function iconUrl(name: string): string {
   return `${iconBase()}/${name}.png?v=${ICON_VERSION}`
@@ -618,41 +618,14 @@ const POPULAR_QUESTIONS = [
   'How do I update my details?',
 ]
 
-/**
- * Morning, afternoon or evening — on Indian time, not the server's.
- *
- * The bot runs in a container whose clock is UTC, so reading the hour straight off
- * `Date` would greet a three o'clock Hyderabad afternoon as a half-nine morning.
- *
- * Pinned to one zone rather than worked out per person: Teams tells a bot nothing about
- * where the person is, and everybody using this is in the same office hours. It is the
- * one assumption here that would need revisiting if that stopped being true.
- */
-const OFFICE_TIME_ZONE = 'Asia/Kolkata'
-
-export function greeting(firstName: string, now: Date = new Date()): string {
-  // `hourCycle: 'h23'` rather than `hour12: false`, which reports midnight as 24.
-  const hour = Number(
-    new Intl.DateTimeFormat('en-GB', {
-      timeZone: OFFICE_TIME_ZONE,
-      hour: '2-digit',
-      hourCycle: 'h23',
-    }).format(now),
-  )
-  const part = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
-  return `${part}, ${firstName} 👋`
-}
-
-export function welcomeCard(firstName: string, now: Date = new Date()): AdaptiveCard {
+export function welcomeCard(firstName: string): AdaptiveCard {
   return card([
     /*
-     * The greeting, and nothing competing with it.
+     * The header carries the mascot.
      *
-     * This carried a 64px mascot in its own column. It has gone: the band sits above
-     * four white rows that each already have an icon, and a fifth picture at the top
-     * was the busiest part of the busiest card. The name and the time of day do the
-     * work of feeling personal, and they do it without taking half the width on a
-     * phone — which is what the mascot cost.
+     * A face in the corner is what makes this read as somebody's assistant rather than
+     * a form. It sits in its own column so the greeting keeps its line length whatever
+     * the name is.
      */
     {
       type: 'Container',
@@ -663,91 +636,58 @@ export function welcomeCard(firstName: string, now: Date = new Date()): Adaptive
       items: padded([
         {
           type: 'ColumnSet',
-          spacing: 'None',
           columns: [
             {
               type: 'Column',
-              width: 'auto',
+              width: 'stretch',
               verticalContentAlignment: 'Center',
               items: [
                 {
                   type: 'TextBlock',
-                  text: 'HR Genie',
+                  text: 'INFINITY LEARN',
                   size: 'Small',
                   weight: 'Bolder',
                   color: 'Light',
                   spacing: 'None',
-                  wrap: false,
+                  wrap: true,
+                },
+                {
+                  // Large, not ExtraLarge. On a phone the bigger size wrapped the
+                  // greeting onto a second line, which pushed the band taller than the
+                  // artwork behind it and left a strip of card showing under it.
+                  type: 'TextBlock',
+                  text: `Hi ${firstName} 👋`,
+                  size: 'Large',
+                  weight: 'Bolder',
+                  color: 'Light',
+                  wrap: true,
+                  spacing: 'None',
+                },
+                {
+                  type: 'TextBlock',
+                  text: 'HR Genie · always on',
+                  color: 'Light',
+                  wrap: true,
+                  spacing: 'Small',
                 },
               ],
             },
             {
               type: 'Column',
               width: 'auto',
-              spacing: 'Small',
               verticalContentAlignment: 'Center',
               items: [
                 {
-                  /*
-                   * The status pill.
-                   *
-                   * `style: 'good'` rather than a colour of our own — Teams draws the
-                   * green and the text on it, so the pill follows light and dark
-                   * without a second asset. The same reason the date chips and the
-                   * ticket status discs are styled containers.
-                   *
-                   * It says something true and worth saying: there is no queue and no
-                   * office hours, which is most of the point of asking a bot rather
-                   * than emailing HR.
-                   */
-                  type: 'Container',
-                  style: 'good',
-                  roundedCorners: true,
-                  spacing: 'None',
-                  items: [
-                    {
-                      type: 'TextBlock',
-                      text: 'Online',
-                      size: 'Small',
-                      weight: 'Bolder',
-                      spacing: 'None',
-                      wrap: false,
-                    },
-                  ],
+                  // 64, and it shrinks with the column rather than holding the header
+                  // open: at 84 the greeting had barely half the width on a phone.
+                  type: 'Image',
+                  url: iconUrl('mascot'),
+                  width: '64px',
+                  altText: 'HR Genie',
                 },
               ],
             },
-            // Holds the two above to the left instead of letting them centre.
-            { type: 'Column', width: 'stretch', items: [] },
           ],
-        },
-        {
-          // Large, not ExtraLarge. On a phone the bigger size wrapped the greeting onto
-          // a second line, which pushed the band taller than the artwork behind it and
-          // left a strip of card showing under it.
-          type: 'TextBlock',
-          text: greeting(firstName, now),
-          size: 'Large',
-          weight: 'Bolder',
-          color: 'Light',
-          wrap: true,
-          spacing: 'Small',
-        },
-        {
-          /*
-           * Not `isSubtle`, however much this line wants to be grey.
-           *
-           * `color: 'Light'` with `isSubtle` does not dim white — it selects the light
-           * palette's subtle entry, which the renderer defines as black at 20%. On this
-           * band that is invisible. Measured in the preview, not guessed.
-           *
-           * The hierarchy comes from the greeting above being Large and bold instead.
-           */
-          type: 'TextBlock',
-          text: 'How can I help you today?',
-          color: 'Light',
-          wrap: true,
-          spacing: 'Small',
         },
       ]),
     },

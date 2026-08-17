@@ -15,7 +15,6 @@ import {
   categoryCard,
   celebrationsCard,
   draftCard,
-  greeting,
   holidaysCard,
   moodCard,
   moodDetailCard,
@@ -653,29 +652,6 @@ describe('every card follows the reader\'s theme', () => {
       assert.doesNotMatch(json, /"color":"Dark"/, 'and text pinned dark cannot go light')
     })
   }
-
-  it('greets by the office clock, not the machine the bot runs on', () => {
-    // The container's clock is UTC; everyone reading this is in IST. 06:00 UTC is
-    // half past eleven in Hyderabad — still morning there, and the only one of these
-    // that the server's own hour would get right.
-    const at = (utc: string) => greeting('Gunapati', new Date(utc))
-
-    assert.equal(at('2026-08-17T06:00:00Z'), 'Good morning, Gunapati 👋')
-    assert.equal(at('2026-08-17T07:00:00Z'), 'Good afternoon, Gunapati 👋')
-    assert.equal(at('2026-08-17T12:00:00Z'), 'Good evening, Gunapati 👋')
-
-    // Midnight IST is the case `hour12: false` gets wrong, reporting hour 24.
-    assert.equal(at('2026-08-16T18:30:00Z'), 'Good morning, Gunapati 👋')
-  })
-
-  it('puts the greeting and the status pill on the welcome card', () => {
-    const header = JSON.stringify(welcomeCard('Gunapati').body[0])
-
-    assert.match(header, /Good (morning|afternoon|evening), Gunapati/)
-    assert.match(header, /"text":"Online"/)
-    assert.match(header, /"style":"good"/, 'the pill is drawn by Teams, so it follows the theme')
-    assert.doesNotMatch(header, /mascot/, 'the mascot came out of this header')
-  })
 
   it('leaves the header alone, which is branded on purpose', () => {
     // The band is the one place a fixed colour is right: it is the brand, it carries
