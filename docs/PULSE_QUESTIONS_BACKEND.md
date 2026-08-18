@@ -55,6 +55,42 @@ question, each at most 24 characters.
 
 ---
 
+## 0b2. Draft, published, retired
+
+A question carries a `state`:
+
+```
+DRAFT       being written. Cannot be asked.
+PUBLISHED   fit to ask. The only state a selection may reference.
+RETIRED     was asked once, no longer should be. Kept for the record.
+```
+
+**Only `PUBLISHED` may appear in a selection.** Reject a `questionIds` entry naming a
+draft or retired question with `409` and a message naming which one — the console shows
+it verbatim, and the two cases want different sentences, because the fix for each is
+different.
+
+**Retired rather than deleted, and this is the point of having the state at all.**
+Answers are stored keyed by question id. Deleting a question that has been answered
+leaves rows pointing at nothing, and next year's comparison against this year quietly
+loses a column. Retiring keeps the record and takes it out of circulation, which is what
+"we do not ask that any more" actually means.
+
+**A new question is created as `DRAFT`.** A question is written, read back, and then let
+out; making a half-typed one publishable the moment it saves is how a typo reaches
+everybody.
+
+**An absent `state` reads as `PUBLISHED`, not `DRAFT`.** Anything already stored is
+being asked right now, and defaulting the other way would switch the pulse off for
+everyone the first time the field is introduced.
+
+**Moving a question out of `PUBLISHED` removes it from every selection.** The console
+does this and reports how many it touched. Please do the same server-side rather than
+leaving behind a selection that cannot be served, and return the affected selections so
+the caller can say what happened.
+
+---
+
 ## 0c. Selections
 
 ```jsonc
@@ -123,6 +159,7 @@ the console all tolerate the current shape today.
   "hint": "Think about the last two weeks rather than today.",   // optional, may be ""
   "options": ["Comfortable", "Busy but okay", "Stretched", "Not sustainable"],
   "tags": ["workload", "wellbeing"],        // normalised; see 0b
+  "state": "PUBLISHED",                     // DRAFT | PUBLISHED | RETIRED; see 0b2
   "order": 2                                // 1-based, position in the bank
 }
 ```
@@ -143,7 +180,7 @@ as a string. No ids, because the directory does not expose any.
 | Route | Body | Returns |
 |---|---|---|
 | `POST /api/pulse/questions` | everything except `order` (append to the end) | the created question |
-| `PATCH /api/pulse/questions/{id}` | any of `question`, `hint`, `options`, `tags` | the updated question |
+| `PATCH /api/pulse/questions/{id}` | any of `question`, `hint`, `options`, `tags`, `state` | the updated question |
 | `DELETE /api/pulse/questions/{id}` | — | `204` |
 | `PUT /api/pulse/questions/order` | `{ "ids": ["experience", "workload", ...] }` | the reordered bank |
 

@@ -11,10 +11,14 @@
 
 import { describe, expect, it } from 'vitest'
 import {
+  ANY_STATE,
   ANY_TAG,
   MAX_SELECTED,
   blankSelection,
+  byState,
   byTag,
+  countByState,
+  isSelectable,
   isEveryone,
   normaliseTag,
   normaliseTags,
@@ -22,19 +26,26 @@ import {
   selectionFor,
   selectionLabel,
   tagsInUse,
+  unpublishableIn,
   unreached,
   validateProgramme,
   validateSelection,
+  withoutQuestion,
   type PulseSelection,
 } from './pulseProgramme'
-import { migrateQuestion, type PulseQuestion } from './pulseQuestions'
+import { migrateQuestion, type PulseQuestion, type QuestionState } from './pulseQuestions'
 
-const question = (id: string, tags: string[] = []): PulseQuestion => ({
+const question = (
+  id: string,
+  tags: string[] = [],
+  state: QuestionState = 'PUBLISHED',
+): PulseQuestion => ({
   id,
   question: `Question ${id}?`,
   hint: '',
   options: ['Yes', 'No'],
   tags,
+  state,
 })
 
 const bank: PulseQuestion[] = [
@@ -272,5 +283,90 @@ describe('reading a bank stored under the old shape', () => {
     expect(migrated.id).toBe('')
     expect(migrated.options).toEqual([])
     expect(migrated.tags).toEqual([])
+  })
+})
+
+describe('draft, published and retired', () => {
+  const mixed: PulseQuestion[] = [
+    question('live', ['wellbeing'], 'PUBLISHED'),
+    question('writing', ['wellbeing'], 'DRAFT'),
+    question('old', ['attrition'], 'RETIRED'),
+  ]
+
+  it('lets only a published question be asked', () => {
+    expect(isSelectable(mixed[0])).toBe(true)
+    expect(isSelectable(mixed[1])).toBe(false)
+    expect(isSelectable(mixed[2])).toBe(false)
+  })
+
+  it('filters the bank by state', () => {
+    expect(byState(mixed, 'DRAFT').map((one) => one.id)).toEqual(['writing'])
+    expect(byState(mixed, 'RETIRED').map((one) => one.id)).toEqual(['old'])
+    expect(byState(mixed, ANY_STATE)).toHaveLength(3)
+  })
+
+  it('counts each state for the filter chips', () => {
+    expect(countByState(mixed)).toEqual({ DRAFT: 1, PUBLISHED: 1, RETIRED: 1 })
+  })
+
+  it('combines with the tag filter the way the page does', () => {
+    const shown = byState(byTag(mixed, 'wellbeing'), 'PUBLISHED')
+    expect(shown.map((one) => one.id)).toEqual(['live'])
+  })
+
+  it('refuses a selection holding a draft, and names it', () => {
+    const withDraft = selection({ questionIds: ['live', 'writing'] })
+    expect(validateSelection(withDraft, [], mixed)).toMatch(/still a draft/i)
+  })
+
+  it('refuses a selection holding a retired question, and says so differently', () => {
+    // Two different sentences on purpose: "retired" and "still a draft" are different
+    // situations, and the fix for each is different too.
+    const withRetired = selection({ questionIds: ['live', 'old'] })
+    expect(validateSelection(withRetired, [], mixed)).toMatch(/retired/i)
+  })
+
+  it('accepts a selection of published questions', () => {
+    expect(validateSelection(selection({ questionIds: ['live'] }), [], mixed)).toBeNull()
+  })
+
+  it('lists what in a selection can no longer be asked', () => {
+    const stale = selection({ questionIds: ['live', 'writing', 'old'] })
+    expect(unpublishableIn(stale, mixed).map((one) => one.id)).toEqual(['writing', 'old'])
+  })
+
+  it('finds nothing wrong with a clean selection', () => {
+    expect(unpublishableIn(selection({ questionIds: ['live'] }), mixed)).toEqual([])
+  })
+
+  it('pulls a question out of every selection it was in', () => {
+    const before = [
+      selection({ id: 'a', questionIds: ['live', 'writing'] }),
+      selection({ id: 'b', departments: ['Growth'], questionIds: ['writing'] }),
+    ]
+    const after = withoutQuestion(before, 'writing')
+    expect(after[0].questionIds).toEqual(['live'])
+    expect(after[1].questionIds).toEqual([])
+  })
+
+  it('leaves selections alone when the question was in none of them', () => {
+    const before = [selection({ id: 'a', questionIds: ['live'] })]
+    expect(withoutQuestion(before, 'never-used')).toEqual(before)
+  })
+})
+
+describe('state on a bank stored before states existed', () => {
+  it('reads as published rather than draft', () => {
+    // Defaulting to draft would switch the pulse off for everybody the first time this
+    // page is opened after the upgrade — a silent change to what employees are asked.
+    expect(migrateQuestion({ id: 'x', question: 'Q?', options: [] }).state).toBe('PUBLISHED')
+  })
+
+  it('keeps a state that was stored', () => {
+    expect(migrateQuestion({ id: 'x', question: 'Q?', state: 'RETIRED' }).state).toBe('RETIRED')
+  })
+
+  it('falls back to published on a state nobody recognises', () => {
+    expect(migrateQuestion({ id: 'x', question: 'Q?', state: 'ARCHIVED' }).state).toBe('PUBLISHED')
   })
 })

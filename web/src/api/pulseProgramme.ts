@@ -22,7 +22,7 @@
  * look like data.
  */
 
-import type { PulseQuestion } from './pulseQuestions'
+import type { PulseQuestion, QuestionState } from './pulseQuestions'
 
 /** How many questions one selection may ask. See the note above. */
 export const MAX_SELECTED = 10
@@ -92,6 +92,59 @@ export function tagsInUse(bank: PulseQuestion[]): string[] {
 }
 
 export const ANY_TAG = 'All tags'
+export const ANY_STATE = 'Any state'
+
+/**
+ * Whether a question may be put into a selection.
+ *
+ * The whole point of draft and retired: a question in either is visibly in the bank and
+ * visibly not being asked. Checked here rather than left to the picker, so a stale
+ * selection built before a question was retired is caught rather than quietly asked.
+ */
+export function isSelectable(question: PulseQuestion): boolean {
+  return question.state === 'PUBLISHED'
+}
+
+export function byState(bank: PulseQuestion[], state: string): PulseQuestion[] {
+  if (state === ANY_STATE) return bank
+  return bank.filter((question) => question.state === state)
+}
+
+/** How many questions sit in each state, for the filter chips. */
+export function countByState(bank: PulseQuestion[]): Record<QuestionState, number> {
+  const counts = { DRAFT: 0, PUBLISHED: 0, RETIRED: 0 }
+  for (const question of bank) counts[question.state] += 1
+  return counts
+}
+
+/**
+ * Selections with a question that is no longer publishable in them.
+ *
+ * Retiring a question does pull it out of every selection, but a bank loaded from
+ * elsewhere — another browser, eventually a server — can arrive already inconsistent.
+ * Surfaced rather than silently dropped: what a department is asked should not change
+ * because of a state transition nobody connected to it.
+ */
+export function unpublishableIn(
+  selection: PulseSelection,
+  bank: PulseQuestion[],
+): PulseQuestion[] {
+  return selection.questionIds
+    .map((id) => bank.find((question) => question.id === id))
+    .filter((question): question is PulseQuestion => Boolean(question))
+    .filter((question) => !isSelectable(question))
+}
+
+/** Every selection, with any question that has since stopped being publishable removed. */
+export function withoutQuestion(
+  selections: PulseSelection[],
+  questionId: string,
+): PulseSelection[] {
+  return selections.map((one) => ({
+    ...one,
+    questionIds: one.questionIds.filter((id) => id !== questionId),
+  }))
+}
 
 export function byTag(bank: PulseQuestion[], tag: string): PulseQuestion[] {
   if (tag === ANY_TAG) return bank
@@ -177,6 +230,16 @@ export function validateSelection(
     (id) => !bank.some((question) => question.id === id),
   )
   if (missing.length > 0) return 'A picked question is no longer in the bank.'
+
+  // Draft and retired questions cannot be asked. A selection holding one is a real
+  // state — retire a question from another browser and this is what you come back to —
+  // so it is named rather than quietly skipped.
+  const unpublishable = unpublishableIn(selection, bank)
+  if (unpublishable.length > 0) {
+    const first = unpublishable[0]
+    const state = first.state === 'DRAFT' ? 'still a draft' : 'retired'
+    return `"${first.question}" is ${state} and cannot be asked. Remove it from this selection.`
+  }
 
   if (isEveryone(selection) && others.some(isEveryone)) {
     return 'There is already a selection for every department.'

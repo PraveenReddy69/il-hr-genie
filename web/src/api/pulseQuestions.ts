@@ -35,6 +35,33 @@ export interface PulseQuestion {
    * filter to three different sets.
    */
   tags: string[]
+  /** Where the question is in its life. See QuestionState. */
+  state: QuestionState
+}
+
+/**
+ * Draft, published, retired.
+ *
+ * **Draft** is being written. **Published** is fit to ask. **Retired** was asked once
+ * and no longer should be.
+ *
+ * Only a published question can go into a selection — the point of the other two is
+ * that they are visibly *not* being asked while still being in the bank.
+ *
+ * Retired rather than deleted, because answers are stored keyed by question id. Deleting
+ * a question that has been answered leaves rows pointing at nothing, and next year's
+ * comparison against this year quietly loses a column. Retiring keeps the record and
+ * takes it out of circulation, which is what "we do not ask that any more" actually
+ * means.
+ */
+export type QuestionState = 'DRAFT' | 'PUBLISHED' | 'RETIRED'
+
+export const QUESTION_STATES: QuestionState[] = ['DRAFT', 'PUBLISHED', 'RETIRED']
+
+export const STATE_LABEL: Record<QuestionState, string> = {
+  DRAFT: 'Draft',
+  PUBLISHED: 'Published',
+  RETIRED: 'Retired',
 }
 
 /**
@@ -95,6 +122,9 @@ async function fetchLiveBank(): Promise<PulseQuestion[]> {
       hint: '',
       options: question.options ?? [],
       tags: [],
+      // Whatever the server is serving is what employees are being asked, so it is
+      // published by definition. The endpoint has no notion of state yet.
+      state: 'PUBLISHED' as const,
     }))
   } catch {
     // A bank that will not load is not a reason to block authoring — start from the
@@ -132,6 +162,12 @@ export function migrateQuestion(raw: Record<string, unknown>): PulseQuestion {
     hint: String(raw.hint ?? ''),
     options: Array.isArray(raw.options) ? raw.options.map(String) : [],
     tags: normaliseTags(Array.isArray(raw.tags) ? raw.tags.map(String) : []),
+    // Published when the field is absent. Anything already stored was being asked, and
+    // defaulting to draft would switch the pulse off for everyone who opens this page
+    // after the upgrade — a silent change to what employees are asked.
+    state: QUESTION_STATES.includes(raw.state as QuestionState)
+      ? (raw.state as QuestionState)
+      : 'PUBLISHED',
   }
 }
 
@@ -192,7 +228,9 @@ export function validateBank(questions: PulseQuestion[]): string | null {
 // --------------------------------------------------------------------- helpers
 
 export function blankQuestion(): PulseQuestion {
-  return { id: '', question: '', hint: '', options: [...SCALES[0].options], tags: [] }
+  // Draft, not published. A question is written, read back, and then let out — making
+  // a half-typed one publishable the moment it is saved is how a typo reaches everyone.
+  return { id: '', question: '', hint: '', options: [...SCALES[0].options], tags: [], state: 'DRAFT' }
 }
 
 /**
@@ -238,6 +276,7 @@ const DEFAULTS: PulseQuestion[] = [
     hint: '',
     options: ['Genuinely good', 'Mostly fine', 'Up and down', 'Rough, honestly'],
     tags: ['wellbeing'],
+    state: 'PUBLISHED',
   },
   {
     id: 'workload',
@@ -245,6 +284,7 @@ const DEFAULTS: PulseQuestion[] = [
     hint: 'Think about the last two weeks rather than today.',
     options: ['Comfortable', 'Busy but okay', 'Stretched', 'Not sustainable'],
     tags: ['workload', 'wellbeing'],
+    state: 'PUBLISHED',
   },
   {
     id: 'manager',
@@ -252,6 +292,7 @@ const DEFAULTS: PulseQuestion[] = [
     hint: '',
     options: ['Always', 'Usually', 'Sometimes', 'Rarely'],
     tags: ['manager'],
+    state: 'PUBLISHED',
   },
   {
     id: 'attrition',
@@ -259,5 +300,6 @@ const DEFAULTS: PulseQuestion[] = [
     hint: '',
     options: ['Not at all', 'Passing thought', 'Somewhat', 'Actively looking'],
     tags: ['attrition'],
+    state: 'PUBLISHED',
   },
 ]

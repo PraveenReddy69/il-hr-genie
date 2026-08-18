@@ -28,20 +28,27 @@ import {
   blankQuestion,
   discardLocalBank,
   fetchQuestionBank,
+  QUESTION_STATES,
+  STATE_LABEL,
   newQuestionId,
   nextCycleLabel,
   saveQuestionBank,
   validateQuestion,
   type PulseQuestion,
+  type QuestionState,
 } from '../api/pulseQuestions'
 import {
+  ANY_STATE,
   ANY_TAG,
   MAX_SELECTED,
   MAX_TAGS_PER_QUESTION,
   SUGGESTED_TAGS,
   blankSelection,
+  byState,
   byTag,
+  countByState,
   discardProgramme,
+  isSelectable,
   isEveryone,
   normaliseTag,
   questionsIn,
@@ -51,6 +58,7 @@ import {
   tagsInUse,
   unreached,
   validateSelection,
+  withoutQuestion,
   type PulseSelection,
 } from '../api/pulseProgramme'
 
@@ -69,6 +77,7 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
   const [editing, setEditing] = useState<{ question: PulseQuestion; index: number } | null>(null)
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null)
   const [tag, setTag] = useState<string>(ANY_TAG)
+  const [state, setState] = useState<string>(ANY_STATE)
   const [saveError, setSaveError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -83,7 +92,10 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
         stored ?? [
           {
             ...blankSelection([]),
-            questionIds: bank.questions.slice(0, MAX_SELECTED).map((one) => one.id),
+            questionIds: bank.questions
+              .filter(isSelectable)
+              .slice(0, MAX_SELECTED)
+              .map((one) => one.id),
           },
         ],
       )
@@ -121,7 +133,11 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
   }, [])
 
   const tags = useMemo(() => tagsInUse(questions ?? []), [questions])
-  const shown = useMemo(() => byTag(questions ?? [], tag), [questions, tag])
+  const counts = useMemo(() => countByState(questions ?? []), [questions])
+  const shown = useMemo(
+    () => byState(byTag(questions ?? [], tag), state),
+    [questions, tag, state],
+  )
   const missed = useMemo(
     () => unreached(selections, departments.map((one) => one.name)),
     [selections, departments],
@@ -162,6 +178,31 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
         : questions!.map((one, at) => (at === index ? withId : one)),
     )
     setEditing(null)
+  }
+
+  /**
+   * Move a question between draft, published and retired.
+   *
+   * Leaving published pulls it out of every selection, because a selection holding an
+   * unaskable question is not a state worth keeping — and the alternative, leaving it
+   * there and refusing to save, blocks the page on a decision the person has already
+   * made. What they lose is a tick they can put back by publishing it again.
+   */
+  function setQuestionState(index: number, next: QuestionState) {
+    const question = questions![index]
+    commitBank(
+      questions!.map((one, at) => (at === index ? { ...one, state: next } : one)),
+    )
+    if (next !== 'PUBLISHED') {
+      const affected = selections.filter((one) => one.questionIds.includes(question.id)).length
+      if (affected > 0) {
+        commitSelections(withoutQuestion(selections, question.id))
+        setSaveError(
+          `Taken out of ${affected} ${affected === 1 ? 'selection' : 'selections'} — ` +
+            `a ${STATE_LABEL[next].toLowerCase()} question cannot be asked.`,
+        )
+      }
+    }
   }
 
   function removeQuestion(index: number) {
@@ -240,6 +281,24 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
       {/* ------------------------------------------------------------ the bank */}
 
       <section className="card" style={{ marginTop: 16 }}>
+        <div className="chips" style={{ marginBottom: 8 }}>
+          <button
+            className={`chip ${state === ANY_STATE ? 'chip--on' : ''}`}
+            onClick={() => setState(ANY_STATE)}
+          >
+            {ANY_STATE}
+          </button>
+          {QUESTION_STATES.map((one) => (
+            <button
+              key={one}
+              className={`chip ${state === one ? 'chip--on' : ''}`}
+              onClick={() => setState(one)}
+            >
+              {STATE_LABEL[one]} · {counts[one]}
+            </button>
+          ))}
+        </div>
+
         <div className="chips">
           <button
             className={`chip ${tag === ANY_TAG ? 'chip--on' : ''}`}
@@ -269,9 +328,9 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
 
         {shown.length === 0 ? (
           <Empty style={{ marginTop: 14 }}>
-            {tag === ANY_TAG
+            {tag === ANY_TAG && state === ANY_STATE
               ? 'No questions yet. Nobody would be asked anything.'
-              : `Nothing tagged ${tag}.`}
+              : 'Nothing here matches those filters.'}
           </Empty>
         ) : (
           <div style={{ marginTop: 8 }}>
@@ -283,7 +342,21 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
               return (
                 <div className="qrow" key={question.id}>
                   <div className="qrow__main">
-                    <div className="row__title">{question.question}</div>
+                    <div className="row__title">
+                      {question.question}
+                      <span
+                        className={`pill ${
+                          question.state === 'PUBLISHED'
+                            ? 'pill--resolved'
+                            : question.state === 'DRAFT'
+                              ? 'pill--optional'
+                              : 'pill--neutral'
+                        }`}
+                        style={{ marginLeft: 8 }}
+                      >
+                        {STATE_LABEL[question.state]}
+                      </span>
+                    </div>
                     <div className="row__meta">
                       {question.tags.length > 0
                         ? question.tags.map((one) => (
@@ -302,6 +375,22 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
 
                   {editable && (
                     <div className="qrow__acts">
+                      {question.state !== 'PUBLISHED' && (
+                        <button
+                          className="qrow__act"
+                          onClick={() => setQuestionState(index, 'PUBLISHED')}
+                        >
+                          Publish
+                        </button>
+                      )}
+                      {question.state === 'PUBLISHED' && (
+                        <button
+                          className="qrow__act"
+                          onClick={() => setQuestionState(index, 'RETIRED')}
+                        >
+                          Retire
+                        </button>
+                      )}
                       <button
                         className="qrow__act"
                         onClick={() => setEditing({ question: { ...question }, index })}
@@ -416,7 +505,10 @@ function SelectionCard({
 }) {
   const [tag, setTag] = useState<string>(ANY_TAG)
   const tags = useMemo(() => tagsInUse(bank), [bank])
-  const shown = byTag(bank, tag)
+  // Only published questions are offered. Drafts and retired ones are deliberately not
+  // shown here rather than shown-and-refused: this list is a menu, and a menu listing
+  // things the kitchen will not make wastes the reader's time.
+  const shown = byTag(bank, tag).filter(isSelectable)
 
   const picked = selection.questionIds.length
   const full = picked >= MAX_SELECTED
@@ -529,7 +621,11 @@ function SelectionCard({
       )}
 
       {shown.length === 0 ? (
-        <Empty>Nothing tagged {tag}.</Empty>
+        <Empty>
+          {tag === ANY_TAG
+            ? 'No published questions yet. Publish one from the bank above.'
+            : `Nothing published under ${tag}.`}
+        </Empty>
       ) : (
         shown.map((question) => {
           const on = selection.questionIds.includes(question.id)
@@ -648,6 +744,26 @@ function QuestionEditor({
         placeholder="Think about the last two weeks rather than today."
         onChange={(event) => set({ hint: event.target.value })}
       />
+
+      <div className="drawer__label">State</div>
+      <div className="chips" style={{ marginBottom: 4 }}>
+        {QUESTION_STATES.map((one) => (
+          <button
+            key={one}
+            className={`chip ${draft.state === one ? 'chip--on' : ''}`}
+            onClick={() => set({ state: one })}
+          >
+            {STATE_LABEL[one]}
+          </button>
+        ))}
+      </div>
+      <div className="field-foot">
+        {draft.state === 'PUBLISHED'
+          ? 'Can be put into a selection.'
+          : draft.state === 'DRAFT'
+            ? 'Still being written. Cannot be asked.'
+            : 'Kept for the record, no longer asked.'}
+      </div>
 
       <div className="drawer__label">Tags</div>
       <div className="chips" style={{ marginBottom: 8 }}>
