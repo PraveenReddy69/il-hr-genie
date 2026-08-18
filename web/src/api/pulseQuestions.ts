@@ -12,6 +12,7 @@
 
 import { get, isLive } from './client'
 import { currentCycle } from './mock'
+import { MAX_BANK, normaliseTags } from './pulseProgramme'
 
 export interface PulseQuestion {
   /**
@@ -25,18 +26,25 @@ export interface PulseQuestion {
   /** The line under the question. Optional — most questions do not need one. */
   hint: string
   options: string[]
-  /** Empty means everyone. Otherwise only these departments are asked. */
-  departments: string[]
+  /**
+   * What the question is about, normalised — see normaliseTag.
+   *
+   * Free text rather than a fixed list, unlike holiday regions: whoever writes a
+   * question should be able to name what it covers without asking anyone. Normalising
+   * is what stops "Work Load", "workload" and "work load " becoming three tags that
+   * filter to three different sets.
+   */
+  tags: string[]
 }
 
 /**
- * The cap, and the reason for it.
+ * The cap on one *selection*, re-exported from where it is defined.
  *
- * A pulse is answered on a phone, in a chat window, once a month. Past about ten
- * questions people stop reading and start tapping the first option, which is worse
- * than not asking — the numbers still look like data.
+ * It used to cap the bank, which meant an eleventh question could only be written by
+ * deleting one that was working. The limit is about how much you can ask a person on
+ * a phone in one sitting, so it belongs to what is asked, not to what exists.
  */
-export const MAX_QUESTIONS = 10
+export { MAX_SELECTED as MAX_QUESTIONS } from './pulseProgramme'
 export const MIN_OPTIONS = 2
 export const MAX_OPTIONS = 6
 export const MAX_QUESTION_LENGTH = 120
@@ -51,7 +59,7 @@ export const SCALES: { label: string; options: string[] }[] = [
 ]
 
 const STORAGE_KEY = 'hr-genie-pulse-bank'
-const SCHEMA = 1
+const SCHEMA = 2
 
 /** What the server returns today. No hint, no departments. */
 interface RawQuestion {
@@ -78,12 +86,15 @@ async function fetchLiveBank(): Promise<PulseQuestion[]> {
   if (!isLive) return DEFAULTS.map((question) => ({ ...question }))
   try {
     const raw = await get<{ questions: RawQuestion[] }>('/api/pulse/questions')
-    return (raw.questions ?? []).slice(0, MAX_QUESTIONS).map((question) => ({
+    // Not truncated any more. The server returns what is currently being asked, which
+    // is a selection of at most MAX_SELECTED — but this is the bank, and slicing it
+    // would silently drop questions the moment the endpoint starts serving a library.
+    return (raw.questions ?? []).slice(0, MAX_BANK).map((question) => ({
       id: question.id,
       question: question.question,
       hint: '',
       options: question.options ?? [],
-      departments: [],
+      tags: [],
     }))
   } catch {
     // A bank that will not load is not a reason to block authoring — start from the
@@ -106,13 +117,34 @@ export function discardLocalBank(): void {
   localStorage.removeItem(STORAGE_KEY)
 }
 
+/**
+ * The stored bank, whatever shape it was stored in.
+ *
+ * Version 1 put `departments` on each question. That is now a property of a selection,
+ * so an old entry is read, its departments dropped, and its tags defaulted — rather
+ * than being thrown away, which would lose whatever wording somebody had already
+ * agreed.
+ */
+export function migrateQuestion(raw: Record<string, unknown>): PulseQuestion {
+  return {
+    id: String(raw.id ?? ''),
+    question: String(raw.question ?? ''),
+    hint: String(raw.hint ?? ''),
+    options: Array.isArray(raw.options) ? raw.options.map(String) : [],
+    tags: normaliseTags(Array.isArray(raw.tags) ? raw.tags.map(String) : []),
+  }
+}
+
 function readLocal(): PulseQuestion[] | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return null
-    const parsed = JSON.parse(raw) as { schema?: number; questions?: PulseQuestion[] }
-    if (parsed.schema !== SCHEMA || !Array.isArray(parsed.questions)) return null
-    return parsed.questions
+    const parsed = JSON.parse(raw) as { schema?: number; questions?: unknown[] }
+    if (!Array.isArray(parsed.questions)) return null
+    // Schema 1 and 2 are both read. Refusing the older one would throw away wording
+    // somebody had already agreed, for the sake of a field that moved.
+    if (parsed.schema !== SCHEMA && parsed.schema !== 1) return null
+    return parsed.questions.map((one) => migrateQuestion(one as Record<string, unknown>))
   } catch {
     return null
   }
@@ -144,7 +176,9 @@ export function validateQuestion(question: PulseQuestion): string | null {
 }
 
 export function validateBank(questions: PulseQuestion[]): string | null {
-  if (questions.length > MAX_QUESTIONS) return `A pulse is capped at ${MAX_QUESTIONS} questions.`
+  // No size cap here any more. The bank is a library; the ten-question limit applies to
+  // what a selection asks, which is a different thing — see pulseProgramme.ts.
+  if (questions.length > MAX_BANK) return `That is more than ${MAX_BANK} questions.`
   if (new Set(questions.map((question) => question.id)).size !== questions.length) {
     return 'Two questions share an id.'
   }
@@ -158,7 +192,7 @@ export function validateBank(questions: PulseQuestion[]): string | null {
 // --------------------------------------------------------------------- helpers
 
 export function blankQuestion(): PulseQuestion {
-  return { id: '', question: '', hint: '', options: [...SCALES[0].options], departments: [] }
+  return { id: '', question: '', hint: '', options: [...SCALES[0].options], tags: [] }
 }
 
 /**
@@ -184,18 +218,8 @@ export function newQuestionId(text: string, taken: string[]): string {
   return `${slug}-${taken.length}`
 }
 
-/** What one department is asked: its own questions plus everyone's. */
-export function questionsFor(questions: PulseQuestion[], department: string): PulseQuestion[] {
-  return questions.filter(
-    (question) => question.departments.length === 0 || question.departments.includes(department),
-  )
-}
-
-export function departmentLabel(departments: string[]): string {
-  if (departments.length === 0) return 'Everyone'
-  if (departments.length === 1) return departments[0]
-  return `${departments.length} departments`
-}
+// What a department is asked now comes from the selection, not the question — see
+// selectionFor and questionsIn in pulseProgramme.ts.
 
 /** The cycle this bank will be asked in — pulses are monthly. */
 export function nextCycleLabel(): string {
@@ -213,27 +237,27 @@ const DEFAULTS: PulseQuestion[] = [
     question: 'How has your work experience been this month?',
     hint: '',
     options: ['Genuinely good', 'Mostly fine', 'Up and down', 'Rough, honestly'],
-    departments: [],
+    tags: ['wellbeing'],
   },
   {
     id: 'workload',
     question: 'Is your workload manageable right now?',
     hint: 'Think about the last two weeks rather than today.',
     options: ['Comfortable', 'Busy but okay', 'Stretched', 'Not sustainable'],
-    departments: [],
+    tags: ['workload', 'wellbeing'],
   },
   {
     id: 'manager',
     question: 'Do you feel supported by your manager?',
     hint: '',
     options: ['Always', 'Usually', 'Sometimes', 'Rarely'],
-    departments: [],
+    tags: ['manager'],
   },
   {
     id: 'attrition',
     question: 'Have you thought about looking elsewhere recently?',
     hint: '',
     options: ['Not at all', 'Passing thought', 'Somewhat', 'Actively looking'],
-    departments: [],
+    tags: ['attrition'],
   },
 ]

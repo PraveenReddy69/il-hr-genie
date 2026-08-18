@@ -1,15 +1,113 @@
 # Pulse questions — what the backend needs to add
 
-HR now authors the monthly pulse in the console: the wording, the answers, the order,
-and **which departments get asked each question**. Everything on that page works
-except saving it anywhere other than the HR user's own browser, because the API has
-one route for questions and it is read-only:
+HR now authors the monthly pulse in the console: the wording, the answers, the tags,
+and which departments are asked which questions. Everything on that page works except
+saving it anywhere other than the HR user's own browser, because the API has one
+route for questions and it is read-only:
 
 ```
 GET /api/pulse/questions        # the whole bank, no departments, no way to change it
 ```
 
-Four routes close the gap. Nothing else in the console or either app changes.
+Four routes on the bank close half the gap; a second resource for selections closes the
+rest. Read section 0 first - the model changed shape.
+
+---
+
+## 0. What changed, and why it matters to you
+
+The console used to hold **one list**: a bank of at most ten questions, each carrying
+the departments it was asked of. That has been split, because it conflated two
+decisions that happen at different times:
+
+| | |
+|---|---|
+| **The bank** | Every question anyone has written, tagged. A library. **Uncapped** |
+| **A selection** | A set of departments paired with **up to ten** bank questions. What those departments are actually asked |
+
+The ten-question limit moved from the bank to the selection. It is about how much you
+can ask a person on a phone in one sitting — past about ten they stop reading and start
+tapping the first option, which is worse than not asking, because the numbers still look
+like data. It was never a statement about how many questions may *exist*, and while it
+capped the bank, writing an eleventh question meant deleting one that was working.
+
+**For the API this means `departments` comes off the question and a second resource
+appears.** Everything below is written against that split.
+
+---
+
+## 0b. Tags
+
+A question carries `tags`, which is how a selection finds it later.
+
+```json
+{ "tags": ["workload", "wellbeing"] }
+```
+
+Free text, unlike holiday regions — whoever writes a question should be able to name
+what it covers without asking anyone. But **normalised**: lower-cased, trimmed, inner
+spaces to dashes, punctuation dropped. Without that, `"Work Load"`, `"workload"` and
+`"work load "` are three tags that filter to three different sets, and the list stops
+being useful about a fortnight in.
+
+Please normalise server-side too rather than trusting the client. At most six tags per
+question, each at most 24 characters.
+
+---
+
+## 0c. Selections
+
+```jsonc
+{
+  "id": "sel-eng",
+  "departments": ["Experience", "Growth"],   // empty array = every department
+  "questionIds": ["experience", "workload"]  // order matters, see below
+}
+```
+
+```http
+GET    /api/pulse/selections
+POST   /api/pulse/selections
+PATCH  /api/pulse/selections/{id}
+DELETE /api/pulse/selections/{id}
+```
+
+**Four rules, all of which the console enforces early and none of which it can
+guarantee:**
+
+1. **At most ten `questionIds`.** `422` beyond that.
+2. **A department appears in at most one selection.** Two selections naming the same
+   department means two different pulses and nothing to choose between them. Reject with
+   `409` naming the department — the console shows the message verbatim.
+3. **At most one selection with an empty `departments`.** Otherwise "everyone" has two
+   answers.
+4. **`questionIds` order is the order asked.** Store it as given. A pulse that opens
+   with *have you thought about looking elsewhere* reads very differently from one that
+   ends with it, so this is an authoring decision, not an implementation detail.
+
+**What one department is asked:** its own selection if it has one, otherwise the
+empty-`departments` selection. **Never both.** A department named in a selection has
+been decided about, and quietly adding the general questions on top would push it past
+ten without anybody choosing to.
+
+A department in no selection, with no everyone-selection present, is asked **nothing**.
+That is a real state and the console warns about it, because otherwise the first sign is
+an empty column on the dashboard a month later.
+
+---
+
+## 0d. Who may change what
+
+Same permissions as the holiday calendar — see `docs/ACCESS_CONTROL.md`.
+
+| | HRBP | Admin | Main Head |
+|---|:--:|:--:|:--:|
+| `GET` questions and selections | yes | yes | yes |
+| `POST`, `PATCH`, `DELETE` on either | | yes | yes |
+
+HRBPs read the bank so they know what their people are being asked. Deciding the
+wording, and who gets which questions, is `pulse.publish`. An HRBP calling a write gets
+`403`.
 
 ---
 
@@ -24,8 +122,8 @@ the console all tolerate the current shape today.
   "question": "Is your workload manageable right now?",
   "hint": "Think about the last two weeks rather than today.",   // optional, may be ""
   "options": ["Comfortable", "Busy but okay", "Stretched", "Not sustainable"],
-  "departments": ["Sales", "Inside Sales"], // empty array = everyone
-  "order": 2                                // 1-based, what employees see
+  "tags": ["workload", "wellbeing"],        // normalised; see 0b
+  "order": 2                                // 1-based, position in the bank
 }
 ```
 
@@ -35,8 +133,8 @@ given. The console generates a readable slug on create and never sends a differe
 on update — please enforce the same on your side and reject an `id` in a `PATCH` body
 rather than honouring it.
 
-`departments` matches the `department` field on `/api/employees` exactly, as a string.
-No ids, because the directory does not expose any.
+A selection's `departments` matches the `department` field on `/api/employees` exactly,
+as a string. No ids, because the directory does not expose any.
 
 ---
 
@@ -45,7 +143,7 @@ No ids, because the directory does not expose any.
 | Route | Body | Returns |
 |---|---|---|
 | `POST /api/pulse/questions` | everything except `order` (append to the end) | the created question |
-| `PATCH /api/pulse/questions/{id}` | any of `question`, `hint`, `options`, `departments` | the updated question |
+| `PATCH /api/pulse/questions/{id}` | any of `question`, `hint`, `options`, `tags` | the updated question |
 | `DELETE /api/pulse/questions/{id}` | — | `204` |
 | `PUT /api/pulse/questions/order` | `{ "ids": ["experience", "workload", ...] }` | the reordered bank |
 

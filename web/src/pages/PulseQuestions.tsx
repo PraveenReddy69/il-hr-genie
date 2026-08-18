@@ -1,11 +1,18 @@
 /**
- * Authoring the monthly pulse.
+ * Authoring the monthly pulse, in two stages.
  *
- * HR writes the questions here and chooses which departments get asked each one. The
- * two things worth designing for: a department that ends up with nothing to answer
- * (an empty pulse, and nobody notices until the response rate is zero), and editing a
- * question people have already answered this cycle (the wording changes, the answers
- * do not, and the comparison quietly stops meaning anything).
+ * **The bank** is every question anyone has written, tagged. It is a library: a
+ * question is written once and reused for years, so nothing here is capped.
+ *
+ * **A selection** pairs a set of departments with up to ten of those questions. That is
+ * what those departments are actually asked, and the ten-question limit lives here
+ * rather than on the bank — it is about how much you can ask a person on a phone in one
+ * sitting, not about how many questions may exist.
+ *
+ * Two things worth designing for, both of which fail quietly: a department nobody
+ * assigned (an empty pulse, noticed a month later when the response rate is zero), and
+ * editing a question people have already answered this cycle (the wording changes, the
+ * answers do not, and the comparison stops meaning anything).
  */
 
 import { useEffect, useMemo, useState } from 'react'
@@ -15,57 +22,81 @@ import { fetchEmployees, fetchPulseBreakdown, isLive } from '../api/client'
 import { currentCycle } from '../api/mock'
 import {
   MAX_OPTIONS,
-  MAX_QUESTIONS,
   MAX_QUESTION_LENGTH,
   MIN_OPTIONS,
   SCALES,
   blankQuestion,
-  departmentLabel,
   discardLocalBank,
   fetchQuestionBank,
   newQuestionId,
   nextCycleLabel,
-  questionsFor,
   saveQuestionBank,
   validateQuestion,
   type PulseQuestion,
 } from '../api/pulseQuestions'
+import {
+  ANY_TAG,
+  MAX_SELECTED,
+  MAX_TAGS_PER_QUESTION,
+  SUGGESTED_TAGS,
+  blankSelection,
+  byTag,
+  discardProgramme,
+  isEveryone,
+  normaliseTag,
+  questionsIn,
+  readProgramme,
+  saveProgramme,
+  selectionLabel,
+  tagsInUse,
+  unreached,
+  validateSelection,
+  type PulseSelection,
+} from '../api/pulseProgramme'
 
 interface Department {
   name: string
   headcount: number
 }
 
-/**
- * The question bank.
- *
- * `editable` is `pulse.publish`, which HRBPs do not hold — they read the bank so they
- * know what their people are being asked, and Admin decides the wording. The controls
- * are removed rather than disabled: a row of greyed buttons on every question is a
- * worse way to say "not yours" than not drawing them, and this page is mostly buttons.
- */
 export function PulseQuestions({ editable = true }: { editable?: boolean }) {
   const [questions, setQuestions] = useState<PulseQuestion[] | null>(null)
+  const [selections, setSelections] = useState<PulseSelection[]>([])
   const [unsaved, setUnsaved] = useState(false)
   const [departments, setDepartments] = useState<Department[]>([])
   /** questionId -> people who have already answered it this cycle. */
   const [answered, setAnswered] = useState<Map<string, number>>(new Map())
   const [editing, setEditing] = useState<{ question: PulseQuestion; index: number } | null>(null)
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null)
+  const [tag, setTag] = useState<string>(ANY_TAG)
   const [saveError, setSaveError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchQuestionBank().then((bank) => {
       setQuestions(bank.questions)
       setUnsaved(bank.unsaved)
+      // A first run has no selections stored. Everyone gets whatever the bank already
+      // holds, capped — which is exactly what the old single-list model did, so nobody
+      // opens this page to find the pulse switched off underneath them.
+      const stored = readProgramme()
+      setSelections(
+        stored ?? [
+          {
+            ...blankSelection([]),
+            questionIds: bank.questions.slice(0, MAX_SELECTED).map((one) => one.id),
+          },
+        ],
+      )
     })
+  }, [])
 
+  useEffect(() => {
     fetchEmployees().then((people) => {
       const counts = new Map<string, number>()
-      people.forEach((person) => {
-        if (!person.department) return
+      for (const person of people) {
+        if (person.role !== 'EMPLOYEE') continue
         counts.set(person.department, (counts.get(person.department) ?? 0) + 1)
-      })
+      }
       setDepartments(
         [...counts.entries()]
           .map(([name, headcount]) => ({ name, headcount }))
@@ -73,10 +104,10 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
       )
     })
 
-    // Only to warn before an edit rewrites what an answer meant. A failure here is
-    // not worth blocking authoring over — it costs the warning, not the page.
     fetchPulseBreakdown(currentCycle())
-      .then((rows) => {
+      .then((rows) =>
+        // Summed from the per-option counts: the breakdown has no total of its own,
+        // and the number wanted here is how many people this question has reached.
         setAnswered(
           new Map(
             rows.map((row) => [
@@ -84,19 +115,21 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
               row.answers.reduce((total, answer) => total + answer.count, 0),
             ]),
           ),
-        )
-      })
-      .catch(() => undefined)
+        ),
+      )
+      .catch(() => setAnswered(new Map()))
   }, [])
 
-  /**
-   * Every change is written straight away — there is no half-saved state to lose.
-   *
-   * The write can still fail (a full storage quota, private browsing), and silently
-   * losing an edit that is on screen is the one outcome worth ruling out: the change
-   * is kept either way and the failure is said out loud.
-   */
-  function commit(next: PulseQuestion[]) {
+  const tags = useMemo(() => tagsInUse(questions ?? []), [questions])
+  const shown = useMemo(() => byTag(questions ?? [], tag), [questions, tag])
+  const missed = useMemo(
+    () => unreached(selections, departments.map((one) => one.name)),
+    [selections, departments],
+  )
+
+  if (!questions) return <Loading />
+
+  function commitBank(next: PulseQuestion[]) {
     setQuestions(next)
     setUnsaved(true)
     try {
@@ -107,71 +140,61 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
     }
   }
 
-  function move(index: number, by: number) {
-    if (!questions) return
-    const to = index + by
-    if (to < 0 || to >= questions.length) return
-    const next = [...questions]
-    ;[next[index], next[to]] = [next[to], next[index]]
-    commit(next)
+  function commitSelections(next: PulseSelection[]) {
+    setSelections(next)
+    setUnsaved(true)
+    try {
+      saveProgramme(next)
+      setSaveError(null)
+    } catch (failure) {
+      setSaveError(failure instanceof Error ? failure.message : 'Could not save that change.')
+    }
   }
 
-  function remove(index: number) {
-    if (!questions) return
-    commit(questions.filter((_, at) => at !== index))
-    setConfirmRemove(null)
-  }
-
-  function save(question: PulseQuestion, index: number) {
-    if (!questions) return
-    const cleaned: PulseQuestion = {
-      ...question,
-      question: question.question.trim(),
-      hint: question.hint.trim(),
-      options: question.options.map((option) => option.trim()).filter(Boolean),
-    }
-    if (index < 0) {
-      const id = newQuestionId(cleaned.question, questions.map((one) => one.id))
-      commit([...questions, { ...cleaned, id }])
-    } else {
-      // The id is deliberately not taken from the form: it is what every answer ever
-      // given is keyed by.
-      commit(questions.map((one, at) => (at === index ? { ...cleaned, id: one.id } : one)))
-    }
+  function saveQuestion(question: PulseQuestion, index: number) {
+    const taken = questions!.map((one) => one.id).filter((_, at) => at !== index)
+    const withId = question.id
+      ? question
+      : { ...question, id: newQuestionId(question.question, taken) }
+    commitBank(
+      index < 0
+        ? [...questions!, withId]
+        : questions!.map((one, at) => (at === index ? withId : one)),
+    )
     setEditing(null)
   }
 
-  const coverage = useMemo(() => {
-    const list = questions ?? []
-    return departments.map((department) => ({
-      ...department,
-      asked: questionsFor(list, department.name).length,
-    }))
-  }, [questions, departments])
-
-  if (!questions) return <Loading />
-
-  const everyone = questions.filter((question) => question.departments.length === 0).length
-  const targeted = questions.length - everyone
-  const uncovered = coverage.filter((department) => department.asked === 0)
-  const full = questions.length >= MAX_QUESTIONS
+  function removeQuestion(index: number) {
+    const going = questions![index]
+    commitBank(questions!.filter((_, at) => at !== index))
+    // Dropped from every selection too. Leaving the id behind would show as a shorter
+    // pulse than the counter claims, with no sign of why.
+    commitSelections(
+      selections.map((one) => ({
+        ...one,
+        questionIds: one.questionIds.filter((id) => id !== going.id),
+      })),
+    )
+    setConfirmRemove(null)
+  }
 
   return (
     <>
       <div className="page-head">
-        <h1>Pulse questions</h1>
+        <h1>Pulse</h1>
         <p>
-          {questions.length} of {MAX_QUESTIONS} · asked in {nextCycleLabel()}
+          {questions.length} in the bank · {selections.length}{' '}
+          {selections.length === 1 ? 'selection' : 'selections'} for {nextCycleLabel()}
         </p>
       </div>
 
       <div className="banner banner--info">
         <div className="banner__title">Not on the server yet</div>
         <div className="banner__body">
-          The backend serves the question bank read-only — there is no route to create
-          or edit one. Everything here is kept in this browser so the wording and the
-          department split can be agreed now; it reaches employees once the four routes
-          in <code>docs/PULSE_QUESTIONS_BACKEND.md</code> exist.
+          The backend serves the question bank read-only, and has nothing at all for
+          selections. Everything here is kept in this browser so the wording and the
+          department split can be agreed now; it reaches employees once the routes in{' '}
+          <code>docs/PULSE_QUESTIONS_BACKEND.md</code> exist.
           {unsaved && (
             <>
               {' '}
@@ -179,9 +202,11 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
                 className="linkish"
                 onClick={() => {
                   discardLocalBank()
+                  discardProgramme()
                   fetchQuestionBank().then((bank) => {
                     setQuestions(bank.questions)
                     setUnsaved(bank.unsaved)
+                    setSelections(readProgramme() ?? [])
                   })
                 }}
               >
@@ -192,175 +217,358 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
         </div>
       </div>
 
-      {saveError && <div className="error">{saveError}</div>}
-
-      <div className="grid grid--3">
-        <div className="tile tile--blue">
-          <div className="tile__value">
-            {questions.length}
-            <small> / {MAX_QUESTIONS}</small>
+      {missed.length > 0 && (
+        <div className="banner banner--warn" style={{ marginTop: 12 }}>
+          <div className="banner__title">
+            {missed.length} {missed.length === 1 ? 'department is' : 'departments are'} not asked
+            anything
           </div>
-          <div className="tile__label">Questions</div>
-          <div className="tile__sub">
-            {full ? 'At the cap' : `${MAX_QUESTIONS - questions.length} more allowed`}
-          </div>
-        </div>
-        <div className="tile tile--purple">
-          <div className="tile__value">{everyone}</div>
-          <div className="tile__label">Asked of everyone</div>
-          <div className="tile__sub">{targeted} scoped to departments</div>
-        </div>
-        <div className={`tile ${uncovered.length ? 'tile--amber' : 'tile--green'}`}>
-          <div className="tile__value">
-            {coverage.length - uncovered.length}
-            <small> / {coverage.length}</small>
-          </div>
-          <div className="tile__label">Departments covered</div>
-          <div className="tile__sub">
-            {uncovered.length === 0
-              ? 'Everyone gets something to answer'
-              : `${uncovered.length} would get an empty pulse`}
+          <div className="banner__body">
+            {missed.join(', ')}. Add them to a selection, or add one covering every
+            department — otherwise they are simply skipped, and the first sign is an
+            empty column on the dashboard next month.
           </div>
         </div>
-      </div>
+      )}
 
-      <div className="grid grid--2" style={{ alignItems: 'start' }}>
-        <Card
-          chip="✎"
-          chipColour="var(--blue-tint-12)"
-          title="The bank"
-          subtitle="In the order employees are asked"
-          action={
-            editable ? (
-              <button
-                className="card__action"
-                disabled={full}
-                title={full ? `A pulse is capped at ${MAX_QUESTIONS} questions.` : undefined}
-                onClick={() => setEditing({ question: blankQuestion(), index: -1 })}
-              >
-                + Add question
-              </button>
-            ) : undefined
-          }
-        >
-          {questions.length === 0 && <Empty>No questions yet. Nobody would be asked anything.</Empty>}
+      {saveError && (
+        <div className="error" style={{ marginTop: 12 }}>
+          {saveError}
+        </div>
+      )}
 
-          {questions.map((question, index) => (
-            <div className="qrow" key={question.id}>
-              <div className="qrow__ord">
-                <button
-                  className="qrow__move"
-                  onClick={() => move(index, -1)}
-                  disabled={index === 0}
-                  aria-label="Move up"
-                >
-                  ▲
-                </button>
-                <span className="qrow__num">{index + 1}</span>
-                <button
-                  className="qrow__move"
-                  onClick={() => move(index, 1)}
-                  disabled={index === questions.length - 1}
-                  aria-label="Move down"
-                >
-                  ▼
-                </button>
-              </div>
+      {/* ------------------------------------------------------------ the bank */}
 
-              <div className="qrow__main">
-                <div className="qrow__text">{question.question}</div>
-                {question.hint && <div className="qrow__hint">{question.hint}</div>}
-                <div className="qrow__options">
-                  {question.options.map((option) => (
-                    <span className="qrow__option" key={option}>
-                      {option}
-                    </span>
-                  ))}
-                </div>
-                <div className="qrow__foot">
-                  <span
-                    className={`tag ${question.departments.length === 0 ? 'tag--all' : 'tag--dept'}`}
-                    title={question.departments.join(', ')}
-                  >
-                    {departmentLabel(question.departments)}
-                  </span>
-                  {(answered.get(question.id) ?? 0) > 0 && (
-                    <span className="tag tag--live">
-                      {answered.get(question.id)} answered this cycle
-                    </span>
+      <section className="card" style={{ marginTop: 16 }}>
+        <div className="chips">
+          <button
+            className={`chip ${tag === ANY_TAG ? 'chip--on' : ''}`}
+            onClick={() => setTag(ANY_TAG)}
+          >
+            {ANY_TAG}
+          </button>
+          {tags.map((one) => (
+            <button
+              key={one}
+              className={`chip ${tag === one ? 'chip--on' : ''}`}
+              onClick={() => setTag(one)}
+            >
+              {one}
+            </button>
+          ))}
+          {editable && (
+            <button
+              className="chip"
+              style={{ marginLeft: 'auto' }}
+              onClick={() => setEditing({ question: blankQuestion(), index: -1 })}
+            >
+              + Add question
+            </button>
+          )}
+        </div>
+
+        {shown.length === 0 ? (
+          <Empty style={{ marginTop: 14 }}>
+            {tag === ANY_TAG
+              ? 'No questions yet. Nobody would be asked anything.'
+              : `Nothing tagged ${tag}.`}
+          </Empty>
+        ) : (
+          <div style={{ marginTop: 8 }}>
+            {shown.map((question) => {
+              const index = questions.indexOf(question)
+              const uses = selections.filter((one) =>
+                one.questionIds.includes(question.id),
+              ).length
+              return (
+                <div className="qrow" key={question.id}>
+                  <div className="qrow__main">
+                    <div className="row__title">{question.question}</div>
+                    <div className="row__meta">
+                      {question.tags.length > 0
+                        ? question.tags.map((one) => (
+                            <span className="tag tag--dept" key={one} style={{ marginRight: 6 }}>
+                              {one}
+                            </span>
+                          ))
+                        : <span className="tag tag--all">untagged</span>}
+                      {uses > 0 && (
+                        <span style={{ marginLeft: 8 }}>
+                          in {uses} {uses === 1 ? 'selection' : 'selections'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {editable && (
+                    <div className="qrow__acts">
+                      <button
+                        className="qrow__act"
+                        onClick={() => setEditing({ question: { ...question }, index })}
+                      >
+                        Edit
+                      </button>
+                      {confirmRemove === question.id ? (
+                        <span className="qrow__confirm">
+                          <button
+                            className="qrow__act qrow__act--danger"
+                            onClick={() => removeQuestion(index)}
+                          >
+                            Remove
+                          </button>
+                          <button className="qrow__act" onClick={() => setConfirmRemove(null)}>
+                            Keep
+                          </button>
+                        </span>
+                      ) : (
+                        <button
+                          className="qrow__act"
+                          onClick={() => setConfirmRemove(question.id)}
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
-              </div>
+              )
+            })}
+          </div>
+        )}
+      </section>
 
-              <div className="qrow__acts">
-                {editable && (
-                  <button
-                    className="qrow__act"
-                    onClick={() => setEditing({ question: { ...question }, index })}
-                  >
-                    Edit
-                  </button>
-                )}
-                {editable &&
-                  (confirmRemove === question.id ? (
-                    <span className="qrow__confirm">
-                      <button className="qrow__act qrow__act--danger" onClick={() => remove(index)}>
-                        Remove
-                      </button>
-                      <button className="qrow__act" onClick={() => setConfirmRemove(null)}>
-                        Keep
-                      </button>
-                    </span>
-                  ) : (
-                    <button className="qrow__act" onClick={() => setConfirmRemove(question.id)}>
-                      Remove
-                    </button>
-                  ))}
-              </div>
-            </div>
-          ))}
-        </Card>
+      {/* ------------------------------------------------------ the selections */}
 
-        <Card
-          chip="◎"
-          chipColour="var(--green-tint-14)"
-          title="Who is asked what"
-          subtitle={`${departments.length} departments in the directory`}
-        >
-          {departments.length === 0 && <Empty>Directory not loaded.</Empty>}
-          {coverage.map((department) => (
-            <div className="row" key={department.name}>
-              <div className="row__main">
-                <div className="row__title">{department.name}</div>
-                <div className="row__meta">
-                  {department.headcount} {department.headcount === 1 ? 'person' : 'people'}
-                </div>
-              </div>
-              <span className={`pill ${department.asked === 0 ? 'pill--open' : 'pill--neutral'}`}>
-                {department.asked === 0
-                  ? 'nothing to answer'
-                  : `${department.asked} question${department.asked === 1 ? '' : 's'}`}
-              </span>
-            </div>
-          ))}
-          <p className="note">
-            A question with no departments goes to everyone. A department with nothing
-            still gets the pulse invitation, and opens an empty form.
-          </p>
-        </Card>
+      <div style={{ marginTop: 20 }}>
+        {selections.map((selection, index) => (
+          <SelectionCard
+            key={selection.id}
+            selection={selection}
+            others={selections.filter((_, at) => at !== index)}
+            bank={questions}
+            departments={departments}
+            editable={editable}
+            onChange={(next) =>
+              commitSelections(selections.map((one, at) => (at === index ? next : one)))
+            }
+            onRemove={() => commitSelections(selections.filter((_, at) => at !== index))}
+          />
+        ))}
       </div>
+
+      {editable && (
+        <button
+          className="button button--ghost"
+          style={{ marginTop: 12 }}
+          onClick={() =>
+            commitSelections([...selections, blankSelection(selections.map((one) => one.id))])
+          }
+        >
+          + Add a selection
+        </button>
+      )}
 
       {editing && (
         <QuestionEditor
           question={editing.question}
           index={editing.index}
-          departments={departments}
+          knownTags={[...new Set([...tags, ...SUGGESTED_TAGS])]}
           answeredBy={answered.get(editing.question.id) ?? 0}
           onCancel={() => setEditing(null)}
-          onSave={save}
+          onSave={saveQuestion}
         />
       )}
+
+      {!isLive && (
+        <p className="note">
+          Running on mock data — the bank and the selections are this browser&apos;s.
+        </p>
+      )}
     </>
+  )
+}
+
+// ---------------------------------------------------------------- a selection
+
+/**
+ * One set of departments and what they are asked.
+ *
+ * The question list is the whole bank with a checkbox each, rather than a picker that
+ * hides what is not chosen: choosing the ten is a comparison, and you cannot compare
+ * against things you cannot see.
+ */
+function SelectionCard({
+  selection,
+  others,
+  bank,
+  departments,
+  editable,
+  onChange,
+  onRemove,
+}: {
+  selection: PulseSelection
+  others: PulseSelection[]
+  bank: PulseQuestion[]
+  departments: Department[]
+  editable: boolean
+  onChange: (selection: PulseSelection) => void
+  onRemove: () => void
+}) {
+  const [tag, setTag] = useState<string>(ANY_TAG)
+  const tags = useMemo(() => tagsInUse(bank), [bank])
+  const shown = byTag(bank, tag)
+
+  const picked = selection.questionIds.length
+  const full = picked >= MAX_SELECTED
+  const problem = validateSelection(selection, others, bank)
+
+  const reach = isEveryone(selection)
+    ? departments.reduce((total, one) => total + one.headcount, 0)
+    : departments
+        .filter((one) => selection.departments.includes(one.name))
+        .reduce((total, one) => total + one.headcount, 0)
+
+  function toggleQuestion(id: string) {
+    const on = selection.questionIds.includes(id)
+    if (!on && full) return
+    onChange({
+      ...selection,
+      questionIds: on
+        ? selection.questionIds.filter((one) => one !== id)
+        : [...selection.questionIds, id],
+    })
+  }
+
+  function toggleDepartment(name: string) {
+    onChange({
+      ...selection,
+      departments: selection.departments.includes(name)
+        ? selection.departments.filter((one) => one !== name)
+        : [...selection.departments, name],
+    })
+  }
+
+  return (
+    <Card
+      chip="🎯"
+      chipColour="var(--purple-tint-12)"
+      title={selectionLabel(selection)}
+      subtitle={`${picked} of ${MAX_SELECTED} questions · ${reach} ${reach === 1 ? 'person' : 'people'}`}
+      action={
+        editable ? (
+          <button className="card__action" onClick={onRemove}>
+            Remove
+          </button>
+        ) : undefined
+      }
+    >
+      {problem && <div className="error">{problem}</div>}
+
+      <div className="drawer__label">Departments</div>
+      <div
+        {...clickable(() => editable && onChange({ ...selection, departments: [] }))}
+        className={`option ${isEveryone(selection) ? 'option--on' : ''}`}
+      >
+        <span
+          className="option__dot"
+          style={{ background: isEveryone(selection) ? 'var(--blue-primary)' : 'var(--ink-12)' }}
+        />
+        Every department
+        <span className="option__tag">
+          {departments.reduce((total, one) => total + one.headcount, 0)} people
+        </span>
+      </div>
+
+      {departments.map((department) => {
+        const on = selection.departments.includes(department.name)
+        // Named in another selection: showing it as available would offer a choice that
+        // is then refused, which is worse than showing it as spoken for.
+        const elsewhere = others.some((one) => one.departments.includes(department.name))
+        return (
+          <div
+            key={department.name}
+            {...clickable(() => editable && !elsewhere && toggleDepartment(department.name))}
+            className={`option ${on ? 'option--on' : ''}`}
+            style={elsewhere ? { opacity: 0.4 } : undefined}
+          >
+            <span
+              className="option__dot"
+              style={{ background: on ? 'var(--blue-primary)' : 'var(--ink-12)' }}
+            />
+            {department.name}
+            <span className="option__tag">
+              {elsewhere ? 'in another selection' : department.headcount}
+            </span>
+          </div>
+        )
+      })}
+
+      <div className="drawer__label" style={{ marginTop: 16 }}>
+        Questions — {picked} of {MAX_SELECTED}
+        {full && <span style={{ color: 'var(--text-muted)' }}> · at the cap</span>}
+      </div>
+
+      {tags.length > 0 && (
+        <div className="chips" style={{ marginBottom: 8 }}>
+          <button
+            className={`chip ${tag === ANY_TAG ? 'chip--on' : ''}`}
+            onClick={() => setTag(ANY_TAG)}
+          >
+            {ANY_TAG}
+          </button>
+          {tags.map((one) => (
+            <button
+              key={one}
+              className={`chip ${tag === one ? 'chip--on' : ''}`}
+              onClick={() => setTag(one)}
+            >
+              {one}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {shown.length === 0 ? (
+        <Empty>Nothing tagged {tag}.</Empty>
+      ) : (
+        shown.map((question) => {
+          const on = selection.questionIds.includes(question.id)
+          const order = selection.questionIds.indexOf(question.id) + 1
+          return (
+            <div
+              key={question.id}
+              {...clickable(() => editable && toggleQuestion(question.id))}
+              className={`option ${on ? 'option--on' : ''}`}
+              // Dimmed rather than hidden at the cap: the row still says what it is,
+              // and the counter above says why it will not take.
+              style={!on && full ? { opacity: 0.4 } : undefined}
+            >
+              <span
+                className="option__dot"
+                style={{ background: on ? 'var(--blue-primary)' : 'var(--ink-12)' }}
+              />
+              {question.question}
+              <span className="option__tag">{on ? `#${order}` : question.tags[0] ?? ''}</span>
+            </div>
+          )
+        })
+      )}
+
+      {picked > 0 && (
+        <>
+          <div className="drawer__label" style={{ marginTop: 16 }}>
+            In this order
+          </div>
+          <div className="qpreview">
+            {questionsIn(bank, selection).map((question, at) => (
+              <div className="qpreview__option" key={question.id}>
+                {at + 1}. {question.question}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </Card>
   )
 }
 
@@ -369,19 +577,20 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
 function QuestionEditor({
   question,
   index,
-  departments,
+  knownTags,
   answeredBy,
   onCancel,
   onSave,
 }: {
   question: PulseQuestion
   index: number
-  departments: Department[]
+  knownTags: string[]
   answeredBy: number
   onCancel: () => void
   onSave: (question: PulseQuestion, index: number) => void
 }) {
   const [draft, setDraft] = useState<PulseQuestion>(question)
+  const [tagDraft, setTagDraft] = useState('')
   const problem = validateQuestion(draft)
 
   function set(patch: Partial<PulseQuestion>) {
@@ -392,24 +601,21 @@ function QuestionEditor({
     set({ options: draft.options.map((option, index) => (index === at ? value : option)) })
   }
 
-  function toggleDepartment(name: string) {
-    set({
-      departments: draft.departments.includes(name)
-        ? draft.departments.filter((one) => one !== name)
-        : [...draft.departments, name],
-    })
+  function toggleTag(raw: string) {
+    const tag = normaliseTag(raw)
+    if (!tag) return
+    if (draft.tags.includes(tag)) {
+      set({ tags: draft.tags.filter((one) => one !== tag) })
+      return
+    }
+    if (draft.tags.length >= MAX_TAGS_PER_QUESTION) return
+    set({ tags: [...draft.tags, tag] })
   }
-
-  const reach = draft.departments.length
-    ? departments
-        .filter((department) => draft.departments.includes(department.name))
-        .reduce((total, department) => total + department.headcount, 0)
-    : departments.reduce((total, department) => total + department.headcount, 0)
 
   return (
     <Drawer
       title={index < 0 ? 'New question' : 'Edit question'}
-      subtitle={`Goes to ${reach} ${reach === 1 ? 'person' : 'people'}`}
+      subtitle="Written once, used in any selection"
       onClose={onCancel}
     >
       {answeredBy > 0 && (
@@ -442,6 +648,35 @@ function QuestionEditor({
         placeholder="Think about the last two weeks rather than today."
         onChange={(event) => set({ hint: event.target.value })}
       />
+
+      <div className="drawer__label">Tags</div>
+      <div className="chips" style={{ marginBottom: 8 }}>
+        {knownTags.map((one) => (
+          <button
+            key={one}
+            className={`chip ${draft.tags.includes(one) ? 'chip--on' : ''}`}
+            onClick={() => toggleTag(one)}
+          >
+            {one}
+          </button>
+        ))}
+      </div>
+      <input
+        className="search"
+        value={tagDraft}
+        placeholder="Add a tag and press Enter"
+        onChange={(event) => setTagDraft(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key !== 'Enter') return
+          event.preventDefault()
+          toggleTag(tagDraft)
+          setTagDraft('')
+        }}
+      />
+      <div className="field-foot">
+        {draft.tags.length}/{MAX_TAGS_PER_QUESTION} · tags are how a selection finds this
+        question later
+      </div>
 
       <div className="drawer__label">Answers</div>
       <div className="chips" style={{ marginBottom: 10 }}>
@@ -484,41 +719,6 @@ function QuestionEditor({
         </button>
       )}
 
-      <div className="drawer__label">Who gets asked</div>
-      <div
-        {...clickable(() => set({ departments: [] }))}
-        className={`option ${draft.departments.length === 0 ? 'option--on' : ''}`}
-      >
-        <span
-          className="option__dot"
-          style={{
-            background: draft.departments.length === 0 ? 'var(--blue-primary)' : 'var(--ink-12)',
-          }}
-        />
-        Everyone
-        <span className="option__tag">
-          {departments.reduce((total, department) => total + department.headcount, 0)} people
-        </span>
-      </div>
-
-      {departments.map((department) => {
-        const on = draft.departments.includes(department.name)
-        return (
-          <div
-            key={department.name}
-            {...clickable(() => toggleDepartment(department.name))}
-            className={`option ${on ? 'option--on' : ''}`}
-          >
-            <span
-              className="option__dot"
-              style={{ background: on ? 'var(--blue-primary)' : 'var(--ink-12)' }}
-            />
-            {department.name}
-            <span className="option__tag">{department.headcount}</span>
-          </div>
-        )
-      })}
-
       <div className="drawer__label">How it looks in the app</div>
       <div className="qpreview">
         <div className="qpreview__text">{draft.question || 'Your question'}</div>
@@ -534,17 +734,15 @@ function QuestionEditor({
 
       {problem && <div className="error">{problem}</div>}
       <button className="button" disabled={Boolean(problem)} onClick={() => onSave(draft, index)}>
-        {index < 0 ? 'Add to the pulse' : 'Save changes'}
+        {index < 0 ? 'Add to the bank' : 'Save changes'}
       </button>
       <button className="button button--ghost" onClick={onCancel}>
         Cancel
       </button>
-
-      {!isLive && <p className="note">Running on mock data — the directory is seeded.</p>}
     </Drawer>
   )
 }
 
 function sameOptions(a: string[], b: string[]): boolean {
-  return a.length === b.length && a.every((option, index) => option === b[index])
+  return a.length === b.length && a.every((option, at) => option === b[at])
 }
