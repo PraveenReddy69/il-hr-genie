@@ -26,6 +26,7 @@ import {
   mockTicketAnalytics,
   mockTickets,
   mockUpdateTicket,
+  mockAssignTicket,
   weekDates,
   weekStart,
 } from './mock'
@@ -934,6 +935,25 @@ export async function fetchTickets(): Promise<Ticket[]> {
   const tickets = await pagedItems<Ticket>('/api/tickets/list')
   // Newest first regardless of what order the server chose to return them in.
   return [...tickets].sort((a, b) => b.createdAtMillis - a.createdAtMillis)
+}
+
+/**
+ * Hand a ticket to somebody, or take it back with `null`.
+ *
+ * Local on the mock path, like every other write here. The endpoint does not exist yet
+ * — see docs/TICKET_ASSIGNMENT_BACKEND.md.
+ */
+export async function assignTicket(id: string, assigneeId: string | null): Promise<Ticket> {
+  if (isLive) {
+    return request<Ticket>(`/api/tickets/${id}/assignee`, {
+      method: 'PATCH',
+      body: JSON.stringify({ assigneeId }),
+    })
+  }
+
+  const updated = mockAssignTicket(id, assigneeId)
+  if (!updated) throw new ApiError(`No ticket ${id}`)
+  return mocked(updated)
 }
 
 export async function updateTicketStatus(

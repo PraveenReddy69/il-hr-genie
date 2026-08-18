@@ -321,6 +321,23 @@ export function mockUpdateTicket(
   return updated
 }
 
+/**
+ * Hand a ticket to somebody, or take it back with null.
+ *
+ * Deliberately does not touch updatedAtMillis: handing a ticket over is not progress on
+ * it, and letting an assignment reset the clock would make an ageing queue look fresh
+ * every time somebody shuffled it.
+ */
+export function mockAssignTicket(id: string, assigneeId: string | null): Ticket | null {
+  let updated: Ticket | null = null
+  tickets = tickets.map((ticket) => {
+    if (ticket.id !== id) return ticket
+    updated = { ...ticket, assigneeId }
+    return updated
+  })
+  return updated
+}
+
 function moodsOn(dateIso: string): { employee: Employee; mood: MoodKey }[] {
   return WORKFORCE.flatMap((employee) => {
     const mood = moodLog[employee.employeeId]?.[dateIso]

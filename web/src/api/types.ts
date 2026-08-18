@@ -39,6 +39,14 @@ export interface Employee {
   dateOfJoining?: string
   /** People reporting to them; drives the manager badge. */
   reportees?: number
+  /**
+   * The HR account tagged as this employee's HRBP, if the directory names one.
+   *
+   * Not populated today — the directory has no such field. Read where it exists so
+   * that assignment can suggest the right person the day it does, rather than needing
+   * a second pass then.
+   */
+  hrbpId?: string
 }
 
 /**
@@ -80,6 +88,14 @@ export interface Ticket {
   createdAtMillis: number
   updatedAtMillis: number
   comments: TicketComment[]
+  /**
+   * The HR account dealing with this, if anyone.
+   *
+   * Null or absent means nobody has picked it up, and it sits in the queue of every
+   * HRBP covering the raiser's department. Set, it belongs to one person — see
+   * visibleTo in ticketQueue.ts, where that narrowing is the whole point.
+   */
+  assigneeId?: string | null
 }
 
 export const TICKET_STATUSES: TicketStatus[] = ['OPEN', 'IN_PROGRESS', 'RESOLVED']

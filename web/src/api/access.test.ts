@@ -270,7 +270,18 @@ describe('rank buys breadth, never depth', () => {
     // the sales page. Not one of them is a deeper look at a person's answers.
     const extra = BUNDLES.HR_HEAD.filter((permission) => !BUNDLES.HR.includes(permission))
     expect(extra.sort()).toEqual(
-      ['access.manage', 'audit.view', 'holidays.edit', 'pulse.publish', 'roles.assign', 'sales.view'],
+      [
+        'access.manage',
+        'audit.view',
+        'holidays.edit',
+        'pulse.publish',
+        'roles.assign',
+        'sales.view',
+        // Deciding who works a ticket, not seeing more of one. Every entry in this
+        // list has to be administrative; the day one of them is a deeper look at an
+        // individual's answers, this test is the thing that should stop it.
+        'tickets.assign',
+      ],
     )
   })
 })

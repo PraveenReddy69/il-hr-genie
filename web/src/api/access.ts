@@ -16,6 +16,7 @@ export type Permission =
   | 'dashboard.view'
   | 'tickets.view'
   | 'tickets.resolve'
+  | 'tickets.assign'
   | 'people.view'
   | 'attendance.view'
   | 'trends.view'
@@ -61,6 +62,9 @@ const HR_BUNDLE: Permission[] = [
 
 const ADMIN_BUNDLE: Permission[] = [
   ...HR_BUNDLE,
+  // Deciding who deals with a ticket is a workload decision across the HR team, which
+  // is Admin's job. An HRBP works their own queue rather than handing things around.
+  'tickets.assign',
   'holidays.edit',
   'pulse.publish',
   'sales.view',

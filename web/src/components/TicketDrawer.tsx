@@ -1,8 +1,15 @@
 import { useState } from 'react'
 import { Drawer } from './Drawer'
 import { STATUS_COLOUR, relativeTime } from './Bits'
-import { employeeName, updateTicketStatus } from '../api/client'
-import { STATUS_LABEL, TICKET_STATUSES, type Ticket, type TicketStatus } from '../api/types'
+import { assignTicket, employeeName, updateTicketStatus } from '../api/client'
+import { canAssign, suggestedAssignee } from '../api/ticketQueue'
+import {
+  STATUS_LABEL,
+  TICKET_STATUSES,
+  type Employee,
+  type Ticket,
+  type TicketStatus,
+} from '../api/types'
 
 /**
  * One ticket, and the move HR wants to make on it.
@@ -14,15 +21,25 @@ import { STATUS_LABEL, TICKET_STATUSES, type Ticket, type TicketStatus } from '.
 export function TicketDrawer({
   ticket,
   actorId,
+  viewer,
+  hrAccounts,
+  employee,
   onClose,
   onUpdated,
 }: {
   ticket: Ticket
   actorId: string
+  viewer: Employee
+  hrAccounts: Employee[]
+  /** The person who raised it, for the suggestion. Absent if the directory has not loaded. */
+  employee: Employee | undefined
   onClose: () => void
   onUpdated: (ticket: Ticket) => void
 }) {
   const isResolved = ticket.status === 'RESOLVED'
+  const [assigning, setAssigning] = useState(false)
+  const suggested = suggestedAssignee(hrAccounts, employee)
+  const owner = hrAccounts.find((one) => one.employeeId === ticket.assigneeId) ?? null
   const [reopening, setReopening] = useState(false)
   const [selected, setSelected] = useState<TicketStatus | null>(null)
   const [comment, setComment] = useState('')
@@ -31,6 +48,25 @@ export function TicketDrawer({
 
   const controlsVisible = !isResolved || reopening
   const closingNote = [...ticket.comments].reverse().find((c) => c.status === 'RESOLVED')
+
+  /**
+   * Hand it over, or take it back with an empty value.
+   *
+   * Applied straight away rather than gathered with the status change: assigning is a
+   * decision on its own, and burying it behind the same Save as a status move means
+   * either can only happen with the other.
+   */
+  async function assign(assigneeId: string | null) {
+    setAssigning(true)
+    setError(null)
+    try {
+      onUpdated(await assignTicket(ticket.id, assigneeId))
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'Could not assign the ticket.')
+    } finally {
+      setAssigning(false)
+    }
+  }
 
   async function apply() {
     if (!selected) {
@@ -51,6 +87,42 @@ export function TicketDrawer({
 
   return (
     <Drawer title={ticket.subject} onClose={onClose}>
+      {canAssign(viewer) ? (
+        <>
+          <div className="drawer__label">Assigned to</div>
+          <select
+            className="search"
+            disabled={assigning}
+            value={ticket.assigneeId ?? ''}
+            onChange={(event) => assign(event.target.value || null)}
+          >
+            <option value="">Nobody yet</option>
+            {hrAccounts.map((one) => (
+              <option key={one.employeeId} value={one.employeeId}>
+                {one.name}
+                {one.employeeId === suggested?.employeeId ? ' — covers this department' : ''}
+              </option>
+            ))}
+          </select>
+          <div className="field-foot">
+            {ticket.assigneeId
+              ? 'Only they and an Admin see this ticket now.'
+              : suggested
+                ? `${suggested.name} covers ${employee?.department ?? 'this department'}.`
+                : 'Nobody covers this department yet — anyone in scope can pick it up.'}
+          </div>
+        </>
+      ) : (
+        owner && (
+          <>
+            <div className="drawer__label">Assigned to</div>
+            <div className="row__meta" style={{ marginBottom: 6 }}>
+              {owner.employeeId === viewer.employeeId ? 'You' : owner.name}
+            </div>
+          </>
+        )
+      )}
+
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 14 }}>
         <span
           style={{

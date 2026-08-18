@@ -163,7 +163,7 @@ export default function App() {
           <Route path="/" element={gate('dashboard.view', <Dashboard hrName={hr.name} />)} />
           <Route
             path="/tickets"
-            element={gate('tickets.view', <Tickets actorId={hr.employeeId} />)}
+            element={gate('tickets.view', <Tickets actorId={hr.employeeId} viewer={hr} />)}
           />
           <Route path="/people" element={gate('people.view', <People />)} />
           <Route path="/attendance" element={gate('attendance.view', <Attendance />)} />
