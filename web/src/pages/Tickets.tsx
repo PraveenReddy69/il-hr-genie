@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   Avatar,
-  Card,
   Empty,
   Loading,
   STATUS_COLOUR,
@@ -9,7 +8,6 @@ import {
   clickable,
   relativeTime,
 } from '../components/Bits'
-import { Donut } from '../components/Chart'
 import { TicketDrawer } from '../components/TicketDrawer'
 import {
   employeeName,
@@ -28,13 +26,7 @@ import {
   unassignedCount,
   visibleTickets,
 } from '../api/ticketQueue'
-import {
-  STATUS_LABEL,
-  TICKET_STATUSES,
-  type Employee,
-  type Ticket,
-  type TicketStatus,
-} from '../api/types'
+import { type Employee, type Ticket } from '../api/types'
 
 /**
  * The ticket queue.
@@ -50,8 +42,8 @@ import {
 export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee }) {
   const [tickets, setTickets] = useState<Ticket[] | null>(null)
   const [people, setPeople] = useState<Employee[]>([])
-  const [status, setStatus] = useState<TicketStatus | null>(null)
   const [assignee, setAssignee] = useState<string>(ANY_ASSIGNEE)
+  const [query, setQuery] = useState('')
   const [open, setOpen] = useState<Ticket | null>(null)
 
   /**
@@ -112,6 +104,8 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
     [tickets, viewer, departmentOf],
   )
 
+  const now = Date.now()
+
   const counts = useMemo(
     () => ({
       all: mine.length,
@@ -120,17 +114,57 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
       RESOLVED: mine.filter((one) => one.status === 'RESOLVED').length,
       unassigned: unassignedCount(mine),
       forMe: mine.filter((one) => one.assigneeId === viewer.employeeId).length,
+      ageing: mine.filter((one) => daysWaiting(one, now) >= AGEING_DAYS).length,
     }),
+    // `now` is deliberately not a dependency: it changes on every render, and the
+    // ageing count moving by a millisecond is not worth recomputing the whole queue.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [mine, viewer.employeeId],
   )
 
   if (!tickets) return <Loading />
 
-  const filtered = byAssignee(
-    status ? mine.filter((one) => one.status === status) : mine,
-    assignee,
-    viewer.employeeId,
-  )
+  /**
+   * Search across the three things somebody actually has in their head.
+   *
+   * The reference because it is what a person quotes, the subject because it is what
+   * they remember, and the raiser's name because half the time the request arrives as
+   * "the one Faiyaz raised". Category deliberately left out — it is already a visible
+   * grouping and matching on it makes a search for "leave" return the whole department.
+   */
+  const term = query.trim().toLowerCase()
+  const matching = term
+    ? mine.filter((one) =>
+        [one.id, one.subject, employeeName(one.employeeId)]
+          .join(' ')
+          .toLowerCase()
+          .includes(term),
+      )
+    : mine
+
+  const filtered = byAssignee(matching, assignee, viewer.employeeId)
+
+  /*
+   * Three groups, in the order somebody works them.
+   *
+   * Needs an owner first because it is the only one that is nobody's job yet, then what
+   * is being worked, then what is done. This is what replaced the status filter chips:
+   * the grouping answers the same question without a control, and it answers "what
+   * should I do next" as well, which chips never did.
+   */
+  const groups: { key: string; label: string; rows: Ticket[] }[] = [
+    {
+      key: 'unowned',
+      label: 'Needs an owner',
+      rows: filtered.filter((one) => !one.assigneeId && one.status !== 'RESOLVED'),
+    },
+    {
+      key: 'flight',
+      label: 'In flight',
+      rows: filtered.filter((one) => one.assigneeId && one.status !== 'RESOLVED'),
+    },
+    { key: 'done', label: 'Done', rows: filtered.filter((one) => one.status === 'RESOLVED') },
+  ]
 
   function applyUpdate(updated: Ticket) {
     setTickets((current) =>
@@ -138,103 +172,82 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
     )
   }
 
-  const now = Date.now()
-
   return (
     <>
       <div className="page-head">
         <h1>Ticket queue</h1>
         <p>
           {counts.all} in your queue · {counts.OPEN + counts.IN_PROGRESS} still open
-          {counts.unassigned > 0 && ` · ${counts.unassigned} unassigned`}
         </p>
       </div>
 
-      <div className="grid grid--3">
-        <Card
-          chip="🎫"
-          chipColour="var(--orange-tint-14)"
-          title="Where tickets stand"
-          subtitle="Your queue, by status"
-        >
-          <Donut
-            total={counts.all}
-            caption={counts.all === 1 ? 'ticket' : 'tickets'}
-            slices={TICKET_STATUSES.map((one) => ({
-              label: STATUS_LABEL[one],
-              value: counts[one],
-              colour: STATUS_COLOUR[one],
-            }))}
-          />
-        </Card>
-
-        <Card chip="🙋" chipColour="var(--blue-tint-12)" title="Waiting for an owner">
+      <div className="statstrip">
+        <div className="statstrip__cell">
+          <div className="statstrip__label">Open</div>
+          <div className="statstrip__value">{counts.OPEN}</div>
+        </div>
+        <div className="statstrip__cell">
+          <div className="statstrip__label">In progress</div>
+          <div className="statstrip__value">{counts.IN_PROGRESS}</div>
+        </div>
+        <div className="statstrip__cell">
+          <div className="statstrip__label">Unassigned</div>
+          {/* Coloured only when it is a number somebody has to do something about. A
+              permanently orange zero is a warning nobody reads. */}
           <div
-            className="tile__value"
-            style={{ color: counts.unassigned > 0 ? 'var(--orange)' : 'var(--blue-deep)' }}
+            className="statstrip__value"
+            style={{ color: counts.unassigned > 0 ? 'var(--orange-warn)' : undefined }}
           >
             {counts.unassigned}
           </div>
-          <div className="tile__sub">
-            {counts.unassigned === 0
-              ? 'Everything open has somebody on it'
-              : 'Open, and nobody has picked them up'}
+        </div>
+        <div className="statstrip__cell">
+          <div className="statstrip__label">Waiting {AGEING_DAYS}d+</div>
+          <div
+            className="statstrip__value"
+            style={{ color: counts.ageing > 0 ? 'var(--red-risk)' : undefined }}
+          >
+            {counts.ageing}
           </div>
-        </Card>
-
-        <Card chip="👤" chipColour="var(--purple-tint-12)" title="Assigned to you">
-          <div className="tile__value" style={{ color: 'var(--purple)' }}>
-            {counts.forMe}
-          </div>
-          <div className="tile__sub">Yours to answer</div>
-        </Card>
+        </div>
       </div>
 
       <section className="card" style={{ marginTop: 16 }}>
-        <div className="chips">
-          <button
-            className={`chip ${status === null ? 'chip--on' : ''}`}
-            onClick={() => setStatus(null)}
-          >
-            All {counts.all}
-          </button>
-          {TICKET_STATUSES.map((one) => (
-            <button
-              key={one}
-              className={`chip ${status === one ? 'chip--on' : ''}`}
-              onClick={() => setStatus(one)}
-              style={{ opacity: counts[one] === 0 && status !== one ? 0.5 : 1 }}
-            >
-              {STATUS_LABEL[one]} {counts[one]}
-            </button>
-          ))}
-        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <input
+            className="search"
+            style={{ flex: 1, minWidth: 200 }}
+            value={query}
+            placeholder="Search subject, reference or person"
+            onChange={(event) => setQuery(event.target.value)}
+          />
 
-        <div className="chips" style={{ marginTop: 8 }}>
-          <button
-            className={`chip ${assignee === ANY_ASSIGNEE ? 'chip--on' : ''}`}
-            onClick={() => setAssignee(ANY_ASSIGNEE)}
-          >
-            {ANY_ASSIGNEE}
-          </button>
-          <button
-            className={`chip ${assignee === UNASSIGNED ? 'chip--on' : ''}`}
-            onClick={() => setAssignee(UNASSIGNED)}
-          >
-            Unassigned {counts.unassigned}
-          </button>
-          <button
-            className={`chip ${assignee === MINE ? 'chip--on' : ''}`}
-            onClick={() => setAssignee(MINE)}
-          >
-            Mine {counts.forMe}
-          </button>
+          <div className="seg">
+            <button
+              className={`seg__item ${assignee === ANY_ASSIGNEE ? 'seg__item--on' : ''}`}
+              onClick={() => setAssignee(ANY_ASSIGNEE)}
+            >
+              {ANY_ASSIGNEE}
+            </button>
+            <button
+              className={`seg__item ${assignee === UNASSIGNED ? 'seg__item--on' : ''}`}
+              onClick={() => setAssignee(UNASSIGNED)}
+            >
+              Unassigned {counts.unassigned}
+            </button>
+            <button
+              className={`seg__item ${assignee === MINE ? 'seg__item--on' : ''}`}
+              onClick={() => setAssignee(MINE)}
+            >
+              Mine {counts.forMe}
+            </button>
+          </div>
 
           {/* One person at a time, and only where handing tickets around is the job. */}
           {canAssign(viewer) && hrAccounts.length > 0 && (
             <select
               className="search"
-              style={{ marginLeft: 'auto', width: 'auto' }}
+              style={{ width: 'auto' }}
               value={
                 assignee === ANY_ASSIGNEE || assignee === UNASSIGNED || assignee === MINE
                   ? ''
@@ -252,54 +265,66 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
           )}
         </div>
 
-        <div style={{ marginTop: 10 }}>
+        <div style={{ marginTop: 4 }}>
           {filtered.length === 0 && (
-            <Empty>
-              {assignee === UNASSIGNED
-                ? 'Everything open has somebody on it.'
-                : `Nothing ${status ? STATUS_LABEL[status].toLowerCase() : 'here'} right now.`}
+            <Empty style={{ marginTop: 14 }}>
+              {term
+                ? `Nothing matches "${query.trim()}".`
+                : assignee === UNASSIGNED
+                  ? 'Everything open has somebody on it.'
+                  : 'Nothing here right now.'}
             </Empty>
           )}
-          {filtered.map((ticket) => {
-            const owner = ticket.assigneeId ? employeeById.get(ticket.assigneeId) : undefined
-            const waiting = daysWaiting(ticket, now)
-            return (
-              <div className="row" key={ticket.id} {...clickable(() => setOpen(ticket))}>
-                <span className="accent" style={{ background: STATUS_COLOUR[ticket.status] }} />
-                <div className="row__main">
-                  <div className="row__title">{ticket.subject}</div>
-                  <div className="row__meta">
-                    {ticket.id} · {ticket.category} · {employeeName(ticket.employeeId)} ·{' '}
-                    {relativeTime(ticket.createdAtMillis)}
-                    {/* Only once it is worth chasing. A day-old ticket is not late, and
-                        an ageing badge on everything is an ageing badge on nothing. */}
-                    {waiting >= 3 && (
-                      <span style={{ color: 'var(--orange)', marginLeft: 8 }}>
-                        · waiting {waiting} days
-                      </span>
-                    )}
-                  </div>
+
+          {groups.map((group) =>
+            group.rows.length === 0 ? null : (
+              <div key={group.key}>
+                <div className="qgroup">
+                  {group.label}
+                  <span className="qgroup__count">{group.rows.length}</span>
                 </div>
 
-                {owner ? (
-                  <span
-                    className="row__meta"
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, marginRight: 10 }}
-                    title={`Assigned to ${owner.name}`}
-                  >
-                    <Avatar name={owner.name} index={0} />
-                    {owner.employeeId === viewer.employeeId ? 'You' : owner.name}
-                  </span>
-                ) : (
-                  <span className="tag tag--all" style={{ marginRight: 10 }}>
-                    Unassigned
-                  </span>
-                )}
+                {group.rows.map((ticket) => {
+                  const owner = ticket.assigneeId ? employeeById.get(ticket.assigneeId) : undefined
+                  const waiting = daysWaiting(ticket, now)
+                  return (
+                    <div className="row" key={ticket.id} {...clickable(() => setOpen(ticket))}>
+                      <span
+                        className="accent"
+                        style={{ background: STATUS_COLOUR[ticket.status] }}
+                      />
+                      <div className="row__main">
+                        <div className="row__title">{ticket.subject}</div>
+                        <div className="row__meta">
+                          <span className="ref">{ticket.id}</span> · {ticket.category} ·{' '}
+                          {employeeName(ticket.employeeId)} ·{' '}
+                          {relativeTime(ticket.createdAtMillis)}
+                          {/* Only once it is worth chasing. A day-old ticket is not
+                              late, and an ageing badge on everything is one on nothing. */}
+                          {waiting >= AGEING_DAYS && (
+                            <span style={{ color: 'var(--red-risk)', marginLeft: 8 }}>
+                              · waiting {waiting} days
+                            </span>
+                          )}
+                        </div>
+                      </div>
 
-                <StatusPill status={ticket.status} />
+                      {owner ? (
+                        <span className="owner" title={`Assigned to ${owner.name}`}>
+                          <Avatar name={owner.name} index={0} />
+                          {owner.employeeId === viewer.employeeId ? 'You' : owner.name}
+                        </span>
+                      ) : (
+                        <span className="owner owner--none">Unassigned</span>
+                      )}
+
+                      <StatusPill status={ticket.status} />
+                    </div>
+                  )
+                })}
               </div>
-            )
-          })}
+            ),
+          )}
         </div>
       </section>
 
@@ -325,3 +350,11 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
 
 /** Often enough that a ticket raised on the phone shows up while HR is looking. */
 const REFRESH_MS = 30_000
+
+/**
+ * When a ticket stops being "recent" and starts being "waiting".
+ *
+ * Three days rather than one: a ticket raised yesterday is not late, and a badge that
+ * appears on everything is a badge that says nothing.
+ */
+const AGEING_DAYS = 3
