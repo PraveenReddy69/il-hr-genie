@@ -104,6 +104,9 @@ function token(): string | null {
 
 export function clearToken() {
   sessionStorage.removeItem(TOKEN_KEY)
+  // The mock has no token to invalidate, so signing out has to drop its own record of
+  // who signed in. Left behind, the next sign-in would start as the previous person.
+  sessionStorage.removeItem(MOCK_SESSION_KEY)
   directory.clear()
   directoryLoad = null
   employeeLoad = null
@@ -178,7 +181,7 @@ export async function signIn(employeeId: string, password: string): Promise<Empl
     (candidate) => candidate.employeeId.toLowerCase() === employeeId.trim().toLowerCase(),
   )
   if (!employee) throw new ApiError('That employee ID is not in the directory.')
-  mockSignedInId = employee.employeeId
+  sessionStorage.setItem(MOCK_SESSION_KEY, employee.employeeId)
   return mocked(employee)
 }
 
@@ -239,10 +242,15 @@ function toEmployee(raw: RawEmployee): Employee {
  * HR account was identical; with permissions on the session it silently demoted whoever
  * reloaded the tab. The id is kept here at sign-in so the re-read agrees with it.
  */
-let mockSignedInId: string | null = null
+const MOCK_SESSION_KEY = 'hr-genie-mock-signed-in'
 
 function signedInMock(): Employee {
-  const found = EMPLOYEES.find((one) => one.employeeId === mockSignedInId)
+  // In sessionStorage rather than a module variable: a reload resets the module and
+  // the re-read would answer with whichever HR account happens to come first, quietly
+  // demoting an Admin to an HRBP on refresh. The real path keeps a token in the same
+  // place for the same reason.
+  const id = sessionStorage.getItem(MOCK_SESSION_KEY)
+  const found = EMPLOYEES.find((one) => one.employeeId === id)
   return found ?? EMPLOYEES.find((one) => isConsoleRole(one.role)) ?? EMPLOYEES[0]
 }
 

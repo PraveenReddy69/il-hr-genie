@@ -171,7 +171,7 @@ export default function App() {
           <Route path="/pulse" element={gate('pulse.view', <PulseQuestions editable={can(hr, 'pulse.publish')} />)} />
           <Route path="/analytics" element={gate('analytics.view', <Analytics />)} />
           <Route path="/trends" element={gate('trends.view', <Trends />)} />
-          <Route path="/holidays" element={gate('holidays.view', <Holidays />)} />
+          <Route path="/holidays" element={gate('holidays.view', <Holidays editable={can(hr, 'holidays.edit')} />)} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
