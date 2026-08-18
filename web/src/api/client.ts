@@ -53,7 +53,21 @@ import type {
   TicketStatus,
 } from './types'
 
-const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '')
+/**
+ * Run on the mock without deleting your API address.
+ *
+ * `.env.local` is loaded in every mode and outranks `.env.[mode]`, so no env file can
+ * turn the backend off while it exists — the only way was to rename it and remember to
+ * rename it back. This is the switch instead: `npm run dev:mock`.
+ *
+ * Dev only. A stray variable in a production build must not be able to blank the API
+ * and quietly serve everybody invented numbers.
+ */
+const FORCED_MOCK = import.meta.env.DEV && import.meta.env.VITE_FORCE_MOCK === 'true'
+
+const BASE_URL = FORCED_MOCK
+  ? undefined
+  : (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '')
 
 export const isLive = Boolean(BASE_URL)
 
