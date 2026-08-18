@@ -21,21 +21,47 @@ import {
   TicketsIcon,
 } from './components/Icons'
 import { clearToken, fetchMe, isLive, isUnauthorized, signIn } from './api/client'
+import { can, isConsoleRole, ROLE_LABEL, type Permission } from './api/access'
 import type { Employee } from './api/types'
 
 const SESSION_KEY = 'hr-genie-console'
 
-const NAV = [
-  { to: '/', label: 'Dashboard', Icon: DashboardIcon },
-  { to: '/tickets', label: 'Tickets', Icon: TicketsIcon },
-  { to: '/people', label: 'People', Icon: PeopleIcon },
-  { to: '/attendance', label: 'Attendance', Icon: AttendanceIcon },
-  { to: '/sales', label: 'Sales Insights', Icon: SalesIcon },
-  { to: '/pulse', label: 'Pulse questions', Icon: PulseIcon },
-  { to: '/analytics', label: 'Analytics', Icon: AnalyticsIcon },
-  { to: '/trends', label: 'History', Icon: HistoryIcon },
-  { to: '/holidays', label: 'Holidays', Icon: HolidaysIcon },
+/**
+ * The sidebar, and the permission each entry needs.
+ *
+ * One table rather than a check per link: a route that is filtered out of the nav but
+ * still reachable by typing the path is the classic version of this bug, so the same
+ * list drives both the links and the guards below.
+ */
+const NAV: { to: string; label: string; Icon: typeof DashboardIcon; needs: Permission }[] = [
+  { to: '/', label: 'Dashboard', Icon: DashboardIcon, needs: 'dashboard.view' },
+  { to: '/tickets', label: 'Tickets', Icon: TicketsIcon, needs: 'tickets.view' },
+  { to: '/people', label: 'People', Icon: PeopleIcon, needs: 'people.view' },
+  { to: '/attendance', label: 'Attendance', Icon: AttendanceIcon, needs: 'attendance.view' },
+  { to: '/sales', label: 'Sales Insights', Icon: SalesIcon, needs: 'sales.view' },
+  { to: '/pulse', label: 'Pulse questions', Icon: PulseIcon, needs: 'pulse.view' },
+  { to: '/analytics', label: 'Analytics', Icon: AnalyticsIcon, needs: 'analytics.view' },
+  { to: '/trends', label: 'History', Icon: HistoryIcon, needs: 'trends.view' },
+  { to: '/holidays', label: 'Holidays', Icon: HolidaysIcon, needs: 'holidays.view' },
 ]
+
+/**
+ * A route the signed-in account may not open.
+ *
+ * Shown rather than redirected. A silent bounce to the dashboard reads as a broken
+ * link, and somebody following a colleague's URL deserves to know the difference
+ * between "gone" and "not yours".
+ */
+function NoAccess() {
+  return (
+    <div className="page">
+      <h1 className="page__title">Not your access</h1>
+      <p className="page__lede">
+        This page is outside what your account can open. Ask an Admin if you need it.
+      </p>
+    </div>
+  )
+}
 
 export default function App() {
   const [hr, setHr] = useState<Employee | null>(() => {
@@ -86,6 +112,9 @@ export default function App() {
 
   if (!hr) return <SignIn onSignedIn={onSignedIn} />
 
+  const gate = (needs: Permission, page: React.ReactElement) =>
+    can(hr, needs) ? page : <NoAccess />
+
   return (
     <div className="shell">
       <nav className="sidebar">
@@ -97,11 +126,11 @@ export default function App() {
           />
           <div>
             <div className="sidebar__title">HR Genie</div>
-            <div className="sidebar__subtitle">HRBP console</div>
+            <div className="sidebar__subtitle">{ROLE_LABEL[hr.role]} console</div>
           </div>
         </div>
 
-        {NAV.map((item) => (
+        {NAV.filter((item) => can(hr, item.needs)).map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
@@ -131,15 +160,18 @@ export default function App() {
 
       <main className="main">
         <Routes>
-          <Route path="/" element={<Dashboard hrName={hr.name} />} />
-          <Route path="/tickets" element={<Tickets actorId={hr.employeeId} />} />
-          <Route path="/people" element={<People />} />
-          <Route path="/attendance" element={<Attendance />} />
-          <Route path="/sales" element={<SalesInsights />} />
-          <Route path="/pulse" element={<PulseQuestions />} />
-          <Route path="/analytics" element={<Analytics />} />
-          <Route path="/trends" element={<Trends />} />
-          <Route path="/holidays" element={<Holidays />} />
+          <Route path="/" element={gate('dashboard.view', <Dashboard hrName={hr.name} />)} />
+          <Route
+            path="/tickets"
+            element={gate('tickets.view', <Tickets actorId={hr.employeeId} />)}
+          />
+          <Route path="/people" element={gate('people.view', <People />)} />
+          <Route path="/attendance" element={gate('attendance.view', <Attendance />)} />
+          <Route path="/sales" element={gate('sales.view', <SalesInsights />)} />
+          <Route path="/pulse" element={gate('pulse.view', <PulseQuestions editable={can(hr, 'pulse.publish')} />)} />
+          <Route path="/analytics" element={gate('analytics.view', <Analytics />)} />
+          <Route path="/trends" element={gate('trends.view', <Trends />)} />
+          <Route path="/holidays" element={gate('holidays.view', <Holidays />)} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
@@ -163,7 +195,7 @@ function SignIn({ onSignedIn }: { onSignedIn: (employee: Employee) => void }) {
     setError(null)
     try {
       const employee = await signIn(employeeId, password)
-      if (employee.role !== 'HR') {
+      if (!isConsoleRole(employee.role)) {
         setError('This console is for HR accounts. Employees use the mobile app.')
         return
       }

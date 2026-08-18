@@ -5,7 +5,16 @@
  * contract both the Android app and this console are written against.
  */
 
-export type Role = 'EMPLOYEE' | 'HR'
+import type { Permission } from './access'
+
+/**
+ * Ordered, not a set of flags — see docs/ACCESS_CONTROL.md.
+ *
+ * HR is an HRBP scoped to their own departments; HR_ADMIN and HR_HEAD read the whole
+ * organisation. Every check is a rank comparison, which is what keeps three tiers from
+ * becoming fifteen booleans nobody can reason about.
+ */
+export type Role = 'EMPLOYEE' | 'HR' | 'HR_ADMIN' | 'HR_HEAD'
 
 export interface Employee {
   employeeId: string
@@ -14,6 +23,18 @@ export interface Employee {
   department: string
   officialEmail: string
   role: Role
+  /**
+   * The departments this account may read. Empty on HR_ADMIN and HR_HEAD, meaning the
+   * whole organisation; empty on an HR account means no access at all, which is the
+   * correct failure for an HRBP nobody has assigned yet.
+   */
+  departments?: string[]
+  /**
+   * Effective permissions, already resolved by the server from the role bundle plus any
+   * per-person grants. Absent while the backend predates access control, in which case
+   * the bundle in access.ts stands in — see permissionsOf.
+   */
+  permissions?: Permission[]
   /** ISO-8601. Optional so a thin directory response still satisfies the type. */
   dateOfJoining?: string
   /** People reporting to them; drives the manager badge. */

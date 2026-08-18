@@ -36,7 +36,15 @@ interface Department {
   headcount: number
 }
 
-export function PulseQuestions() {
+/**
+ * The question bank.
+ *
+ * `editable` is `pulse.publish`, which HRBPs do not hold — they read the bank so they
+ * know what their people are being asked, and Admin decides the wording. The controls
+ * are removed rather than disabled: a row of greyed buttons on every question is a
+ * worse way to say "not yours" than not drawing them, and this page is mostly buttons.
+ */
+export function PulseQuestions({ editable = true }: { editable?: boolean }) {
   const [questions, setQuestions] = useState<PulseQuestion[] | null>(null)
   const [unsaved, setUnsaved] = useState(false)
   const [departments, setDepartments] = useState<Department[]>([])
@@ -223,14 +231,16 @@ export function PulseQuestions() {
           title="The bank"
           subtitle="In the order employees are asked"
           action={
-            <button
-              className="card__action"
-              disabled={full}
-              title={full ? `A pulse is capped at ${MAX_QUESTIONS} questions.` : undefined}
-              onClick={() => setEditing({ question: blankQuestion(), index: -1 })}
-            >
-              + Add question
-            </button>
+            editable ? (
+              <button
+                className="card__action"
+                disabled={full}
+                title={full ? `A pulse is capped at ${MAX_QUESTIONS} questions.` : undefined}
+                onClick={() => setEditing({ question: blankQuestion(), index: -1 })}
+              >
+                + Add question
+              </button>
+            ) : undefined
           }
         >
           {questions.length === 0 && <Empty>No questions yet. Nobody would be asked anything.</Empty>}
@@ -283,26 +293,29 @@ export function PulseQuestions() {
               </div>
 
               <div className="qrow__acts">
-                <button
-                  className="qrow__act"
-                  onClick={() => setEditing({ question: { ...question }, index })}
-                >
-                  Edit
-                </button>
-                {confirmRemove === question.id ? (
-                  <span className="qrow__confirm">
-                    <button className="qrow__act qrow__act--danger" onClick={() => remove(index)}>
-                      Remove
-                    </button>
-                    <button className="qrow__act" onClick={() => setConfirmRemove(null)}>
-                      Keep
-                    </button>
-                  </span>
-                ) : (
-                  <button className="qrow__act" onClick={() => setConfirmRemove(question.id)}>
-                    Remove
+                {editable && (
+                  <button
+                    className="qrow__act"
+                    onClick={() => setEditing({ question: { ...question }, index })}
+                  >
+                    Edit
                   </button>
                 )}
+                {editable &&
+                  (confirmRemove === question.id ? (
+                    <span className="qrow__confirm">
+                      <button className="qrow__act qrow__act--danger" onClick={() => remove(index)}>
+                        Remove
+                      </button>
+                      <button className="qrow__act" onClick={() => setConfirmRemove(null)}>
+                        Keep
+                      </button>
+                    </span>
+                  ) : (
+                    <button className="qrow__act" onClick={() => setConfirmRemove(question.id)}>
+                      Remove
+                    </button>
+                  ))}
               </div>
             </div>
           ))}

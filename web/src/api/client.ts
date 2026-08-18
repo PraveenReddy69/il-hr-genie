@@ -29,6 +29,7 @@ import {
   weekDates,
   weekStart,
 } from './mock'
+import { isConsoleRole, type Permission } from './access'
 import { MIN_COHORT, MOODS } from './types'
 import { holidaysFor } from './holidays'
 import type {
@@ -177,6 +178,7 @@ export async function signIn(employeeId: string, password: string): Promise<Empl
     (candidate) => candidate.employeeId.toLowerCase() === employeeId.trim().toLowerCase(),
   )
   if (!employee) throw new ApiError('That employee ID is not in the directory.')
+  mockSignedInId = employee.employeeId
   return mocked(employee)
 }
 
@@ -195,6 +197,8 @@ interface RawEmployee {
   subDepartment?: string
   officialEmail: string
   role: Role
+  departments?: string[]
+  permissions?: Permission[]
   dateOfJoining?: string
   reportees?: number
 }
@@ -207,6 +211,12 @@ function toEmployee(raw: RawEmployee): Employee {
     department: raw.subDepartment || raw.department,
     officialEmail: raw.officialEmail,
     role: raw.role,
+    // Passed through rather than derived. The server resolves a bundle plus any
+    // per-person grants into one list; recomputing it here would mean a front-end
+    // release every time the backend changed what a role includes. Undefined on a
+    // backend that predates access control, and permissionsOf falls back to the bundle.
+    departments: raw.departments,
+    permissions: raw.permissions,
     dateOfJoining: raw.dateOfJoining,
     reportees: raw.reportees,
   }
@@ -221,8 +231,23 @@ function toEmployee(raw: RawEmployee): Employee {
  * the tab lives — so a rename or a role change on the server stayed invisible until
  * the next sign-out. This re-reads it.
  */
+/**
+ * Who the mock is signed in as.
+ *
+ * Sign-in on the mock path finds the account by id, but the re-read on load used to
+ * return EMPLOYEES[0] regardless — an EMPLOYEE record. That was survivable while every
+ * HR account was identical; with permissions on the session it silently demoted whoever
+ * reloaded the tab. The id is kept here at sign-in so the re-read agrees with it.
+ */
+let mockSignedInId: string | null = null
+
+function signedInMock(): Employee {
+  const found = EMPLOYEES.find((one) => one.employeeId === mockSignedInId)
+  return found ?? EMPLOYEES.find((one) => isConsoleRole(one.role)) ?? EMPLOYEES[0]
+}
+
 export function fetchMe(): Promise<Employee> {
-  if (!isLive) return mocked(EMPLOYEES[0])
+  if (!isLive) return mocked(signedInMock())
   return get<RawEmployee>('/api/employees/me').then(toEmployee)
 }
 
@@ -534,7 +559,9 @@ export async function fetchStats(): Promise<HrStats> {
   ])
 
   // HR accounts are not subjects of the programme, so they are not in the denominator.
-  const workforce = employees.filter((one) => one.role !== 'HR')
+  // Every console role, not just HR: an Admin or a Head is no more their own subject
+  // than an HRBP is, and counting them would put staff into their own sentiment figures.
+  const workforce = employees.filter((one) => !isConsoleRole(one.role))
 
   const breakdown: Record<MoodKey, number> = {
     GREAT: 0, GOOD: 0, OKAY: 0, STRESSED: 0, BURNT_OUT: 0,
@@ -687,7 +714,7 @@ export async function fetchPulseHistory(cycles = 6): Promise<CycleSummary[]> {
 
   // Headcount is today's for every cycle: the server does not keep a historical
   // roster, and inventing one would make old completion rates look wrong.
-  const headcount = employees.filter((one) => one.role !== 'HR').length
+  const headcount = employees.filter((one) => !isConsoleRole(one.role)).length
   return lastCycles(cycles).map((cycle) => ({
     cycle,
     completed: counts.get(cycle) ?? 0,

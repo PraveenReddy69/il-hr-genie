@@ -8,6 +8,7 @@
  * Everything is derived from a fixed seed, so a reload shows the same fortnight.
  */
 
+import { isConsoleRole } from './access'
 import { HOLIDAY_CALENDAR, holidaysFor } from './holidays'
 import {
   FULL_DAY_MILLIS,
@@ -77,6 +78,16 @@ export const EMPLOYEES: Employee[] = [
     dateOfJoining: '2021-02-01',
     reportees: 2,
   },
+  /*
+   * Three console accounts, one per tier.
+   *
+   * The mock is the only place the Access page and the escalation rules can be
+   * exercised before the backend lands, and none of them mean anything with a single
+   * account: rule 2 needs somebody to outrank, rule 4 needs a Head who is the last one.
+   *
+   * HR000 is scoped to two departments deliberately. Organisation-wide is the easy case,
+   * and it is the one both accounts below already cover.
+   */
   {
     employeeId: 'HR000',
     name: 'Aamy C P',
@@ -84,13 +95,34 @@ export const EMPLOYEES: Employee[] = [
     department: 'Human Resource & Administration',
     officialEmail: 'hr@infinitylearn.com',
     role: 'HR',
+    departments: ['Experience', 'Brand Marketing'],
     dateOfJoining: '2019-06-01',
     reportees: 4,
+  },
+  {
+    employeeId: 'HR001',
+    name: 'Sneha Rao',
+    title: 'HR Operations Admin',
+    department: 'Human Resource & Administration',
+    officialEmail: 'sneha.rao@infinitylearn.com',
+    role: 'HR_ADMIN',
+    dateOfJoining: '2018-03-12',
+    reportees: 6,
+  },
+  {
+    employeeId: 'HR002',
+    name: 'Vikram Iyer',
+    title: 'Head of People',
+    department: 'Human Resource & Administration',
+    officialEmail: 'vikram.iyer@infinitylearn.com',
+    role: 'HR_HEAD',
+    dateOfJoining: '2016-01-04',
+    reportees: 12,
   },
 ]
 
 /** HR accounts are not their own subject — they are excluded from every figure. */
-export const WORKFORCE = EMPLOYEES.filter((e) => e.role !== 'HR')
+export const WORKFORCE = EMPLOYEES.filter((e) => !isConsoleRole(e.role))
 
 // -------------------------------------------------------------------- helpers
 
