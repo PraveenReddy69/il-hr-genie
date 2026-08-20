@@ -54,7 +54,10 @@ describe('the route table', () => {
   it('keeps the sidebar and the routes asking for the same thing', () => {
     // The drift this file is named after: a link hidden by one permission and a page
     // guarded by another means either a dead link or an open door.
-    const navPattern = /\{\s*to:\s*'([^']+)',[\s\S]*?needs:\s*'([^']+)'\s*\}/g
+    // The trailing comma is optional. A prettier-wrapped multi-line entry has one,
+    // and without it the pattern ran past its own entry and paired a route with the
+    // NEXT entry's permission — a failure that looked like drift and was not.
+    const navPattern = /\{\s*to:\s*'([^']+)',[\s\S]*?needs:\s*'([^']+)',?\s*\}/g
     const nav = new Map<string, string>()
     for (const match of source.matchAll(navPattern)) nav.set(match[1], match[2])
 

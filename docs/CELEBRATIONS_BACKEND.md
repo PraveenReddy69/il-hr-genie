@@ -91,3 +91,46 @@ will appear as soon as data arrives.
 **`windowDays` is 5.** Fine for birthdays. For new joiners, five days is narrow enough
 that most people will never see a welcome; 14 or 30 would suit that group better if it
 can be set per group.
+
+---
+
+## What the console now needs
+
+There is a Celebrations page in the HRBP console. It shows **today** from this endpoint
+and **the month ahead** computed from `dateOfJoining` in the directory. Two things would
+make it better, and one of them is a correctness issue.
+
+### 1. `department` on each celebrant (correctness)
+
+HRBPs are scoped to their own departments — see `docs/ACCESS_CONTROL.md`. This response
+carries no department, so the console joins each celebrant against the directory by
+`employeeId` to work out whether an HRBP should see them.
+
+That join fails silently for anyone the directory does not return, and the console
+resolves it by hiding them. The safe direction, but it means a real celebrant can
+vanish for reasons nobody can see from the page.
+
+One field per person fixes it:
+
+```jsonc
+{ "employeeId": "EMP3801", "name": "...", "department": "Experience" }
+```
+
+Better still, **scope the response server-side** by the caller's departments, the way
+the ticket list should be. Then the console does no filtering at all and the rule lives
+in one place.
+
+### 2. A date of birth the console can look ahead on
+
+Birthdays are the one kind that cannot appear in the month-ahead list. Anniversaries and
+joiners come off `dateOfJoining`, which the directory already returns; there is no
+equivalent for birthdays, so they can only be known on the day.
+
+The page says so plainly rather than showing a list that looks complete. If HR wants to
+plan a week ahead — which is the point of the page — the endpoint needs either a
+`daysAhead` parameter or a `birthdayIso` (month and day are enough; the year is not
+needed and is more personal data than the job requires).
+
+**Not the full date of birth on `/api/employees`.** The directory is deliberately
+work-facing; adding a birth date to it would put personal data in front of every HR
+account for the sake of a card. Month and day, on the celebrations endpoint only.

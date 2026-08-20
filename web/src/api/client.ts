@@ -27,10 +27,12 @@ import {
   mockTickets,
   mockUpdateTicket,
   mockAssignTicket,
+  mockCelebrations,
   weekDates,
   weekStart,
 } from './mock'
 import { isConsoleRole, type Permission } from './access'
+import type { Celebrant, Celebrations } from './celebrations'
 import { MIN_COHORT, MOODS } from './types'
 import { holidaysFor } from './holidays'
 import type {
@@ -943,6 +945,51 @@ export async function fetchTickets(): Promise<Ticket[]> {
  * Local on the mock path, like every other write here. The endpoint does not exist yet
  * — see docs/TICKET_ASSIGNMENT_BACKEND.md.
  */
+/**
+ * Today's birthdays, work anniversaries and joiners.
+ *
+ * The one endpoint on this page, and it answers for today only — everything further
+ * ahead is computed from the directory. See src/api/celebrations.ts.
+ *
+ * A failure is an empty day rather than a broken page: the console still has the
+ * directory, so the month ahead renders either way.
+ */
+export async function fetchCelebrations(): Promise<Celebrations> {
+  if (!isLive) return mocked(mockCelebrations())
+
+  const raw = await get<Record<string, unknown>>('/api/employees/celebrations')
+
+  // Whole employee records come back; a bare string is tolerated in case a thinner
+  // shape ever appears. Same reading as the bot's, in teams/src/api.ts.
+  const people = (value: unknown): Celebrant[] =>
+    Array.isArray(value)
+      ? value
+          .map((row): Celebrant => {
+            if (typeof row === 'string') {
+              return { name: row, employeeId: '', designation: '', email: '' }
+            }
+            const one = row as Record<string, unknown>
+            return {
+              name: String(one.name ?? ''),
+              employeeId: String(one.employeeId ?? ''),
+              designation: String(one.designation ?? one.title ?? ''),
+              // Every spelling the service might use, and never a stand-in: a wish is
+              // a deep link to a named person, so the wrong address messages the wrong
+              // colleague. Absent, the action does not render.
+              email: String(one.officialEmail ?? one.email ?? one.upn ?? ''),
+              ...(one.years === undefined ? {} : { years: Number(one.years) }),
+            }
+          })
+          .filter((one) => one.name)
+      : []
+
+  return {
+    birthdays: people(raw.birthdays),
+    anniversaries: people(raw.anniversaries),
+    newJoiners: people(raw.newJoiners ?? raw.joiners),
+  }
+}
+
 export async function assignTicket(id: string, assigneeId: string | null): Promise<Ticket> {
   if (isLive) {
     return request<Ticket>(`/api/tickets/${id}/assignee`, {

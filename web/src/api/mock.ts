@@ -9,6 +9,7 @@
  */
 
 import { isConsoleRole } from './access'
+import type { Celebrant, Celebrations } from './celebrations'
 import { HOLIDAY_CALENDAR, holidaysFor } from './holidays'
 import {
   FULL_DAY_MILLIS,
@@ -65,7 +66,9 @@ export const EMPLOYEES: Employee[] = [
     department: 'Experience',
     officialEmail: 'manikanteswar@example.com',
     role: 'EMPLOYEE',
-    dateOfJoining: '2022-08-01',
+    // Dated so a work anniversary falls inside the month-ahead window and the
+    // Coming up list has something in it. Mock data exists to exercise the page.
+    dateOfJoining: '2022-08-25',
     reportees: 0,
   },
   {
@@ -336,6 +339,50 @@ export function mockAssignTicket(id: string, assigneeId: string | null): Ticket 
     return updated
   })
   return updated
+}
+
+/**
+ * Today's celebrations, derived from the same directory the rest of the mock uses.
+ *
+ * Anniversaries and joiners come out of `dateOfJoining` so they stay consistent with
+ * the month-ahead list. Birthdays are invented here because nothing in the directory
+ * could produce them — which is exactly the gap the real endpoint fills.
+ */
+export function mockCelebrations(): Celebrations {
+  const today = isoDate()
+
+  const asCelebrant = (employee: Employee, years?: number): Celebrant => ({
+    name: employee.name,
+    employeeId: employee.employeeId,
+    designation: employee.title,
+    email: employee.officialEmail,
+    department: employee.department,
+    ...(years === undefined ? {} : { years }),
+  })
+
+  const anniversaries: Celebrant[] = []
+  const newJoiners: Celebrant[] = []
+
+  for (const employee of WORKFORCE) {
+    const joined = employee.dateOfJoining
+    if (!joined) continue
+    if (joined.slice(5) === today.slice(5) && joined < today) {
+      anniversaries.push(
+        asCelebrant(employee, Number(today.slice(0, 4)) - Number(joined.slice(0, 4))),
+      )
+    }
+    const ago = Math.round(
+      (new Date(`${today}T00:00:00`).getTime() - new Date(`${joined}T00:00:00`).getTime()) /
+        86_400_000,
+    )
+    if (ago >= 0 && ago <= 30) newJoiners.push(asCelebrant(employee))
+  }
+
+  // One birthday, so the page has all three kinds to lay out. The real endpoint is the
+  // only thing that can know this.
+  const birthdays = WORKFORCE.length > 0 ? [asCelebrant(WORKFORCE[0])] : []
+
+  return { birthdays, anniversaries, newJoiners }
 }
 
 function moodsOn(dateIso: string): { employee: Employee; mood: MoodKey }[] {

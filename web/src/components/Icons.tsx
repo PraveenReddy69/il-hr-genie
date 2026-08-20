@@ -111,3 +111,19 @@ export const PulseIcon = (props: IconProps) => (
     <path d="M6.5 12.5h2.2l1.6-3.4 2.4 6 1.6-2.6h2.8" />
   </Svg>
 )
+
+/**
+ * A gift, for celebrations.
+ *
+ * A cake was the obvious choice and reads as a birthday alone — this page is also
+ * anniversaries and joiners, and a cake would quietly mislabel two thirds of it.
+ */
+export const CelebrationsIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <path d="M20 12v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8" />
+    <path d="M3 8h18a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z" />
+    <path d="M12 8v13" />
+    <path d="M12 8H7.5a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8Z" />
+    <path d="M12 8h4.5a2.5 2.5 0 0 0 0-5C13 3 12 8 12 8Z" />
+  </Svg>
+)

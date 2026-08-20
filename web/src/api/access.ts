@@ -19,6 +19,7 @@ export type Permission =
   | 'tickets.assign'
   | 'people.view'
   | 'attendance.view'
+  | 'celebrations.view'
   | 'trends.view'
   | 'analytics.view'
   | 'holidays.view'
@@ -54,6 +55,7 @@ const HR_BUNDLE: Permission[] = [
   'tickets.resolve',
   'people.view',
   'attendance.view',
+  'celebrations.view',
   'trends.view',
   'analytics.view',
   'holidays.view',

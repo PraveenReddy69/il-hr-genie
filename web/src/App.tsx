@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
 import { Analytics } from './pages/Analytics'
 import { Attendance } from './pages/Attendance'
+import { Celebrations } from './pages/Celebrations'
 import { Dashboard } from './pages/Dashboard'
 import { Holidays } from './pages/Holidays'
 import { People } from './pages/People'
@@ -12,6 +13,7 @@ import { Trends } from './pages/Trends'
 import {
   AnalyticsIcon,
   AttendanceIcon,
+  CelebrationsIcon,
   DashboardIcon,
   HistoryIcon,
   HolidaysIcon,
@@ -38,6 +40,12 @@ const NAV: { to: string; label: string; Icon: typeof DashboardIcon; needs: Permi
   { to: '/tickets', label: 'Tickets', Icon: TicketsIcon, needs: 'tickets.view' },
   { to: '/people', label: 'People', Icon: PeopleIcon, needs: 'people.view' },
   { to: '/attendance', label: 'Attendance', Icon: AttendanceIcon, needs: 'attendance.view' },
+  {
+    to: '/celebrations',
+    label: 'Celebrations',
+    Icon: CelebrationsIcon,
+    needs: 'celebrations.view',
+  },
   { to: '/sales', label: 'Sales Insights', Icon: SalesIcon, needs: 'sales.view' },
   { to: '/pulse', label: 'Pulse questions', Icon: PulseIcon, needs: 'pulse.view' },
   { to: '/analytics', label: 'Analytics', Icon: AnalyticsIcon, needs: 'analytics.view' },
@@ -167,6 +175,10 @@ export default function App() {
           />
           <Route path="/people" element={gate('people.view', <People />)} />
           <Route path="/attendance" element={gate('attendance.view', <Attendance />)} />
+          <Route
+            path="/celebrations"
+            element={gate('celebrations.view', <Celebrations viewer={hr} />)}
+          />
           <Route path="/sales" element={gate('sales.view', <SalesInsights />)} />
           <Route path="/pulse" element={gate('pulse.view', <PulseQuestions editable={can(hr, 'pulse.publish')} />)} />
           <Route path="/analytics" element={gate('analytics.view', <Analytics />)} />
