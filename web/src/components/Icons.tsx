@@ -127,3 +127,122 @@ export const CelebrationsIcon = (props: IconProps) => (
     <path d="M12 8h4.5a2.5 2.5 0 0 0 0-5C13 3 12 8 12 8Z" />
   </Svg>
 )
+
+/* ------------------------------------------------- the ticket queue's glyphs */
+
+/**
+ * One glyph per ticket category, and one per stat.
+ *
+ * A queue is read by scanning, and a shape is faster to scan than a word. These sit in
+ * a tinted square at the head of each row, so they carry the category and free the
+ * meta line to carry the reference and the person instead.
+ *
+ * Same 24-grid and 1.75 stroke as the navigation set — at 18px inside a 38px tile they
+ * hold up, and a heavier weight would fight the row title.
+ */
+export const PayrollIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <rect x="2" y="5" width="20" height="14" rx="2.5" />
+    <path d="M2 10h20" />
+    <path d="M6 15h4" />
+  </Svg>
+)
+
+export const LeaveIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <path d="M12 21c-4-2-7-5.5-7-10a7 7 0 0 1 14 0c0 4.5-3 8-7 10Z" />
+    <path d="M12 21V8" />
+    <path d="M12 12c-1.6 0-3-1.2-3-2.6" />
+  </Svg>
+)
+
+export const AccessIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <rect x="4" y="10" width="16" height="10" rx="2" />
+    <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+    <path d="M12 14v2" />
+  </Svg>
+)
+
+export const InsuranceIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <path d="M12 3l7 3v6c0 4-3 7.5-7 9-4-1.5-7-5-7-9V6l7-3Z" />
+    <path d="M9.5 12l1.8 1.8L15 10" />
+  </Svg>
+)
+
+export const FacilitiesIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <circle cx="12" cy="12" r="2" />
+    <path d="M12 10c0-3 1-5 3-5s2.5 2 1 3.5S12 10 12 10Z" />
+    <path d="M14 12c3 0 5 1 5 3s-2 2.5-3.5 1S14 12 14 12Z" />
+    <path d="M12 14c0 3-1 5-3 5s-2.5-2-1-3.5S12 14 12 14Z" />
+    <path d="M10 12c-3 0-5-1-5-3s2-2.5 3.5-1S10 12 10 12Z" />
+  </Svg>
+)
+
+export const SomethingElseIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M9.6 9.4a2.5 2.5 0 1 1 3.3 2.4c-.6.2-.9.7-.9 1.3v.4" />
+    <path d="M12 17h.01" />
+  </Svg>
+)
+
+/** Stat-strip glyphs. Each says what the number is about, not what it counts. */
+export const OpenIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z" />
+    <path d="M14 3v5h5" />
+  </Svg>
+)
+
+export const ProgressIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7v5l3.5 2" />
+  </Svg>
+)
+
+export const UnownedIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </Svg>
+)
+
+export const WaitingIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <path d="M7 3h10" />
+    <path d="M7 21h10" />
+    <path d="M8 3v3.5c0 2 4 3.4 4 5.5s-4 3.5-4 5.5V21" />
+    <path d="M16 3v3.5c0 2-4 3.4-4 5.5s4 3.5 4 5.5V21" />
+  </Svg>
+)
+
+export const SearchIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <circle cx="11" cy="11" r="7" />
+    <path d="m20 20-3.5-3.5" />
+  </Svg>
+)
+
+export const TickIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <path d="m5 13 4 4 10-10" />
+  </Svg>
+)
+
+export const HintIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <path d="M9 18h6" />
+    <path d="M10 21h4" />
+    <path d="M12 3a6 6 0 0 0-3.5 10.9c.5.4.8 1 .9 1.6h5.2c.1-.6.4-1.2.9-1.6A6 6 0 0 0 12 3Z" />
+  </Svg>
+)
+
+export const CloseIcon = (props: IconProps) => (
+  <Svg {...props}>
+    <path d="M18 6 6 18M6 6l12 12" />
+  </Svg>
+)

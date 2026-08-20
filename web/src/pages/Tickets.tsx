@@ -1,19 +1,24 @@
 import { useEffect, useMemo, useState } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
+import { Avatar, Empty, Loading, STATUS_COLOUR, clickable, relativeTime } from '../components/Bits'
 import {
-  Avatar,
-  Empty,
-  Loading,
-  STATUS_COLOUR,
-  clickable,
-  relativeTime,
-} from '../components/Bits'
+  AccessIcon,
+  CloseIcon,
+  FacilitiesIcon,
+  HintIcon,
+  InsuranceIcon,
+  LeaveIcon,
+  OpenIcon,
+  PayrollIcon,
+  ProgressIcon,
+  SearchIcon,
+  SomethingElseIcon,
+  TickIcon,
+  UnownedIcon,
+  WaitingIcon,
+} from '../components/Icons'
 import { TicketDrawer } from '../components/TicketDrawer'
-import {
-  employeeName,
-  ensureDirectory,
-  fetchEmployees,
-  fetchTickets,
-} from '../api/client'
+import { employeeName, ensureDirectory, fetchEmployees, fetchTickets } from '../api/client'
 import { isConsoleRole } from '../api/access'
 import {
   ANY_ASSIGNEE,
@@ -30,18 +35,20 @@ import {
   TICKET_STATUSES,
   type Employee,
   type Ticket,
+  type TicketStatus,
 } from '../api/types'
 
 /**
  * The ticket queue.
  *
- * Two filters rather than one, because they answer different questions: *what state is
- * the work in* and *whose work is it*. An Admin opens this page to find what nobody has
- * picked up; an HRBP opens it to find their own.
+ * One axis in the layout and one in the filter: status groups the list, the segmented
+ * control narrows it by owner. They used to be the other way round and fought each
+ * other — an In progress ticket sat under "Needs an owner" — so each fact now appears
+ * exactly once.
  *
- * The list is already narrowed before it is filtered — see visibleTickets. An assigned
- * ticket belongs to one person, and the rest of that department stops seeing it. That is
- * a decision about what to draw; the API has to make the same one about what to return.
+ * The list is narrowed before it is filtered; see visibleTickets. An assigned ticket
+ * belongs to one person and leaves everyone else's queue. That is a decision about what
+ * to draw, and the API has to make the same one about what to return.
  */
 export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee }) {
   const [tickets, setTickets] = useState<Ticket[] | null>(null)
@@ -49,6 +56,7 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
   const [assignee, setAssignee] = useState<string>(ANY_ASSIGNEE)
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState<Ticket | null>(null)
+  const [hintShown, setHintShown] = useState(() => localStorage.getItem(HINT_KEY) !== 'dismissed')
 
   /**
    * Reloads on a timer and whenever the tab is looked at again.
@@ -83,7 +91,9 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
   }, [])
 
   useEffect(() => {
-    fetchEmployees().then(setPeople).catch(() => setPeople([]))
+    fetchEmployees()
+      .then(setPeople)
+      .catch(() => setPeople([]))
   }, [])
 
   const departmentOf = useMemo(() => {
@@ -91,16 +101,10 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
     return (employeeId: string) => byId.get(employeeId) ?? ''
   }, [people])
 
-  const employeeById = useMemo(
-    () => new Map(people.map((one) => [one.employeeId, one])),
-    [people],
-  )
+  const employeeById = useMemo(() => new Map(people.map((one) => [one.employeeId, one])), [people])
 
   /** HR accounts a ticket can be handed to. Admins included: they cover holidays. */
-  const hrAccounts = useMemo(
-    () => people.filter((one) => isConsoleRole(one.role)),
-    [people],
-  )
+  const hrAccounts = useMemo(() => people.filter((one) => isConsoleRole(one.role)), [people])
 
   /** Everything this account may see, before either filter. */
   const mine = useMemo(
@@ -139,26 +143,12 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
   const term = query.trim().toLowerCase()
   const matching = term
     ? mine.filter((one) =>
-        [one.id, one.subject, employeeName(one.employeeId)]
-          .join(' ')
-          .toLowerCase()
-          .includes(term),
+        [one.id, one.subject, employeeName(one.employeeId)].join(' ').toLowerCase().includes(term),
       )
     : mine
 
   const filtered = byAssignee(matching, assignee, viewer.employeeId)
 
-  /*
-   * Grouped by status, which is the same thing the pills used to say.
-   *
-   * They were grouped by owner — Needs an owner, In flight, Done — while every row
-   * carried a status pill. Two axes on one row, and they contradicted each other in
-   * plain sight: an In progress ticket sat under "Needs an owner" because it happened
-   * to have no assignee. Both readings were correct and the pair was nonsense.
-   *
-   * One axis in the layout, one in the filter. Status groups the list; the owner is
-   * what the segmented control filters by. Each fact appears once.
-   */
   const groups = TICKET_STATUSES.map((status) => ({
     key: status,
     label: STATUS_LABEL[status],
@@ -171,6 +161,11 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
     )
   }
 
+  function dismissHint() {
+    localStorage.setItem(HINT_KEY, 'dismissed')
+    setHintShown(false)
+  }
+
   return (
     <>
       <div className="page-head">
@@ -180,48 +175,55 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
         </p>
       </div>
 
-      <div className="statstrip">
-        <div className="statstrip__cell">
-          <div className="statstrip__label">Open</div>
-          <div className="statstrip__value">{counts.OPEN}</div>
-        </div>
-        <div className="statstrip__cell">
-          <div className="statstrip__label">In progress</div>
-          <div className="statstrip__value">{counts.IN_PROGRESS}</div>
-        </div>
-        <div className="statstrip__cell">
-          <div className="statstrip__label">Unassigned</div>
-          {/* Coloured only when it is a number somebody has to do something about. A
-              permanently orange zero is a warning nobody reads. */}
-          <div
-            className="statstrip__value"
-            style={{ color: counts.unassigned > 0 ? 'var(--orange-warn)' : undefined }}
-          >
-            {counts.unassigned}
-          </div>
-        </div>
-        <div className="statstrip__cell">
-          <div className="statstrip__label">Waiting {AGEING_DAYS}d+</div>
-          <div
-            className="statstrip__value"
-            style={{ color: counts.ageing > 0 ? 'var(--red-risk)' : undefined }}
-          >
-            {counts.ageing}
-          </div>
-        </div>
+      <div className="stats">
+        <Stat
+          label="Open"
+          value={counts.OPEN}
+          sub="Needs attention"
+          accent="var(--orange-warn)"
+          tint="var(--orange-tint-14)"
+          icon={<OpenIcon />}
+        />
+        <Stat
+          label="In progress"
+          value={counts.IN_PROGRESS}
+          sub="Being worked on"
+          accent="var(--blue-primary)"
+          tint="var(--blue-tint-12)"
+          icon={<ProgressIcon />}
+        />
+        <Stat
+          label="Unassigned"
+          value={counts.unassigned}
+          sub="Awaiting assignment"
+          // Colour only where the number is a prompt. Nought unassigned is good news,
+          // and good news in orange is a warning nobody reads.
+          accent={counts.unassigned > 0 ? 'var(--orange-warn)' : 'var(--ink-12)'}
+          tint={counts.unassigned > 0 ? 'var(--orange-tint-14)' : 'var(--ink-05)'}
+          icon={<UnownedIcon />}
+        />
+        <Stat
+          label={`Waiting ${AGEING_DAYS}d+`}
+          value={counts.ageing}
+          sub="Requires follow up"
+          accent={counts.ageing > 0 ? 'var(--red-risk)' : 'var(--green-ok)'}
+          tint={counts.ageing > 0 ? 'rgba(229, 72, 77, 0.12)' : 'var(--green-tint-14)'}
+          icon={<WaitingIcon />}
+        />
       </div>
 
-      <section className="card" style={{ marginTop: 16 }}>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <input
-            className="search"
-            style={{ flex: 1, minWidth: 200 }}
-            value={query}
-            placeholder="Search subject, reference or person"
-            onChange={(event) => setQuery(event.target.value)}
-          />
+      <div style={{ marginTop: 16 }}>
+        <div className="toolbar">
+          <label className="toolbar__search">
+            <SearchIcon />
+            <input
+              value={query}
+              placeholder="Search by subject, reference or person…"
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </label>
 
-          <div className="seg">
+          <div className="seg seg--dark">
             <button
               className={`seg__item ${assignee === ANY_ASSIGNEE ? 'seg__item--on' : ''}`}
               onClick={() => setAssignee(ANY_ASSIGNEE)}
@@ -246,7 +248,7 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
           {canAssign(viewer) && hrAccounts.length > 0 && (
             <select
               className="search"
-              style={{ width: 'auto' }}
+              style={{ width: 'auto', flex: 'none' }}
               value={
                 assignee === ANY_ASSIGNEE || assignee === UNASSIGNED || assignee === MINE
                   ? ''
@@ -264,11 +266,11 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
           )}
         </div>
 
-        <div style={{ marginTop: 4 }}>
+        <div className="queue">
           {filtered.length === 0 && (
             <Empty style={{ marginTop: 14 }}>
               {term
-                ? `Nothing matches "${query.trim()}".`
+                ? `Nothing matches “${query.trim()}”.`
                 : assignee === UNASSIGNED
                   ? 'Everything open has somebody on it.'
                   : 'Nothing here right now.'}
@@ -278,7 +280,7 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
           {groups.map((group) =>
             group.rows.length === 0 ? null : (
               <div key={group.key}>
-                <div className="qgroup">
+                <div className={`qgroup qgroup--${group.key}`}>
                   {group.label}
                   <span className="qgroup__count">{group.rows.length}</span>
                 </div>
@@ -286,20 +288,33 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
                 {group.rows.map((ticket) => {
                   const owner = ticket.assigneeId ? employeeById.get(ticket.assigneeId) : undefined
                   const waiting = daysWaiting(ticket, now)
+                  const resolved = ticket.status === 'RESOLVED'
                   return (
                     <div className="row" key={ticket.id} {...clickable(() => setOpen(ticket))}>
                       <span
                         className="accent"
                         style={{ background: STATUS_COLOUR[ticket.status] }}
                       />
+
+                      {/* The category, as a shape. A queue is scanned before it is read. */}
+                      <span
+                        className="rowicon"
+                        style={{
+                          background: tintFor(ticket.status),
+                          color: STATUS_COLOUR[ticket.status],
+                        }}
+                        title={ticket.category}
+                      >
+                        {iconFor(ticket.category)}
+                      </span>
+
                       <div className="row__main">
                         <div className="row__title">{ticket.subject}</div>
                         <div className="row__meta">
                           <span className="ref">{ticket.id}</span> · {ticket.category} ·{' '}
-                          {employeeName(ticket.employeeId)} ·{' '}
-                          {relativeTime(ticket.createdAtMillis)}
+                          {employeeName(ticket.employeeId)} · {relativeTime(ticket.createdAtMillis)}
                           {/* Only once it is worth chasing. A day-old ticket is not
-                              late, and an ageing badge on everything is one on nothing. */}
+                              late, and a badge on everything is a badge on nothing. */}
                           {waiting >= AGEING_DAYS && (
                             <span style={{ color: 'var(--red-risk)', marginLeft: 8 }}>
                               · waiting {waiting} days
@@ -309,33 +324,47 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
                       </div>
 
                       {/*
-                        Nothing about ownership on a resolved ticket. It is finished;
-                        who still nominally owns it is not a fact anybody acts on, and
-                        an "Unassigned" chip on four closed rows made the queue look
-                        like four open problems.
+                        Nothing about ownership on a resolved ticket. It is finished, and
+                        an "Unassigned" chip on closed rows made the queue look like a
+                        list of open problems.
                       */}
-                      {ticket.status !== 'RESOLVED' &&
-                        (owner ? (
-                          <span className="owner" title={`Assigned to ${owner.name}`}>
-                            <Avatar name={owner.name} index={0} />
-                            {owner.employeeId === viewer.employeeId ? 'You' : owner.name}
-                          </span>
-                        ) : (
-                          <span className="owner owner--none">Needs an owner</span>
-                        ))}
+                      {resolved ? (
+                        <span className="pill pill--done">
+                          <TickIcon />
+                          Resolved
+                        </span>
+                      ) : owner ? (
+                        <span className="owner" title={`Assigned to ${owner.name}`}>
+                          <Avatar name={owner.name} index={0} />
+                          {owner.employeeId === viewer.employeeId ? 'You' : owner.name}
+                        </span>
+                      ) : (
+                        <span className="pill pill--outline">
+                          <UnownedIcon />
+                          Needs an owner
+                        </span>
+                      )}
                     </div>
                   )
                 })}
               </div>
             ),
           )}
-        </div>
-      </section>
 
-      <p className="note">
-        Click a ticket to move it on. Resolving needs a note saying what was done — the
-        employee sees it in HR Genie chat.
-      </p>
+          {hintShown && (
+            <div className="hintbar">
+              <HintIcon />
+              <span>
+                Click a ticket to move it on. Resolving needs a note saying what was done —
+                the employee sees it in HR Genie chat.
+              </span>
+              <button className="hintbar__close" onClick={dismissHint} aria-label="Dismiss">
+                <CloseIcon />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
 
       {open && (
         <TicketDrawer
@@ -352,6 +381,66 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
   )
 }
 
+function Stat({
+  label,
+  value,
+  sub,
+  accent,
+  tint,
+  icon,
+}: {
+  label: string
+  value: number
+  sub: string
+  accent: string
+  tint: string
+  icon: ReactNode
+}) {
+  return (
+    <div
+      className="stat"
+      style={{ '--stat-accent': accent, '--stat-tint': tint } as CSSProperties}
+    >
+      <span className="stat__icon">{icon}</span>
+      <div>
+        <div className="stat__label">{label}</div>
+        <div className="stat__value">{value}</div>
+        <div className="stat__sub">{sub}</div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * The glyph for a category.
+ *
+ * Falls back rather than rendering nothing: the category list comes from the API, so a
+ * name this console has never heard of is expected, not a bug.
+ */
+function iconFor(category: string) {
+  switch (category) {
+    case 'Payroll':
+      return <PayrollIcon />
+    case 'Leave':
+      return <LeaveIcon />
+    case 'IT & access':
+      return <AccessIcon />
+    case 'Insurance':
+      return <InsuranceIcon />
+    case 'Facilities':
+      return <FacilitiesIcon />
+    default:
+      return <SomethingElseIcon />
+  }
+}
+
+/** The glyph tile takes the status tint, so a row reads as one colour. */
+function tintFor(status: TicketStatus): string {
+  if (status === 'OPEN') return 'var(--orange-tint-14)'
+  if (status === 'IN_PROGRESS') return 'var(--blue-tint-12)'
+  return 'var(--green-tint-14)'
+}
+
 /** Often enough that a ticket raised on the phone shows up while HR is looking. */
 const REFRESH_MS = 30_000
 
@@ -362,3 +451,6 @@ const REFRESH_MS = 30_000
  * appears on everything is a badge that says nothing.
  */
 const AGEING_DAYS = 3
+
+/** Dismissed for good, not for this visit — it is only news once. */
+const HINT_KEY = 'hr-genie-queue-hint'
