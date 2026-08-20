@@ -4,7 +4,6 @@ import {
   Empty,
   Loading,
   STATUS_COLOUR,
-  StatusPill,
   clickable,
   relativeTime,
 } from '../components/Bits'
@@ -26,7 +25,12 @@ import {
   unassignedCount,
   visibleTickets,
 } from '../api/ticketQueue'
-import { type Employee, type Ticket } from '../api/types'
+import {
+  STATUS_LABEL,
+  TICKET_STATUSES,
+  type Employee,
+  type Ticket,
+} from '../api/types'
 
 /**
  * The ticket queue.
@@ -145,26 +149,21 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
   const filtered = byAssignee(matching, assignee, viewer.employeeId)
 
   /*
-   * Three groups, in the order somebody works them.
+   * Grouped by status, which is the same thing the pills used to say.
    *
-   * Needs an owner first because it is the only one that is nobody's job yet, then what
-   * is being worked, then what is done. This is what replaced the status filter chips:
-   * the grouping answers the same question without a control, and it answers "what
-   * should I do next" as well, which chips never did.
+   * They were grouped by owner — Needs an owner, In flight, Done — while every row
+   * carried a status pill. Two axes on one row, and they contradicted each other in
+   * plain sight: an In progress ticket sat under "Needs an owner" because it happened
+   * to have no assignee. Both readings were correct and the pair was nonsense.
+   *
+   * One axis in the layout, one in the filter. Status groups the list; the owner is
+   * what the segmented control filters by. Each fact appears once.
    */
-  const groups: { key: string; label: string; rows: Ticket[] }[] = [
-    {
-      key: 'unowned',
-      label: 'Needs an owner',
-      rows: filtered.filter((one) => !one.assigneeId && one.status !== 'RESOLVED'),
-    },
-    {
-      key: 'flight',
-      label: 'In flight',
-      rows: filtered.filter((one) => one.assigneeId && one.status !== 'RESOLVED'),
-    },
-    { key: 'done', label: 'Done', rows: filtered.filter((one) => one.status === 'RESOLVED') },
-  ]
+  const groups = TICKET_STATUSES.map((status) => ({
+    key: status,
+    label: STATUS_LABEL[status],
+    rows: filtered.filter((one) => one.status === status),
+  }))
 
   function applyUpdate(updated: Ticket) {
     setTickets((current) =>
@@ -309,16 +308,21 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
                         </div>
                       </div>
 
-                      {owner ? (
-                        <span className="owner" title={`Assigned to ${owner.name}`}>
-                          <Avatar name={owner.name} index={0} />
-                          {owner.employeeId === viewer.employeeId ? 'You' : owner.name}
-                        </span>
-                      ) : (
-                        <span className="owner owner--none">Unassigned</span>
-                      )}
-
-                      <StatusPill status={ticket.status} />
+                      {/*
+                        Nothing about ownership on a resolved ticket. It is finished;
+                        who still nominally owns it is not a fact anybody acts on, and
+                        an "Unassigned" chip on four closed rows made the queue look
+                        like four open problems.
+                      */}
+                      {ticket.status !== 'RESOLVED' &&
+                        (owner ? (
+                          <span className="owner" title={`Assigned to ${owner.name}`}>
+                            <Avatar name={owner.name} index={0} />
+                            {owner.employeeId === viewer.employeeId ? 'You' : owner.name}
+                          </span>
+                        ) : (
+                          <span className="owner owner--none">Needs an owner</span>
+                        ))}
                     </div>
                   )
                 })}

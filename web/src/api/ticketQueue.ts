@@ -105,7 +105,13 @@ export function refusalFor(actor: Employee, assignee: Employee | null): string |
 
 export function byAssignee(tickets: Ticket[], assignee: string, viewerId: string): Ticket[] {
   if (assignee === ANY_ASSIGNEE) return tickets
-  if (assignee === UNASSIGNED) return tickets.filter((ticket) => !ticket.assigneeId)
+  // Resolved tickets are excluded, matching unassignedCount exactly. They did not
+  // before, so the chip said "Unassigned 2" and the list showed four — a resolved
+  // ticket has no owner and does not need one, and counting it as work waiting for
+  // somebody is the wrong answer as well as an inconsistent one.
+  if (assignee === UNASSIGNED) {
+    return tickets.filter((ticket) => !ticket.assigneeId && ticket.status !== 'RESOLVED')
+  }
   if (assignee === MINE) return tickets.filter((ticket) => ticket.assigneeId === viewerId)
   return tickets.filter((ticket) => ticket.assigneeId === assignee)
 }

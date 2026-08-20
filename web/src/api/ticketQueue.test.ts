@@ -236,3 +236,25 @@ describe('what to put on the page', () => {
     expect(unassignedCount(queue)).toBe(1)
   })
 })
+
+describe('the unassigned chip and the unassigned list agree', () => {
+  const queue = [
+    ticket({ id: 'A' }),
+    ticket({ id: 'B', status: 'RESOLVED' }),
+    ticket({ id: 'C', assigneeId: 'HR000' }),
+  ]
+
+  it('counts and lists the same tickets', () => {
+    // They did not. The chip read "Unassigned 2" above a list of four, because the
+    // count excluded resolved tickets and the filter did not. Whichever definition
+    // wins, one of them has to — this is the test that says so.
+    expect(byAssignee(queue, UNASSIGNED, 'HR000')).toHaveLength(unassignedCount(queue))
+  })
+
+  it('leaves a resolved ticket out of both', () => {
+    // It is finished. Nobody has to pick it up, so it is not work waiting for an owner
+    // however empty its assignee field happens to be.
+    expect(byAssignee(queue, UNASSIGNED, 'HR000').map((one) => one.id)).toEqual(['A'])
+    expect(unassignedCount(queue)).toBe(1)
+  })
+})
