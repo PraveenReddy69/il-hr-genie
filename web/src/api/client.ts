@@ -187,6 +187,32 @@ export function clearToken() {
   employeeLoad = null
 }
 
+/**
+ * The sentence inside a failure body, or the body as it came.
+ *
+ * NestJS answers `{"message":"...","error":"Forbidden","statusCode":403}`, and showing
+ * that verbatim put a line of JSON in front of HR where a sentence belonged. The
+ * message is the only part written for a person; the rest is for a log.
+ *
+ * Falls back to the raw text rather than swallowing it — an unrecognised body is still
+ * the best evidence anyone has about what went wrong.
+ */
+export function messageIn(body: string, status: number): string {
+  const trimmed = body.trim()
+  if (!trimmed) return `Request failed (${status})`
+
+  try {
+    const parsed = JSON.parse(trimmed) as { message?: unknown; error?: unknown }
+    // `message` is sometimes an array of validation failures.
+    if (Array.isArray(parsed.message)) return parsed.message.map(String).join('. ')
+    if (typeof parsed.message === 'string' && parsed.message) return parsed.message
+    if (typeof parsed.error === 'string' && parsed.error) return parsed.error
+  } catch {
+    // Not JSON. An HTML error page or a bare string is still worth showing.
+  }
+  return trimmed
+}
+
 class ApiError extends Error {
   constructor(
     message: string,
@@ -235,7 +261,7 @@ export async function request<T>(path: string, init: RequestInit): Promise<T> {
   if (!response.ok) {
     // Read the body for the server's own message before giving up on it.
     const detail = await response.text().catch(() => '')
-    throw new ApiError(detail || `Request failed (${response.status})`, response.status)
+    throw new ApiError(messageIn(detail, response.status), response.status)
   }
   return (await response.json()) as T
 }
@@ -256,7 +282,7 @@ export async function remove(path: string): Promise<void> {
   })
   if (!response.ok) {
     const detail = await response.text().catch(() => '')
-    throw new ApiError(detail || `Request failed (${response.status})`, response.status)
+    throw new ApiError(messageIn(detail, response.status), response.status)
   }
 }
 
