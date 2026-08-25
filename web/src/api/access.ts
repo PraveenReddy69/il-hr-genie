@@ -99,9 +99,31 @@ export const BUNDLES: Record<Role, Permission[]> = {
  */
 export const HEAD_GRANTABLE_ONLY: Permission[] = ['access.manage', 'roles.assign']
 
+/**
+ * Permissions the console adds to a server list that predates them.
+ *
+ * `celebrations.view` was specified after the API implemented its permission set, so
+ * the server sends a list without it and the Celebrations page disappears for everyone
+ * — a working feature removed by a spec gap rather than by a decision.
+ *
+ * Granted alongside `people.view` because it is the same kind of read of the same
+ * directory, and no role is meant to be without it.
+ *
+ * **Delete this the moment the API includes `celebrations.view`.** It is a bridge over
+ * one missing string, not a licence for the console to grant itself anything.
+ */
+const IMPLIED: readonly [Permission, Permission][] = [['people.view', 'celebrations.view']]
+
 /** What an account can actually do. Server-resolved when present, bundle otherwise. */
 export function permissionsOf(who: Employee): Permission[] {
-  return who.permissions ?? BUNDLES[who.role] ?? []
+  const sent = who.permissions
+  if (!sent) return BUNDLES[who.role] ?? []
+
+  const filled = [...sent]
+  for (const [given, implied] of IMPLIED) {
+    if (filled.includes(given) && !filled.includes(implied)) filled.push(implied)
+  }
+  return filled
 }
 
 export function can(who: Employee | null, permission: Permission): boolean {

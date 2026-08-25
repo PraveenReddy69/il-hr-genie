@@ -296,3 +296,48 @@ describe('the sign-in gate', () => {
     for (const role of HR_ROLES) expect(isConsoleRole(role)).toBe(true)
   })
 })
+
+describe('a permission list from a server that predates a permission', () => {
+  /*
+   * The API sends its own list now. It was built from the spec as it stood, so it has
+   * no `celebrations.view` — and because the server list wins over the bundle, a page
+   * that works disappeared for everybody.
+   */
+  const sentByServer: Permission[] = [
+    'dashboard.view',
+    'tickets.view',
+    'tickets.resolve',
+    'people.view',
+    'attendance.view',
+    'trends.view',
+    'analytics.view',
+    'holidays.view',
+    'pulse.view',
+  ]
+
+  it('keeps Celebrations reachable for anyone who can read the directory', () => {
+    const hrbp = person('HYD606840', 'HR', { permissions: sentByServer })
+    expect(can(hrbp, 'celebrations.view')).toBe(true)
+  })
+
+  it('adds nothing else the server withheld', () => {
+    // The bridge covers one missing string. It must not become a way for the console
+    // to grant itself the administrative half.
+    const hrbp = person('HYD606840', 'HR', { permissions: sentByServer })
+    expect(can(hrbp, 'holidays.edit')).toBe(false)
+    expect(can(hrbp, 'pulse.publish')).toBe(false)
+    expect(can(hrbp, 'access.manage')).toBe(false)
+  })
+
+  it('does not invent a read for somebody who cannot read the directory', () => {
+    const stripped = person('X', 'HR', { permissions: ['dashboard.view'] as Permission[] })
+    expect(can(stripped, 'celebrations.view')).toBe(false)
+  })
+
+  it('leaves a list that already has it alone', () => {
+    const full = person('X', 'HR', {
+      permissions: ['people.view', 'celebrations.view'] as Permission[],
+    })
+    expect(permissionsOf(full)).toEqual(['people.view', 'celebrations.view'])
+  })
+})
