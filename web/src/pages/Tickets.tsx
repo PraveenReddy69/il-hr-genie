@@ -58,6 +58,7 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState<Ticket | null>(null)
   const [hintShown, setHintShown] = useState(() => localStorage.getItem(HINT_KEY) !== 'dismissed')
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   /**
    * Reloads on a timer and whenever the tab is looked at again.
@@ -72,9 +73,18 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
     const load = () => {
       Promise.all([fetchTickets(), ensureDirectory()])
         .then(([rows]) => {
-          if (!cancelled) setTickets(rows)
+          if (cancelled) return
+          setTickets(rows)
+          setLoadError(null)
         })
-        .catch(() => {})
+        .catch((failure: unknown) => {
+          if (cancelled) return
+          // A failed refresh keeps the rows already on screen — see above. A failed
+          // *first* load used to keep the spinner instead, forever and with no message,
+          // which is the worst of both: nothing to read and nothing to do.
+          setLoadError(failure instanceof Error ? failure.message : 'Could not load the queue.')
+          setTickets((current) => current ?? [])
+        })
     }
 
     load()
@@ -175,6 +185,18 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
           {counts.all} in your queue · {counts.OPEN + counts.IN_PROGRESS} still open
         </p>
       </div>
+
+      {/*
+        Shown above the queue rather than in place of it. A refresh that fails while
+        rows are on screen should say so without taking them away — the last known
+        queue is more use than an error page.
+      */}
+      {loadError && (
+        <div className="banner banner--warn" style={{ marginBottom: 16 }}>
+          <div className="banner__title">Could not reach the queue</div>
+          <div className="banner__body">{loadError}</div>
+        </div>
+      )}
 
       <div className="stats">
         <Stat
