@@ -93,6 +93,39 @@ const FORCED_ROLE = import.meta.env.DEV
   ? (import.meta.env.VITE_FORCE_ROLE as Role | undefined)
   : undefined
 
+/**
+ * Which HR account holds which role, until the server can say.
+ *
+ * **This is a stopgap and it is meant to be deleted.** `/api/auth/login` returns
+ * `role: "HR"` for every HR account because HR is the only role the API has; without
+ * something here, nobody can reach the Admin half of the console at all.
+ *
+ * Three things keep it honest:
+ *
+ *   It **grants nothing**. The API has no role checks, so any authenticated HR account
+ *   can already call anything it allows. This decides which buttons are drawn, not
+ *   which requests succeed.
+ *
+ *   It **only fills a gap**. A server-sent role other than `HR` always wins — see
+ *   `roleOf` — so the day the backend returns `HR_ADMIN` this map stops having any
+ *   effect on its own, without a release.
+ *
+ *   It is **not a security boundary and must not become one**. When
+ *   docs/ACCESS_CONTROL.md lands, delete this and the function below.
+ */
+const ROLE_BY_EMPLOYEE: Record<string, Role> = {
+  HYD609552: 'HR', // Aamy C P — HRBP
+  HYD606840: 'HR', // Deepak Patl — HRBP
+  HYD604982: 'HR_ADMIN', // OM Narayan — Admin
+}
+
+function roleOf(employeeId: string, sent: Role): Role {
+  if (FORCED_ROLE) return FORCED_ROLE
+  // Anything the server actually decided outranks the map.
+  if (sent !== 'HR') return sent
+  return ROLE_BY_EMPLOYEE[employeeId] ?? sent
+}
+
 const BASE_URL = FORCED_MOCK
   ? undefined
   : (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '')
@@ -281,7 +314,7 @@ function toEmployee(raw: RawEmployee): Employee {
     title: raw.designation || raw.title || '',
     department: raw.subDepartment || raw.department,
     officialEmail: raw.officialEmail,
-    role: FORCED_ROLE ?? raw.role,
+    role: roleOf(raw.employeeId, raw.role),
     // Passed through rather than derived. The server resolves a bundle plus any
     // per-person grants into one list; recomputing it here would mean a front-end
     // release every time the backend changed what a role includes. Undefined on a

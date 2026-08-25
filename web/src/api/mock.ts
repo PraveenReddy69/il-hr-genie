@@ -41,16 +41,6 @@ import {
 
 export const EMPLOYEES: Employee[] = [
   {
-    employeeId: 'HYD609552',
-    name: 'Aamy C P',
-    title: 'Assistant Manager - HRBP',
-    department: 'Human Resource & Administration',
-    officialEmail: 'aamy.cp@example.com',
-    role: 'EMPLOYEE',
-    dateOfJoining: '2026-04-15',
-    reportees: 0,
-  },
-  {
     employeeId: 'EMP3801',
     name: 'Gunapati Praveen Reddy',
     title: 'Tech Lead-2-Software Engineering',
@@ -83,45 +73,46 @@ export const EMPLOYEES: Employee[] = [
     reportees: 2,
   },
   /*
-   * Three console accounts, one per tier.
+   * The real HR accounts, by their real employee ids.
    *
-   * The mock is the only place the Access page and the escalation rules can be
-   * exercised before the backend lands, and none of them mean anything with a single
-   * account: rule 2 needs somebody to outrank, rule 4 needs a Head who is the last one.
+   * Invented ones (HR000, HR001, HR002) meant signing in here proved nothing about
+   * signing in there — a mock whose ids do not exist cannot catch an id that does not
+   * match. These are the people who actually hold the roles.
    *
-   * HR000 is scoped to two departments deliberately. Organisation-wide is the easy case,
-   * and it is the one both accounts below already cover.
+   * Aamy is scoped to two departments deliberately. Organisation-wide is the easy case
+   * and the Admin below already covers it.
    */
   {
-    employeeId: 'HR000',
+    employeeId: 'HYD609552',
     name: 'Aamy C P',
-    title: 'HR Business Partner',
+    title: 'Assistant Manager - HRBP',
     department: 'Human Resource & Administration',
-    officialEmail: 'hr@infinitylearn.com',
+    officialEmail: 'aamy.cp@infinitylearn.com',
     role: 'HR',
     departments: ['Experience', 'Brand Marketing'],
     dateOfJoining: '2019-06-01',
     reportees: 4,
   },
   {
-    employeeId: 'HR001',
-    name: 'Sneha Rao',
+    employeeId: 'HYD606840',
+    name: 'Deepak Patl',
+    title: 'HR Business Partner',
+    department: 'Human Resource & Administration',
+    officialEmail: 'deepak.patl@infinitylearn.com',
+    role: 'HR',
+    departments: ['Human Resource & Administration'],
+    dateOfJoining: '2021-07-19',
+    reportees: 2,
+  },
+  {
+    employeeId: 'HYD604982',
+    name: 'OM Narayan',
     title: 'HR Operations Admin',
     department: 'Human Resource & Administration',
-    officialEmail: 'sneha.rao@infinitylearn.com',
+    officialEmail: 'om.narayan@infinitylearn.com',
     role: 'HR_ADMIN',
     dateOfJoining: '2018-03-12',
     reportees: 6,
-  },
-  {
-    employeeId: 'HR002',
-    name: 'Vikram Iyer',
-    title: 'Head of People',
-    department: 'Human Resource & Administration',
-    officialEmail: 'vikram.iyer@infinitylearn.com',
-    role: 'HR_HEAD',
-    dateOfJoining: '2016-01-04',
-    reportees: 12,
   },
 ]
 
@@ -277,7 +268,7 @@ let tickets: Ticket[] = (() => {
                 status === 'RESOLVED'
                   ? 'Sorted and confirmed with the employee.'
                   : 'Picked this up — chasing the owning team today.',
-              authorId: 'HR000',
+              authorId: 'HYD609552',
               atMillis: createdAtMillis + 4 * hour,
             },
           ]

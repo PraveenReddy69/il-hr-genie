@@ -240,7 +240,7 @@ function SignIn({ onSignedIn }: { onSignedIn: (employee: Employee) => void }) {
             id="employee-id"
             value={employeeId}
             onChange={(event) => setEmployeeId(event.target.value)}
-            placeholder="HR000"
+            placeholder="HYD609552"
             autoFocus
             autoComplete="off"
           />
@@ -273,7 +273,9 @@ function SignIn({ onSignedIn }: { onSignedIn: (employee: Employee) => void }) {
         {!isLive && (
           <>
             <p className="signin__hint">
-              Running on mock data — any password works. Use <strong>HR000</strong>.
+              Running on mock data — any password works. Use{' '}
+              <strong>HYD609552</strong> for an HRBP or <strong>HYD604982</strong> for
+              an Admin.
             </p>
             <span className="env-flag">Mock data</span>
           </>
