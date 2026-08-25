@@ -210,7 +210,11 @@ export async function handle(state: ConversationState, input: Input): Promise<Re
    * The flow is left alone: a stray "ok" should not throw away a half-written ticket.
    */
   if (isSmallTalk(text)) {
-    return [{ card: helloCard() }]
+    // Signed in only to read the name. A failure is not worth surfacing here — the
+    // card greets without one, and refusing to answer "hi" because the directory was
+    // slow is the worst possible first impression.
+    const session = await api.gateway.signIn().catch(() => null)
+    return [{ card: helloCard(session?.name) }]
   }
 
   if (/^(raise|new|open)\b.*\bticket\b/i.test(text) || /^raise a ticket$/i.test(text)) {
@@ -646,6 +650,7 @@ async function startTicket(state: ConversationState): Promise<Reply[]> {
     'IT & access',
     'Insurance',
     'Facilities',
+    'Attendance',
     'Something else',
   ])
   return [{ card: categoryCard(names) }]

@@ -48,6 +48,7 @@ const ICONS = {
   'it-access': [PURPLE, laptop],
   insurance: [DEEP, shield],
   facilities: [ORANGE, building],
+  attendance: [SLATE, clock],
 }
 
 mkdirSync(OUT, { recursive: true })
@@ -116,6 +117,23 @@ function shieldBody(x, y, s, inset) {
   const shoulder = s * 0.58
   const width = y <= shoulder ? halfWidth : halfWidth * (1 - (y - shoulder) / (bottom - shoulder))
   return clamp(width - Math.abs(x - s / 2) + 0.5)
+}
+
+/**
+ * A clock, for attendance.
+ *
+ * The one glyph everybody reads the same way. A calendar would have been the obvious
+ * pick and is already what Leave uses — attendance is about the hours inside a day,
+ * not which days, and two calendars side by side would make the pair harder to tell
+ * apart rather than easier.
+ */
+function clock(x, y, s) {
+  const face = ringDisc(x, y, s / 2, s / 2, s * 0.3, s * 0.065)
+  // Ten past ten: the hands sit apart at a glance and nothing overlaps the numerals
+  // a face this size does not have room for anyway.
+  const hour = segment(x, y, s / 2, s / 2, s * 0.365, s * 0.36, s * 0.035)
+  const minute = segment(x, y, s / 2, s / 2, s * 0.63, s * 0.315, s * 0.035)
+  return Math.min(1, Math.max(face, hour, minute))
 }
 
 /** An office block with windows. */

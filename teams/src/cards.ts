@@ -492,9 +492,22 @@ function weekday(iso: string): string {
  * noise, and it teaches nothing — whereas one card naming the word that opens the
  * menu is a thing a person can remember and use tomorrow.
  */
-export function helloCard(): AdaptiveCard {
+/**
+ * The answer to "hi".
+ *
+ * Greets by full name rather than first name, which is the one place in the bot that
+ * does. Everywhere else is a working screen where "Hi Praveen" is warmer; this is the
+ * first thing a person ever sees from HR Genie, and being addressed properly is what
+ * makes it read as the company's assistant rather than a chatbot.
+ *
+ * Falls back to a plain hello when there is no session — small talk must answer even
+ * when sign-in did not, since it is exactly what somebody types when nothing works.
+ */
+export function helloCard(fullName?: string): AdaptiveCard {
+  const greeting = fullName?.trim() ? `Hello ${fullName.trim()}` : 'Hello'
+
   return card([
-    header('Infinity Learn', "Hello! I'm HR Genie 👋", 'Here whenever you need HR'),
+    header('Infinity Learn', greeting, "I'm HR Genie 👋"),
     body([
       {
         type: 'TextBlock',
@@ -858,6 +871,7 @@ const CATEGORY_ICON: Record<string, string> = {
   'IT & access': 'it-access',
   Insurance: 'insurance',
   Facilities: 'facilities',
+  Attendance: 'attendance',
   'Something else': 'something-else',
 }
 
@@ -881,6 +895,9 @@ const CATEGORY_HINT: Record<string, string> = {
   'IT & access': 'Laptop, software, VPN, email and account access',
   Insurance: 'Health cover, claims, dependants and policy cards',
   Facilities: 'Office, seating, ID card, parking and workplace',
+  // Deliberately not comp-offs, which Leave already claims. This one is the hours
+  // inside a day — a missed punch, a shift swap — where Leave is which days.
+  Attendance: 'Regularisation, missed punches, shift timings and work from home',
   'Something else': 'Anything that does not fit the others — HR will route it',
 }
 

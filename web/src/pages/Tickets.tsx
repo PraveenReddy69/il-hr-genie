@@ -3,6 +3,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import { Avatar, Empty, Loading, STATUS_COLOUR, clickable, relativeTime } from '../components/Bits'
 import {
   AccessIcon,
+  AttendanceIcon,
   CloseIcon,
   FacilitiesIcon,
   HintIcon,
@@ -429,6 +430,8 @@ function iconFor(category: string) {
       return <InsuranceIcon />
     case 'Facilities':
       return <FacilitiesIcon />
+    case 'Attendance':
+      return <AttendanceIcon />
     default:
       return <SomethingElseIcon />
   }
