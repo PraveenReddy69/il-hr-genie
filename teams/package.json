@@ -10,7 +10,7 @@
     "start": "node dist/index.js",
     "try": "node dist/scripts/try.js",
     "typecheck": "tsc --noEmit",
-    "test": "tsc && node scripts/copy-assets.mjs && node --test \"dist/tests/conversation.test.js\" \"dist/tests/cards.test.js\" \"dist/tests/notify.test.js\" \"dist/tests/sso.test.js\" \"dist/tests/authTeams.test.js\"",
+    "test": "tsc && node scripts/copy-assets.mjs && node --test \"dist/tests/api.test.js\" \"dist/tests/conversation.test.js\" \"dist/tests/cards.test.js\" \"dist/tests/notify.test.js\" \"dist/tests/sso.test.js\" \"dist/tests/authTeams.test.js\"",
     "test:images": "tsc && node scripts/copy-assets.mjs && node --test \"dist/tests/images.test.js\"",
     "package": "node scripts/package.mjs",
     "package:bump": "node scripts/package.mjs --bump"

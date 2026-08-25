@@ -520,7 +520,7 @@ export async function holidays(year: number): Promise<Holiday[]> {
       } as Holiday
     })
     // A row without a name or a date cannot be drawn and cannot be reasoned about.
-    .filter((one) => one.name && /^d{4}-d{2}-d{2}$/.test(one.isoDate))
+    .filter((one) => one.name && /^\d{4}-\d{2}-\d{2}$/.test(one.isoDate))
 }
 
 export async function categories(): Promise<string[]> {
