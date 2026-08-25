@@ -73,6 +73,26 @@ import type {
  */
 const FORCED_MOCK = import.meta.env.DEV && import.meta.env.VITE_FORCE_MOCK === 'true'
 
+/**
+ * Sign in as a role the server does not know about yet.
+ *
+ * The API returns `role: "HR"` for every HR account — `HR_ADMIN` and `HR_HEAD` do not
+ * exist server-side until docs/ACCESS_CONTROL.md lands. So against live, everybody is
+ * an HRBP and every page is read-only, which makes the Admin half impossible to try.
+ *
+ * This changes **what the console draws**, and nothing else. It grants no access: the
+ * API has no role checks yet, so a write either succeeds because the server allows any
+ * authenticated HR account, or fails on the server's own terms. Once access control
+ * ships, this flag stops mattering — the server will refuse what the role may not do,
+ * whatever the console drew.
+ *
+ * Dev only, deliberately. A role override that could be switched on in a production
+ * build is a permission system with an off switch.
+ */
+const FORCED_ROLE = import.meta.env.DEV
+  ? (import.meta.env.VITE_FORCE_ROLE as Role | undefined)
+  : undefined
+
 const BASE_URL = FORCED_MOCK
   ? undefined
   : (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '')
@@ -261,7 +281,7 @@ function toEmployee(raw: RawEmployee): Employee {
     title: raw.designation || raw.title || '',
     department: raw.subDepartment || raw.department,
     officialEmail: raw.officialEmail,
-    role: raw.role,
+    role: FORCED_ROLE ?? raw.role,
     // Passed through rather than derived. The server resolves a bundle plus any
     // per-person grants into one list; recomputing it here would mean a front-end
     // release every time the backend changed what a role includes. Undefined on a
