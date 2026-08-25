@@ -19,6 +19,7 @@ import {
   byTag,
   countByState,
   isSelectable,
+  isUnsaved,
   isEveryone,
   normaliseTag,
   normaliseTags,
@@ -248,9 +249,21 @@ describe('labels and blanks', () => {
     expect(fresh.questionIds).toEqual([])
   })
 
+  it('marks a new selection as one the server has never seen', () => {
+    // The page reads this to choose POST over PATCH. It used to read "has an id" as
+    // "exists", which meant a new selection was PATCHed against nothing and vanished
+    // on the next reload with no error shown anywhere.
+    expect(isUnsaved(blankSelection([]))).toBe(true)
+  })
+
+  it('does not treat a saved selection as new', () => {
+    expect(isUnsaved(selection({ id: 'sel-1' }))).toBe(false)
+  })
+
   it('does not reuse an id already taken', () => {
-    expect(blankSelection(['selection']).id).toBe('selection-1')
-    expect(blankSelection(['selection', 'selection-1']).id).toBe('selection-2')
+    const first = blankSelection([]).id
+    expect(blankSelection([first]).id).not.toBe(first)
+    expect(blankSelection([first, blankSelection([first]).id]).id).not.toBe(first)
   })
 })
 

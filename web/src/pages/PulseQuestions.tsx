@@ -48,6 +48,7 @@ import {
   byTag,
   countByState,
   createSelection,
+  isUnsaved,
   deleteSelection,
   fetchSelections,
   isSelectable,
@@ -221,7 +222,9 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
    * its own validation the moment the server saw it.
    */
   function saveSelection(next: PulseSelection) {
-    return attempt(() => (next.id ? updateSelection(next.id, next) : createSelection(next)))
+    return attempt(() =>
+      isUnsaved(next) ? createSelection(next) : updateSelection(next.id, next),
+    )
   }
 
   function addSelection() {
@@ -232,7 +235,7 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
 
   function removeSelection(selection: PulseSelection) {
     // Never saved, so there is nothing to delete — drop the card and say nothing.
-    if (!selections.some((one) => one.id === selection.id && one.questionIds.length > 0)) {
+    if (isUnsaved(selection)) {
       setSelections((current) => current.filter((one) => one.id !== selection.id))
       return Promise.resolve(true)
     }

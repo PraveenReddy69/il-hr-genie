@@ -118,6 +118,7 @@ export async function fetchQuestionBank(): Promise<Bank> {
 
 /** One question, created server-side. The id comes back from the server. */
 export function createQuestion(question: PulseQuestion): Promise<PulseQuestion> {
+  if (!isLive) return Promise.resolve(mockCreateQuestion(question))
   return request<RawQuestion>('/api/pulse/questions', {
     method: 'POST',
     body: JSON.stringify(toWire(question)),
@@ -131,6 +132,7 @@ export function updateQuestion(
   // Never the id. Answers are keyed by it, so rewriting one orphans every answer ever
   // given — see the note on PulseQuestion.id.
   const { id: _ignored, ...rest } = patch
+  if (!isLive) return Promise.resolve(mockUpdateQuestion(id, rest))
   return request<RawQuestion>(`/api/pulse/questions/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     body: JSON.stringify(toWire(rest as PulseQuestion)),
@@ -138,6 +140,7 @@ export function updateQuestion(
 }
 
 export function deleteQuestion(id: string): Promise<void> {
+  if (!isLive) return Promise.resolve(mockDeleteQuestion(id))
   return remove(`/api/pulse/questions/${encodeURIComponent(id)}`)
 }
 
@@ -158,7 +161,7 @@ export function fromWire(raw: RawQuestion): PulseQuestion {
 
 /** Whatever employees are being asked right now, adapted to the fuller shape. */
 async function fetchLiveBank(): Promise<PulseQuestion[]> {
-  if (!isLive) return DEFAULTS.map((question) => ({ ...question }))
+  if (!isLive) return mockBank()
   try {
     // Both envelopes: `{ questions: [...] }` as documented, and a bare array.
     const body = await get<unknown>('/api/pulse/questions')
@@ -297,7 +300,42 @@ export function nextCycleLabel(): string {
   })
 }
 
-/** The bank the mock serves, so the page has something real to edit offline. */
+/*
+ * The bank the mock serves, held in memory so the page can be edited offline.
+ *
+ * Same reasoning as the holidays above: the page writes through the API now, and
+ * without somewhere for those writes to land the offline path is read-only.
+ */
+let bank: PulseQuestion[] | null = null
+
+function mockBank(): PulseQuestion[] {
+  bank ??= DEFAULTS.map((question) => ({ ...question }))
+  return bank
+}
+
+function mockCreateQuestion(question: PulseQuestion): PulseQuestion {
+  const taken = mockBank().map((one) => one.id)
+  const created = { ...question, id: newQuestionId(question.question, taken) }
+  bank = [...mockBank(), created]
+  return created
+}
+
+function mockUpdateQuestion(id: string, patch: Partial<PulseQuestion>): PulseQuestion {
+  let updated: PulseQuestion | null = null
+  bank = mockBank().map((one) => {
+    if (one.id !== id) return one
+    updated = { ...one, ...patch, id }
+    return updated
+  })
+  if (!updated) throw new Error(`No question ${id}`)
+  return updated
+}
+
+function mockDeleteQuestion(id: string): void {
+  bank = mockBank().filter((one) => one.id !== id)
+}
+
+/** The starting bank the mock serves, so the page has something real to edit offline. */
 const DEFAULTS: PulseQuestion[] = [
   {
     id: 'experience',

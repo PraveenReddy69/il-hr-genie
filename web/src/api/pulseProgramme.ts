@@ -22,7 +22,13 @@
  * look like data.
  */
 
-import { get, remove, request } from './client'
+import { get, isLive, remove, request } from './client'
+import {
+  mockCreateSelection,
+  mockDeleteSelection,
+  mockSelectionList,
+  mockUpdateSelection,
+} from './mock'
 import type { PulseQuestion, QuestionState } from './pulseQuestions'
 
 /** How many questions one selection may ask. See the note above. */
@@ -165,9 +171,23 @@ export interface PulseSelection {
   questionIds: string[]
 }
 
+/**
+ * The marker on a selection the server has never seen.
+ *
+ * A new card needs *an* id — React keys it, and two blank cards must not collide — but
+ * that id must not look saved. It did: the page read "has an id" as "exists", took the
+ * update branch for something that had never been created, and the new selection
+ * vanished on the next reload with no error anywhere.
+ */
+const UNSAVED_PREFIX = 'new:'
+
+export function isUnsaved(selection: PulseSelection): boolean {
+  return selection.id.startsWith(UNSAVED_PREFIX)
+}
+
 export function blankSelection(taken: string[]): PulseSelection {
-  let id = 'selection'
-  for (let n = 1; taken.includes(id); n += 1) id = `selection-${n}`
+  let id = `${UNSAVED_PREFIX}selection`
+  for (let n = 1; taken.includes(id); n += 1) id = `${UNSAVED_PREFIX}selection-${n}`
   return { id, departments: [], questionIds: [] }
 }
 
@@ -294,6 +314,7 @@ export function unreached(selections: PulseSelection[], departments: string[]): 
  * changes their mind leaves nothing behind.
  */
 export async function fetchSelections(): Promise<PulseSelection[]> {
+  if (!isLive) return mockSelectionList()
   const body = await get<unknown>('/api/pulse/selections')
   const list = Array.isArray(body) ? body : (body as { selections?: unknown }).selections
   if (!Array.isArray(list)) return []
@@ -319,6 +340,7 @@ function wire(selection: PulseSelection): Record<string, unknown> {
 }
 
 export function createSelection(selection: PulseSelection): Promise<PulseSelection> {
+  if (!isLive) return Promise.resolve(mockCreateSelection(selection))
   return request<PulseSelection>('/api/pulse/selections', {
     method: 'POST',
     body: JSON.stringify(wire(selection)),
@@ -326,6 +348,7 @@ export function createSelection(selection: PulseSelection): Promise<PulseSelecti
 }
 
 export function updateSelection(id: string, selection: PulseSelection): Promise<PulseSelection> {
+  if (!isLive) return Promise.resolve(mockUpdateSelection(id, selection))
   return request<PulseSelection>(`/api/pulse/selections/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     body: JSON.stringify(wire(selection)),
@@ -333,5 +356,6 @@ export function updateSelection(id: string, selection: PulseSelection): Promise<
 }
 
 export function deleteSelection(id: string): Promise<void> {
+  if (!isLive) return Promise.resolve(mockDeleteSelection(id))
   return remove(`/api/pulse/selections/${encodeURIComponent(id)}`)
 }

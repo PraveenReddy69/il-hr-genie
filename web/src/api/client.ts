@@ -28,13 +28,17 @@ import {
   mockUpdateTicket,
   mockAssignTicket,
   mockCelebrations,
+  mockCreateHoliday,
+  mockDeleteHoliday,
+  mockHolidayList,
+  mockHolidayYears,
+  mockUpdateHoliday,
   weekDates,
   weekStart,
 } from './mock'
 import { isConsoleRole, type Permission } from './access'
 import type { Celebrant, Celebrations } from './celebrations'
 import { MIN_COHORT, MOODS } from './types'
-import { holidayYears, holidaysFor } from './holidays'
 import { REGIONS, type HolidayDraft } from './holidayStore'
 import type {
   Role,
@@ -597,7 +601,7 @@ export async function fetchHolidays(year: number): Promise<Holiday[]> {
 export async function fetchHolidayCalendar(
   year: number,
 ): Promise<{ holidays: Holiday[]; years: number[] }> {
-  if (!isLive) return mocked({ holidays: holidaysFor(year), years: holidayYears() })
+  if (!isLive) return mocked({ holidays: mockHolidayList(year), years: mockHolidayYears() })
 
   const raw = await get<unknown>(`/api/holidays?year=${year}`)
   const body = (Array.isArray(raw) ? { holidays: raw } : raw) as {
@@ -631,10 +635,12 @@ export async function fetchHolidayRegions(): Promise<string[]> {
 }
 
 export function createHoliday(draft: HolidayDraft): Promise<Holiday> {
+  if (!isLive) return mocked(mockCreateHoliday(draft))
   return request<Holiday>('/api/holidays', { method: 'POST', body: JSON.stringify(draft) })
 }
 
 export function updateHoliday(id: string, patch: Partial<HolidayDraft>): Promise<Holiday> {
+  if (!isLive) return mocked(mockUpdateHoliday(id, patch))
   return request<Holiday>(`/api/holidays/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     body: JSON.stringify(patch),
@@ -642,6 +648,7 @@ export function updateHoliday(id: string, patch: Partial<HolidayDraft>): Promise
 }
 
 export function deleteHoliday(id: string): Promise<void> {
+  if (!isLive) return mocked(mockDeleteHoliday(id))
   return remove(`/api/holidays/${encodeURIComponent(id)}`)
 }
 

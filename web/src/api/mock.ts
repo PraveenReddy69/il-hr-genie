@@ -10,7 +10,8 @@
 
 import { isConsoleRole } from './access'
 import type { Celebrant, Celebrations } from './celebrations'
-import { HOLIDAY_CALENDAR, holidaysFor } from './holidays'
+import { HOLIDAY_CALENDAR } from './holidays'
+import type { PulseSelection } from './pulseProgramme'
 import {
   FULL_DAY_MILLIS,
   MOODS,
@@ -385,6 +386,77 @@ export function mockCelebrations(): Celebrations {
   return { birthdays, anniversaries, newJoiners }
 }
 
+/*
+ * Holidays and the pulse, held in memory for the mock.
+ *
+ * The console writes through the API now, so without these the mock is read-only and
+ * the whole offline path — demos, and every check made without a token — stops being
+ * able to exercise the pages it exists to exercise.
+ *
+ * Deliberately not localStorage. That is what these pages used to be, and a store that
+ * outlives a reload would quietly become a second source of truth again.
+ */
+let holidayRows: Holiday[] = HOLIDAY_CALENDAR.map((one, index) => ({
+  ...one,
+  id: `h${index + 1}`,
+}))
+let nextHolidayId = holidayRows.length + 1
+
+export function mockHolidayList(year: number): Holiday[] {
+  return holidayRows.filter((one) => one.isoDate.startsWith(String(year)))
+}
+
+export function mockHolidayYears(): number[] {
+  return [...new Set(holidayRows.map((one) => Number(one.isoDate.slice(0, 4))))].sort(
+    (a, b) => a - b,
+  )
+}
+
+export function mockCreateHoliday(draft: Omit<Holiday, 'id'>): Holiday {
+  const created = { ...draft, id: `h${nextHolidayId++}` }
+  holidayRows = [...holidayRows, created]
+  return created
+}
+
+export function mockUpdateHoliday(id: string, patch: Partial<Holiday>): Holiday {
+  let updated: Holiday | null = null
+  holidayRows = holidayRows.map((one) => {
+    if (one.id !== id) return one
+    updated = { ...one, ...patch, id }
+    return updated
+  })
+  if (!updated) throw new Error(`No holiday ${id}`)
+  return updated
+}
+
+export function mockDeleteHoliday(id: string): void {
+  if (!holidayRows.some((one) => one.id === id)) throw new Error(`No holiday ${id}`)
+  holidayRows = holidayRows.filter((one) => one.id !== id)
+}
+
+let mockSelections: PulseSelection[] = []
+let nextSelectionId = 1
+
+export function mockSelectionList(): PulseSelection[] {
+  return mockSelections
+}
+
+export function mockCreateSelection(selection: PulseSelection): PulseSelection {
+  const created = { ...selection, id: `sel-${nextSelectionId++}` }
+  mockSelections = [...mockSelections, created]
+  return created
+}
+
+export function mockUpdateSelection(id: string, selection: PulseSelection): PulseSelection {
+  const updated = { ...selection, id }
+  mockSelections = mockSelections.map((one) => (one.id === id ? updated : one))
+  return updated
+}
+
+export function mockDeleteSelection(id: string): void {
+  mockSelections = mockSelections.filter((one) => one.id !== id)
+}
+
 function moodsOn(dateIso: string): { employee: Employee; mood: MoodKey }[] {
   return WORKFORCE.flatMap((employee) => {
     const mood = moodLog[employee.employeeId]?.[dateIso]
@@ -739,8 +811,9 @@ export function mockAttendanceWeek(mondayIso: string): EmployeeWeek[] {
 const HOLIDAYS: Holiday[] = HOLIDAY_CALENDAR
 
 
+/** Superseded by mockHolidayList, which reads the store the mock writes into. */
 export function mockHolidays(year: number): Holiday[] {
-  return holidaysFor(year)
+  return mockHolidayList(year)
 }
 
 // ----------------------------------------------------------------- directory
