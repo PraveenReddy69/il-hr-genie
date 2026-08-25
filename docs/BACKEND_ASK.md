@@ -6,45 +6,57 @@ says how.
 
 ---
 
-## 1. Blocking today: login says HR, the write says it is not
+## Done — thank you
 
-Signing in as **HYD604982 (OM Narayan)** succeeds and `role` comes back as `HR`.
-Creating a holiday as the same account, in the same session, with the same token:
-
-```http
-POST /api/holidays
-→ 403 {"message":"This action requires the HR role.","error":"Forbidden","statusCode":403}
-```
-
-Both cannot be true. Our guess is that the write guard reads a role from the **JWT
-claims** while the login response reports the role from the **employee record**, and the
-token carries no role claim — or a different one.
-
-**What we need to know:** which field does the guard read, and what does it see for this
-account? If the answer is "the token has no role", the fix is at sign-in, not on the
-endpoint.
-
-This blocks every write in the console: holidays, pulse questions, pulse selections.
+**Roles and permissions now come from the API.** Both auth responses carry `role` and a
+resolved `permissions` array, and the write guard accepts an Admin. The console has
+deleted the id-to-role map it was carrying to work around this.
 
 ---
 
-## 2. One field, and the console stops guessing at roles
+## 1. Two permissions are missing from the list
 
-`/api/auth/login` and `/api/employees/me` return `role: "HR"` for every HR account,
-because `HR` is the only role the API has. The console therefore cannot tell an Admin
-from an HRBP, and **currently carries a hard-coded map of three employee ids to roles**
-to work around it. That map is client-side, publicly readable, and should not exist.
+The list is authoritative in the console — it is preferred over the console's own
+defaults, which is the point of sending it. So anything absent is switched off.
+
+**`celebrations.view`** — absent from both roles, which removes the Celebrations page
+from the sidebar entirely. It was specified after your permission set was built, so this
+is a spec gap rather than a decision. The console currently grants it alongside
+`people.view` as a bridge; that bridge is deleted the day it appears in the list.
+
+**`tickets.assign`** — absent from `HR_ADMIN`. Only Admin and above should have it.
+Not urgent, because the endpoint it guards is still 404 (item 3), but the two want to
+land together.
+
+Expected for `HR_ADMIN`:
 
 ```jsonc
-{ "employeeId": "HYD604982", "role": "HR_ADMIN" }
+[ "dashboard.view", "tickets.view", "tickets.resolve", "tickets.assign",
+  "people.view", "attendance.view", "celebrations.view", "trends.view",
+  "analytics.view", "holidays.view", "holidays.edit", "pulse.view",
+  "pulse.publish", "sales.view", "access.manage", "audit.view" ]
 ```
 
-Three roles, ordered: `HR` (HRBP) · `HR_ADMIN` (Admin) · `HR_HEAD` (Main Head). The
-console already reads a server-sent role in preference to its own map, so the day this
-lands the map stops having any effect — no release needed on our side.
+For `HR`, the same list without `tickets.assign`, `holidays.edit`, `pulse.publish`,
+`sales.view`, `access.manage` and `audit.view` — those six are the Admin tier.
 
-Full model in `docs/ACCESS_CONTROL.md`, but **this one field is worth doing on its own,
-ahead of the rest.**
+---
+
+## 2. An HRBP with no departments sees nothing
+
+`HYD606840` (Deepak Patil, role `HR`) comes back with `"departments": []`.
+
+An empty list on an HR account means **no access to anybody**, deliberately — an
+unassigned HRBP showing the whole organisation is the leak the scoping exists to
+prevent. So the behaviour is correct and the data is not: he signs in to an empty ticket
+queue and an empty directory.
+
+Empty is right for `HR_ADMIN` and `HR_HEAD`, where it means organisation-wide. It is
+only a problem on `HR`.
+
+**Which departments does each HRBP cover?** That mapping has to come from somewhere —
+either `departments` on the account, or derived from `hrbpId`, which the employee
+records already carry.
 
 ---
 
@@ -112,3 +124,23 @@ auth". The guard runs after routing, so the two are reliably different.
 | `/api/access/users`, `/api/access/roles`, `/api/audit` | **404** |
 | `PATCH /api/tickets/{id}/assignee` | **404** |
 | `/api/auth/me` | **404** (we use `/api/employees/me`) |
+
+---
+
+## One thing that arrived unasked: `dateOfBirth`
+
+The employee payload now includes `dateOfBirth`. Two consequences worth a decision
+rather than a default:
+
+**It unblocks birthdays in the month ahead.** The Celebrations page says birthdays can
+only be known on the day, because nothing carried a birth date. That is no longer true,
+and the page can look ahead the way it does for anniversaries.
+
+**It is more personal data than the console needs.** A birth date gives an age; month
+and day are all a birthday list requires. `docs/CELEBRATIONS_BACKEND.md` asks for month
+and day on the celebrations endpoint for exactly this reason — the directory is
+work-facing, and every HR account can read it.
+
+Our preference is to drop `dateOfBirth` from the directory and add month-and-day to
+`/api/employees/celebrations`. Happy to use what is there if you would rather not
+change it, but the narrower field is the better shape.
