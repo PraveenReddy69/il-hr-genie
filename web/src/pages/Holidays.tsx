@@ -1,21 +1,25 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Card, Empty, Loading } from '../components/Bits'
 import { isoDate } from '../api/mock'
 import {
   ANY_REGION,
-  REGIONS,
-  currentCalendar,
-  discardLocal,
   inRegion,
   inYear,
   isClosedYear,
   refusalFor,
-  saveCalendar,
   sortCalendar,
   validate,
   yearsCovered,
   type HolidayDraft,
 } from '../api/holidayStore'
+import {
+  createHoliday,
+  deleteHoliday,
+  fetchHolidayCalendar,
+  fetchHolidayRegions,
+  updateHoliday,
+} from '../api/client'
+import { REGIONS as FALLBACK_REGIONS } from '../api/holidayStore'
 import type { Holiday, HolidayKind } from '../api/types'
 
 /**
@@ -32,20 +36,46 @@ import type { Holiday, HolidayKind } from '../api/types'
  */
 export function Holidays({ editable = false }: { editable?: boolean }) {
   const today = isoDate()
-  const [calendar, setCalendar] = useState<{ holidays: Holiday[]; unsaved: boolean } | null>(null)
+  const [calendar, setCalendar] = useState<Holiday[] | null>(null)
+  const [regions, setRegions] = useState<string[]>([])
   const [year, setYear] = useState(Number(today.slice(0, 4)))
   const [region, setRegion] = useState<string>(ANY_REGION)
+  const [busy, setBusy] = useState(false)
   const [editing, setEditing] = useState<{ draft: HolidayDraft; original: Holiday | null } | null>(
     null,
   )
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null)
   const [problem, setProblem] = useState<string | null>(null)
 
+  /**
+   * Reloads the whole year rather than patching the row in place.
+   *
+   * The server owns ids, sort order and whatever it decides to normalise, so guessing
+   * the result of a write is how a list drifts from what was actually saved. One extra
+   * request per edit, on a page edited a handful of times a year.
+   */
+  const reload = useCallback(
+    (forYear: number) =>
+      fetchHolidayCalendar(forYear)
+        .then(({ holidays }) => setCalendar(sortCalendar(holidays)))
+        .catch((failure: unknown) => {
+          setCalendar([])
+          setProblem(failure instanceof Error ? failure.message : 'Could not load the calendar.')
+        }),
+    [],
+  )
+
   useEffect(() => {
-    setCalendar(currentCalendar())
+    void reload(year)
+  }, [reload, year])
+
+  useEffect(() => {
+    // A failed region list is not worth blocking the page: fetchHolidayRegions falls
+    // back to the console's own copy.
+    fetchHolidayRegions().then(setRegions).catch(() => setRegions([]))
   }, [])
 
-  const all = calendar?.holidays ?? []
+  const all = calendar ?? []
   const years = yearsCovered(all, today)
   const closed = isClosedYear(year, today)
 
@@ -68,49 +98,63 @@ export function Holidays({ editable = false }: { editable?: boolean }) {
 
   if (!calendar) return <Loading />
 
+  // The server's list where there is one; the console's own only until it answers.
+  const regionOptions: string[] = regions.length > 0 ? regions : [...FALLBACK_REGIONS]
+
   /**
-   * Every write goes through here.
+   * One place every write passes through.
    *
-   * The rules are checked again on the way in rather than trusted from whichever
-   * control was pressed — a row that should have been locked but was not is a bug
-   * worth catching before it reaches storage, not after.
+   * The server's own message is shown rather than a rewritten one: it is the side that
+   * knows which rule was hit — a closed year answers 409 with a sentence, and second
+   * -guessing it here would show the console's opinion of a refusal it did not make.
    */
-  function commit(holidays: Holiday[]) {
-    // Sorted here as well as on the way to storage. Without it a newly added holiday
-    // sits at the bottom of the list until the next reload, which reads as the add
-    // having gone somewhere odd rather than into November.
-    setCalendar({ holidays: sortCalendar(holidays), unsaved: true })
+  async function attempt(work: () => Promise<unknown>) {
+    setBusy(true)
+    setProblem(null)
     try {
-      saveCalendar(holidays)
-      setProblem(null)
+      await work()
+      await reload(year)
+      return true
     } catch (failure) {
       setProblem(failure instanceof Error ? failure.message : 'Could not save that change.')
+      return false
+    } finally {
+      setBusy(false)
     }
   }
 
-  function save() {
+  async function save() {
     if (!editing) return
     const others = all.filter((one) => one !== editing.original)
-    const wrong = validate(editing.draft, others, today)
+    const wrong = validate(editing.draft, others, today, regions.length ? regions : undefined)
     if (wrong) {
       setProblem(wrong)
       return
     }
-    // The original is dropped and the edited record added, rather than mutated in
-    // place: changing a date moves it in the list, and an in-place edit leaves it
-    // sorted where it used to be until the next reload.
-    commit([...others, { ...editing.draft }])
-    setEditing(null)
+
+    const original = editing.original
+    const draft = { ...editing.draft }
+    const ok = await attempt(() =>
+      // An edit without an id would have to be a delete and a create, which the audit
+      // log reads as two unrelated events. The endpoint sends one; if it ever does not,
+      // failing loudly beats silently splitting a correction in two.
+      original?.id ? updateHoliday(original.id, draft) : createHoliday(draft),
+    )
+    if (ok) setEditing(null)
   }
 
-  function remove(holiday: Holiday) {
+  async function remove(holiday: Holiday) {
     const refusal = refusalFor(holiday.isoDate, today)
     if (refusal) {
       setProblem(refusal)
       return
     }
-    commit(all.filter((one) => one !== holiday))
-    setConfirmRemove(null)
+    if (!holiday.id) {
+      setProblem('That holiday has no id, so it cannot be removed. Reload and try again.')
+      return
+    }
+    const ok = await attempt(() => deleteHoliday(holiday.id!))
+    if (ok) setConfirmRemove(null)
   }
 
   return (
@@ -121,31 +165,6 @@ export function Holidays({ editable = false }: { editable?: boolean }) {
           {shown.length} published for {year}
           {region !== ANY_REGION && ` in ${region}`}
         </p>
-      </div>
-
-      <div className="banner banner--info">
-        <div className="banner__title">Not on the server yet</div>
-        <div className="banner__body">
-          The calendar is hard-coded in this console, the Teams bot and the Android app,
-          and no endpoint writes to it. Changes here are kept in this browser so the
-          dates and regions can be agreed now; they reach employees once the routes in{' '}
-          <code>docs/HOLIDAYS_BACKEND.md</code> exist.
-          {calendar.unsaved && (
-            <>
-              {' '}
-              <button
-                className="linkish"
-                onClick={() => {
-                  discardLocal()
-                  setCalendar(currentCalendar())
-                  setEditing(null)
-                }}
-              >
-                Discard local edits
-              </button>
-            </>
-          )}
-        </div>
       </div>
 
       <div className="grid grid--3">
@@ -202,7 +221,7 @@ export function Holidays({ editable = false }: { editable?: boolean }) {
             onChange={(event) => setRegion(event.target.value)}
           >
             <option value={ANY_REGION}>{ANY_REGION}</option>
-            {REGIONS.map((one) => (
+            {regionOptions.map((one) => (
               <option key={one} value={one}>
                 {one}
               </option>
@@ -249,6 +268,8 @@ export function Holidays({ editable = false }: { editable?: boolean }) {
           <Editor
             draft={editing.draft}
             isNew={editing.original === null}
+            regions={regionOptions}
+            saving={busy}
             onChange={(draft) => setEditing({ ...editing, draft })}
             onSave={save}
             onCancel={() => {
@@ -365,12 +386,16 @@ export function Holidays({ editable = false }: { editable?: boolean }) {
 function Editor({
   draft,
   isNew,
+  regions,
+  saving,
   onChange,
   onSave,
   onCancel,
 }: {
   draft: HolidayDraft
   isNew: boolean
+  regions: string[]
+  saving: boolean
   onChange: (draft: HolidayDraft) => void
   onSave: () => void
   onCancel: () => void
@@ -413,7 +438,7 @@ function Editor({
         value={draft.region}
         onChange={(event) => set({ region: event.target.value })}
       >
-        {REGIONS.map((one) => (
+        {regions.map((one) => (
           <option key={one} value={one}>
             {one}
           </option>
@@ -431,7 +456,7 @@ function Editor({
       </select>
 
       <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-        <button className="button" onClick={onSave}>
+        <button className="button" disabled={saving} onClick={onSave}>
           {isNew ? 'Add holiday' : 'Save changes'}
         </button>
         <button className="button button--ghost" onClick={onCancel}>

@@ -288,6 +288,14 @@ export const FULL_WEEK_MILLIS = FULL_DAY_MILLIS * 5
 export type HolidayKind = 'FIXED' | 'OPTIONAL'
 
 export interface Holiday {
+  /**
+   * The server's own id, absent on the built-in list the mock serves.
+   *
+   * Editing needs one: date plus region is unique but is also exactly what an edit
+   * changes, so moving a holiday by a day without an id is a delete and a create, and
+   * the audit trail shows two unrelated events instead of one correction.
+   */
+  id?: string
   name: string
   isoDate: string
   kind: HolidayKind

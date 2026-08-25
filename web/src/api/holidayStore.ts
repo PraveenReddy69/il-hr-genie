@@ -1,24 +1,17 @@
 /**
- * Editing the holiday calendar.
+ * The rules the holiday calendar is edited by.
  *
- * There is no write endpoint — see docs/HOLIDAYS_BACKEND.md. The calendar is hard-coded
- * in three places (this console, the Teams bot, the Android app), so a corrected date
- * currently means editing three codebases and shipping an Android release.
+ * Pure: no storage, no network. The endpoints landed — `GET/POST/PATCH/DELETE
+ * /api/holidays` plus `/api/holidays/regions` — so the page reads and writes through
+ * client.ts and this file is only the arithmetic around it.
  *
- * Rather than wait, edits are kept in this browser and the page says so, the same way
- * the pulse question bank does. The shapes and the rules here are the ones the endpoint
- * will use, so landing it is a swap of `readLocal` for a fetch rather than a rewrite.
- *
- * **The rules in this file are convenience, not enforcement.** A locked past year is a
- * courtesy to whoever is editing; the server has to refuse the write itself, because
- * nothing here survives contact with a curl command.
+ * **These rules are convenience, not enforcement.** A locked past year is a courtesy to
+ * whoever is editing; the server refuses the write itself, because nothing here
+ * survives contact with a curl command. See docs/HOLIDAYS_BACKEND.md §"What may not be
+ * changed" — it answers 409, and the page shows that message rather than this one.
  */
 
-import { HOLIDAY_CALENDAR } from './holidays'
 import type { Holiday, HolidayKind } from './types'
-
-const STORAGE_KEY = 'hr-genie-holidays'
-const SCHEMA = 1
 
 /**
  * The regions a holiday can apply to.
@@ -84,8 +77,19 @@ export interface HolidayDraft {
   region: string
 }
 
-/** What is wrong with a draft, as a sentence, or null. */
-export function validate(draft: HolidayDraft, existing: Holiday[], today: string): string | null {
+/**
+ * What is wrong with a draft, as a sentence, or null.
+ *
+ * `regions` is passed in rather than read from the constant: the server owns that list
+ * now, and validating against a copy this console happens to ship would reject a region
+ * somebody added server-side an hour ago.
+ */
+export function validate(
+  draft: HolidayDraft,
+  existing: Holiday[],
+  today: string,
+  regions: readonly string[] = REGIONS,
+): string | null {
   const name = draft.name.trim()
   if (!name) return 'Give the holiday a name.'
   if (!/^\d{4}-\d{2}-\d{2}$/.test(draft.isoDate)) return 'Pick a date.'
@@ -94,7 +98,7 @@ export function validate(draft: HolidayDraft, existing: Holiday[], today: string
   const settled = refusalFor(draft.isoDate, today)
   if (settled) return settled
 
-  if (!REGIONS.includes(draft.region as Region)) return 'Pick a region.'
+  if (!regions.includes(draft.region)) return 'Pick a region.'
 
   // Same day, same region, twice. Two regions sharing a date is normal — a state
   // holiday landing on a national one — so the clash is the pair, not the date.
@@ -104,45 +108,6 @@ export function validate(draft: HolidayDraft, existing: Holiday[], today: string
   if (clash) return `${draft.region} already has a holiday on that date.`
 
   return null
-}
-
-interface Stored {
-  schema: number
-  savedAt: number
-  holidays: Holiday[]
-}
-
-function readLocal(): Holiday[] | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return null
-    const parsed = JSON.parse(raw) as Stored
-    if (parsed.schema !== SCHEMA || !Array.isArray(parsed.holidays)) return null
-    return parsed.holidays
-  } catch {
-    // A corrupt or half-written entry is not worth a crash on a page somebody opened to
-    // read a date. Fall back to the published list.
-    return null
-  }
-}
-
-/** The calendar as it stands, and whether these are local edits the server has not seen. */
-export function currentCalendar(): { holidays: Holiday[]; unsaved: boolean } {
-  const local = readLocal()
-  if (local) return { holidays: sortCalendar(local), unsaved: true }
-  return { holidays: sortCalendar(HOLIDAY_CALENDAR), unsaved: false }
-}
-
-export function saveCalendar(holidays: Holiday[]): void {
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify({ schema: SCHEMA, savedAt: Date.now(), holidays: sortCalendar(holidays) }),
-  )
-}
-
-/** Throws local edits away and goes back to the published calendar. */
-export function discardLocal(): void {
-  localStorage.removeItem(STORAGE_KEY)
 }
 
 /**

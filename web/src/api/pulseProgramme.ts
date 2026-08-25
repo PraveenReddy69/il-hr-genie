@@ -22,6 +22,7 @@
  * look like data.
  */
 
+import { get, remove, request } from './client'
 import type { PulseQuestion, QuestionState } from './pulseQuestions'
 
 /** How many questions one selection may ask. See the note above. */
@@ -280,37 +281,57 @@ export function unreached(selections: PulseSelection[], departments: string[]): 
   return departments.filter((department) => !covered.has(department))
 }
 
-// ------------------------------------------------------------------- storage
-
-const STORAGE_KEY = 'hr-genie-pulse-programme'
-const SCHEMA = 1
+// ------------------------------------------------------------------- the API
 
 /**
- * The selections, kept in this browser.
+ * Selections, from the server.
  *
- * Separate from the bank's storage on purpose: the bank is a library that changes
- * rarely, the selections change every cycle, and a single blob would mean a failed
- * write to one losing the other.
+ * Reads both envelopes — `{ selections: [...] }` and a bare array — for the same reason
+ * the bank does: the console asked for one shape and cannot be sure which arrived.
+ *
+ * A selection with no id has not been saved yet. The page creates it on first change
+ * rather than on the button press that adds the card, so an Admin who adds one and
+ * changes their mind leaves nothing behind.
  */
-export function readProgramme(): PulseSelection[] | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return null
-    const parsed = JSON.parse(raw) as { schema?: number; selections?: PulseSelection[] }
-    if (parsed.schema !== SCHEMA || !Array.isArray(parsed.selections)) return null
-    return parsed.selections
-  } catch {
-    return null
-  }
+export async function fetchSelections(): Promise<PulseSelection[]> {
+  const body = await get<unknown>('/api/pulse/selections')
+  const list = Array.isArray(body) ? body : (body as { selections?: unknown }).selections
+  if (!Array.isArray(list)) return []
+
+  return list.map((raw) => {
+    const one = raw as Record<string, unknown>
+    return {
+      id: String(one.id ?? ''),
+      departments: Array.isArray(one.departments) ? one.departments.map(String) : [],
+      questionIds: Array.isArray(one.questionIds)
+        ? one.questionIds.map(String)
+        : Array.isArray(one.questions)
+          ? (one.questions as unknown[]).map((q) =>
+              typeof q === 'string' ? q : String((q as { id?: unknown }).id ?? ''),
+            )
+        : [],
+    }
+  })
 }
 
-export function saveProgramme(selections: PulseSelection[]): void {
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify({ schema: SCHEMA, savedAt: Date.now(), selections }),
-  )
+function wire(selection: PulseSelection): Record<string, unknown> {
+  return { departments: selection.departments, questionIds: selection.questionIds }
 }
 
-export function discardProgramme(): void {
-  localStorage.removeItem(STORAGE_KEY)
+export function createSelection(selection: PulseSelection): Promise<PulseSelection> {
+  return request<PulseSelection>('/api/pulse/selections', {
+    method: 'POST',
+    body: JSON.stringify(wire(selection)),
+  })
+}
+
+export function updateSelection(id: string, selection: PulseSelection): Promise<PulseSelection> {
+  return request<PulseSelection>(`/api/pulse/selections/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(wire(selection)),
+  })
+}
+
+export function deleteSelection(id: string): Promise<void> {
+  return remove(`/api/pulse/selections/${encodeURIComponent(id)}`)
 }

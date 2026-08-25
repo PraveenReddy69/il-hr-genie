@@ -15,7 +15,7 @@
  * answers do not, and the comparison stops meaning anything).
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Card, Empty, Loading, clickable } from '../components/Bits'
 import { Drawer } from '../components/Drawer'
 import { fetchEmployees, fetchPulseBreakdown, isLive } from '../api/client'
@@ -26,13 +26,13 @@ import {
   MIN_OPTIONS,
   SCALES,
   blankQuestion,
-  discardLocalBank,
+  createQuestion,
+  deleteQuestion,
   fetchQuestionBank,
+  updateQuestion,
   QUESTION_STATES,
   STATE_LABEL,
-  newQuestionId,
   nextCycleLabel,
-  saveQuestionBank,
   validateQuestion,
   type PulseQuestion,
   type QuestionState,
@@ -47,14 +47,15 @@ import {
   byState,
   byTag,
   countByState,
-  discardProgramme,
+  createSelection,
+  deleteSelection,
+  fetchSelections,
   isSelectable,
   isEveryone,
   normaliseTag,
   questionsIn,
-  readProgramme,
-  saveProgramme,
   selectionLabel,
+  updateSelection,
   tagsInUse,
   unreached,
   validateSelection,
@@ -70,7 +71,6 @@ interface Department {
 export function PulseQuestions({ editable = true }: { editable?: boolean }) {
   const [questions, setQuestions] = useState<PulseQuestion[] | null>(null)
   const [selections, setSelections] = useState<PulseSelection[]>([])
-  const [unsaved, setUnsaved] = useState(false)
   const [departments, setDepartments] = useState<Department[]>([])
   /** questionId -> people who have already answered it this cycle. */
   const [answered, setAnswered] = useState<Map<string, number>>(new Map())
@@ -78,29 +78,31 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null)
   const [tag, setTag] = useState<string>(ANY_TAG)
   const [state, setState] = useState<string>(ANY_STATE)
+  const [busy, setBusy] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  useEffect(() => {
-    fetchQuestionBank().then((bank) => {
-      setQuestions(bank.questions)
-      setUnsaved(bank.unsaved)
-      // A first run has no selections stored. Everyone gets whatever the bank already
-      // holds, capped — which is exactly what the old single-list model did, so nobody
-      // opens this page to find the pulse switched off underneath them.
-      const stored = readProgramme()
-      setSelections(
-        stored ?? [
-          {
-            ...blankSelection([]),
-            questionIds: bank.questions
-              .filter(isSelectable)
-              .slice(0, MAX_SELECTED)
-              .map((one) => one.id),
-          },
-        ],
-      )
-    })
+  /**
+   * Reloads both halves together.
+   *
+   * A write to either can move the other — retiring a question takes it out of every
+   * selection — so refetching one and trusting the other is how the counter and the
+   * list stop agreeing.
+   */
+  const reload = useCallback(async () => {
+    const [bank, stored] = await Promise.all([
+      fetchQuestionBank(),
+      fetchSelections().catch(() => [] as PulseSelection[]),
+    ])
+    setQuestions(bank.questions)
+    setSelections(stored)
   }, [])
+
+  useEffect(() => {
+    reload().catch((failure: unknown) => {
+      setQuestions([])
+      setSaveError(failure instanceof Error ? failure.message : 'Could not load the pulse.')
+    })
+  }, [reload])
 
   useEffect(() => {
     fetchEmployees().then((people) => {
@@ -145,39 +147,36 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
 
   if (!questions) return <Loading />
 
-  function commitBank(next: PulseQuestion[]) {
-    setQuestions(next)
-    setUnsaved(true)
+  /**
+   * One write, then a reload of both halves.
+   *
+   * The server's own message is shown rather than a rewritten one — it is the side that
+   * knows which rule was hit, and a 409 naming a department in two selections reads far
+   * better than anything this page could guess.
+   */
+  async function attempt(work: () => Promise<unknown>) {
+    setBusy(true)
+    setSaveError(null)
     try {
-      saveQuestionBank(next)
-      setSaveError(null)
+      await work()
+      await reload()
+      return true
     } catch (failure) {
       setSaveError(failure instanceof Error ? failure.message : 'Could not save that change.')
+      return false
+    } finally {
+      setBusy(false)
     }
   }
 
-  function commitSelections(next: PulseSelection[]) {
-    setSelections(next)
-    setUnsaved(true)
-    try {
-      saveProgramme(next)
-      setSaveError(null)
-    } catch (failure) {
-      setSaveError(failure instanceof Error ? failure.message : 'Could not save that change.')
-    }
-  }
-
-  function saveQuestion(question: PulseQuestion, index: number) {
-    const taken = questions!.map((one) => one.id).filter((_, at) => at !== index)
-    const withId = question.id
-      ? question
-      : { ...question, id: newQuestionId(question.question, taken) }
-    commitBank(
-      index < 0
-        ? [...questions!, withId]
-        : questions!.map((one, at) => (at === index ? withId : one)),
+  async function saveQuestion(question: PulseQuestion, index: number) {
+    // The id is the server's on create. It used to be generated here because there was
+    // nowhere to send it; sending a client-made one now would either be ignored or
+    // become an id nobody else can reproduce.
+    const ok = await attempt(() =>
+      index < 0 || !question.id ? createQuestion(question) : updateQuestion(question.id, question),
     )
-    setEditing(null)
+    if (ok) setEditing(null)
   }
 
   /**
@@ -188,35 +187,72 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
    * there and refusing to save, blocks the page on a decision the person has already
    * made. What they lose is a tick they can put back by publishing it again.
    */
-  function setQuestionState(index: number, next: QuestionState) {
+  async function setQuestionState(index: number, next: QuestionState) {
     const question = questions![index]
-    commitBank(
-      questions!.map((one, at) => (at === index ? { ...one, state: next } : one)),
-    )
-    if (next !== 'PUBLISHED') {
-      const affected = selections.filter((one) => one.questionIds.includes(question.id)).length
-      if (affected > 0) {
-        commitSelections(withoutQuestion(selections, question.id))
-        setSaveError(
-          `Taken out of ${affected} ${affected === 1 ? 'selection' : 'selections'} — ` +
-            `a ${STATE_LABEL[next].toLowerCase()} question cannot be asked.`,
-        )
+    const affected = selections.filter((one) => one.questionIds.includes(question.id))
+
+    const ok = await attempt(async () => {
+      await updateQuestion(question.id, { state: next })
+      // Leaving published pulls it out of every selection. Done here as well as
+      // server-side: the spec asks the API to do it, and until that is confirmed a
+      // selection left holding an unaskable question would fail its own validation on
+      // the next render with no way for anyone to fix it.
+      if (next !== 'PUBLISHED') {
+        for (const selection of affected) {
+          const trimmed = withoutQuestion([selection], question.id)[0]
+          await updateSelection(selection.id, trimmed)
+        }
       }
+    })
+
+    if (ok && next !== 'PUBLISHED' && affected.length > 0) {
+      setSaveError(
+        `Taken out of ${affected.length} ${affected.length === 1 ? 'selection' : 'selections'} — ` +
+          `a ${STATE_LABEL[next].toLowerCase()} question cannot be asked.`,
+      )
     }
   }
 
-  function removeQuestion(index: number) {
+  /**
+   * A selection, created or updated.
+   *
+   * Created on first save rather than when the card appears: an Admin who adds one and
+   * changes their mind should leave nothing behind, and an empty selection would fail
+   * its own validation the moment the server saw it.
+   */
+  function saveSelection(next: PulseSelection) {
+    return attempt(() => (next.id ? updateSelection(next.id, next) : createSelection(next)))
+  }
+
+  function addSelection() {
+    // Local until it has a question in it. blankSelection's id is a placeholder the
+    // server replaces on create.
+    setSelections((current) => [...current, blankSelection(current.map((one) => one.id))])
+  }
+
+  function removeSelection(selection: PulseSelection) {
+    // Never saved, so there is nothing to delete — drop the card and say nothing.
+    if (!selections.some((one) => one.id === selection.id && one.questionIds.length > 0)) {
+      setSelections((current) => current.filter((one) => one.id !== selection.id))
+      return Promise.resolve(true)
+    }
+    return attempt(() => deleteSelection(selection.id))
+  }
+
+  async function removeQuestion(index: number) {
     const going = questions![index]
-    commitBank(questions!.filter((_, at) => at !== index))
-    // Dropped from every selection too. Leaving the id behind would show as a shorter
-    // pulse than the counter claims, with no sign of why.
-    commitSelections(
-      selections.map((one) => ({
-        ...one,
-        questionIds: one.questionIds.filter((id) => id !== going.id),
-      })),
-    )
-    setConfirmRemove(null)
+    const affected = selections.filter((one) => one.questionIds.includes(going.id))
+
+    const ok = await attempt(async () => {
+      // Out of the selections first. A question deleted while a selection still names
+      // it leaves that selection unserveable, and the order matters if the second call
+      // fails.
+      for (const selection of affected) {
+        await updateSelection(selection.id, withoutQuestion([selection], going.id)[0])
+      }
+      await deleteQuestion(going.id)
+    })
+    if (ok) setConfirmRemove(null)
   }
 
   return (
@@ -227,35 +263,6 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
           {questions.length} in the bank · {selections.length}{' '}
           {selections.length === 1 ? 'selection' : 'selections'} for {nextCycleLabel()}
         </p>
-      </div>
-
-      <div className="banner banner--info">
-        <div className="banner__title">Not on the server yet</div>
-        <div className="banner__body">
-          The backend serves the question bank read-only, and has nothing at all for
-          selections. Everything here is kept in this browser so the wording and the
-          department split can be agreed now; it reaches employees once the routes in{' '}
-          <code>docs/PULSE_QUESTIONS_BACKEND.md</code> exist.
-          {unsaved && (
-            <>
-              {' '}
-              <button
-                className="linkish"
-                onClick={() => {
-                  discardLocalBank()
-                  discardProgramme()
-                  fetchQuestionBank().then((bank) => {
-                    setQuestions(bank.questions)
-                    setUnsaved(bank.unsaved)
-                    setSelections(readProgramme() ?? [])
-                  })
-                }}
-              >
-                Discard local edits
-              </button>
-            </>
-          )}
-        </div>
       </div>
 
       {missed.length > 0 && (
@@ -437,10 +444,9 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
             bank={questions}
             departments={departments}
             editable={editable}
-            onChange={(next) =>
-              commitSelections(selections.map((one, at) => (at === index ? next : one)))
-            }
-            onRemove={() => commitSelections(selections.filter((_, at) => at !== index))}
+            saving={busy}
+            onChange={(next) => void saveSelection(next)}
+            onRemove={() => void removeSelection(selection)}
           />
         ))}
       </div>
@@ -449,9 +455,8 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
         <button
           className="button button--ghost"
           style={{ marginTop: 12 }}
-          onClick={() =>
-            commitSelections([...selections, blankSelection(selections.map((one) => one.id))])
-          }
+          disabled={busy}
+          onClick={() => void addSelection()}
         >
           + Add a selection
         </button>
@@ -492,6 +497,7 @@ function SelectionCard({
   bank,
   departments,
   editable,
+  saving,
   onChange,
   onRemove,
 }: {
@@ -500,6 +506,7 @@ function SelectionCard({
   bank: PulseQuestion[]
   departments: Department[]
   editable: boolean
+  saving: boolean
   onChange: (selection: PulseSelection) => void
   onRemove: () => void
 }) {
@@ -548,7 +555,7 @@ function SelectionCard({
       subtitle={`${picked} of ${MAX_SELECTED} questions · ${reach} ${reach === 1 ? 'person' : 'people'}`}
       action={
         editable ? (
-          <button className="card__action" onClick={onRemove}>
+          <button className="card__action" disabled={saving} onClick={onRemove}>
             Remove
           </button>
         ) : undefined

@@ -10,7 +10,7 @@
  * employees are actually being asked rather than a fresh mock.
  */
 
-import { get, isLive } from './client'
+import { get, isLive, remove, request } from './client'
 import { currentCycle } from './mock'
 import { MAX_BANK, normaliseTags } from './pulseProgramme'
 
@@ -85,14 +85,15 @@ export const SCALES: { label: string; options: string[] }[] = [
   { label: 'Yes or no', options: ['Yes', 'No'] },
 ]
 
-const STORAGE_KEY = 'hr-genie-pulse-bank'
-const SCHEMA = 2
 
-/** What the server returns today. No hint, no departments. */
+/** What the server returns. Everything optional — the reader fills in the rest. */
 interface RawQuestion {
-  id: string
-  question: string
-  options: string[]
+  id?: string
+  question?: string
+  hint?: string
+  options?: string[]
+  tags?: string[]
+  state?: string
 }
 
 /** The bank, and where it came from — the page has to be honest about that. */
@@ -102,30 +103,75 @@ export interface Bank {
   unsaved: boolean
 }
 
+/**
+ * The bank, from the server.
+ *
+ * It used to prefer a copy in this browser, because there was no way to save one. There
+ * is now — POST/PATCH/DELETE on /api/pulse/questions — so a local copy would be a second
+ * source of truth that silently wins over the real one, which is worse than not having
+ * had a copy at all. `unsaved` stays on the type and is always false; the page still
+ * reads it, and removing the field is churn for no gain.
+ */
 export async function fetchQuestionBank(): Promise<Bank> {
-  const local = readLocal()
-  if (local) return { questions: local, unsaved: true }
   return { questions: await fetchLiveBank(), unsaved: false }
+}
+
+/** One question, created server-side. The id comes back from the server. */
+export function createQuestion(question: PulseQuestion): Promise<PulseQuestion> {
+  return request<RawQuestion>('/api/pulse/questions', {
+    method: 'POST',
+    body: JSON.stringify(toWire(question)),
+  }).then(fromWire)
+}
+
+export function updateQuestion(
+  id: string,
+  patch: Partial<PulseQuestion>,
+): Promise<PulseQuestion> {
+  // Never the id. Answers are keyed by it, so rewriting one orphans every answer ever
+  // given — see the note on PulseQuestion.id.
+  const { id: _ignored, ...rest } = patch
+  return request<RawQuestion>(`/api/pulse/questions/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(toWire(rest as PulseQuestion)),
+  }).then(fromWire)
+}
+
+export function deleteQuestion(id: string): Promise<void> {
+  return remove(`/api/pulse/questions/${encodeURIComponent(id)}`)
+}
+
+function toWire(question: Partial<PulseQuestion>): Record<string, unknown> {
+  const wire: Record<string, unknown> = {}
+  if (question.question !== undefined) wire.question = question.question
+  if (question.hint !== undefined) wire.hint = question.hint
+  if (question.options !== undefined) wire.options = question.options
+  if (question.tags !== undefined) wire.tags = normaliseTags(question.tags)
+  if (question.state !== undefined) wire.state = question.state
+  return wire
+}
+
+/** Reads whatever the endpoint sends, filling in what it does not. */
+export function fromWire(raw: RawQuestion): PulseQuestion {
+  return migrateQuestion(raw as unknown as Record<string, unknown>)
 }
 
 /** Whatever employees are being asked right now, adapted to the fuller shape. */
 async function fetchLiveBank(): Promise<PulseQuestion[]> {
   if (!isLive) return DEFAULTS.map((question) => ({ ...question }))
   try {
-    const raw = await get<{ questions: RawQuestion[] }>('/api/pulse/questions')
+    // Both envelopes: `{ questions: [...] }` as documented, and a bare array.
+    const body = await get<unknown>('/api/pulse/questions')
+    const raw = (Array.isArray(body) ? { questions: body } : body) as { questions?: RawQuestion[] }
     // Not truncated any more. The server returns what is currently being asked, which
     // is a selection of at most MAX_SELECTED — but this is the bank, and slicing it
     // would silently drop questions the moment the endpoint starts serving a library.
-    return (raw.questions ?? []).slice(0, MAX_BANK).map((question) => ({
-      id: question.id,
-      question: question.question,
-      hint: '',
-      options: question.options ?? [],
-      tags: [],
-      // Whatever the server is serving is what employees are being asked, so it is
-      // published by definition. The endpoint has no notion of state yet.
-      state: 'PUBLISHED' as const,
-    }))
+    // Read through migrateQuestion so a row missing tags or state gets the same
+    // defaults as one read back from anywhere else, in one place.
+    return (raw.questions ?? [])
+      .slice(0, MAX_BANK)
+      .map((question) => migrateQuestion(question as unknown as Record<string, unknown>))
+      .filter((question) => question.id)
   } catch {
     // A bank that will not load is not a reason to block authoring — start from the
     // same defaults the mock uses and let HR see the failure in the banner.
@@ -133,18 +179,16 @@ async function fetchLiveBank(): Promise<PulseQuestion[]> {
   }
 }
 
-export function saveQuestionBank(questions: PulseQuestion[]): void {
+/**
+ * Kept only to validate before a write.
+ *
+ * It used to persist the whole bank to this browser. The endpoints landed, so the page
+ * writes one question at a time and this no longer stores anything — the validation it
+ * did is still worth running before a request goes out.
+ */
+export function checkBank(questions: PulseQuestion[]): void {
   const problem = validateBank(questions)
   if (problem) throw new Error(problem)
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify({ schema: SCHEMA, savedAt: Date.now(), questions }),
-  )
-}
-
-/** Throws away local edits and goes back to what the server is serving. */
-export function discardLocalBank(): void {
-  localStorage.removeItem(STORAGE_KEY)
 }
 
 /**
@@ -168,21 +212,6 @@ export function migrateQuestion(raw: Record<string, unknown>): PulseQuestion {
     state: QUESTION_STATES.includes(raw.state as QuestionState)
       ? (raw.state as QuestionState)
       : 'PUBLISHED',
-  }
-}
-
-function readLocal(): PulseQuestion[] | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return null
-    const parsed = JSON.parse(raw) as { schema?: number; questions?: unknown[] }
-    if (!Array.isArray(parsed.questions)) return null
-    // Schema 1 and 2 are both read. Refusing the older one would throw away wording
-    // somebody had already agreed, for the sake of a field that moved.
-    if (parsed.schema !== SCHEMA && parsed.schema !== 1) return null
-    return parsed.questions.map((one) => migrateQuestion(one as Record<string, unknown>))
-  } catch {
-    return null
   }
 }
 

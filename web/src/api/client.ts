@@ -34,7 +34,8 @@ import {
 import { isConsoleRole, type Permission } from './access'
 import type { Celebrant, Celebrations } from './celebrations'
 import { MIN_COHORT, MOODS } from './types'
-import { holidaysFor } from './holidays'
+import { holidayYears, holidaysFor } from './holidays'
+import { REGIONS, type HolidayDraft } from './holidayStore'
 import type {
   Role,
   MoodKey,
@@ -155,7 +156,13 @@ export async function get<T>(path: string): Promise<T> {
   return request<T>(path, { method: 'GET' })
 }
 
-async function request<T>(path: string, init: RequestInit): Promise<T> {
+/**
+ * One authenticated JSON call.
+ *
+ * Exported so the per-feature modules — pulse, holidays — can write through the same
+ * envelope, headers and error type rather than each growing its own fetch.
+ */
+export async function request<T>(path: string, init: RequestInit): Promise<T> {
   const bearer = token()
   const response = await fetch(`${BASE_URL}${path}`, {
     ...init,
@@ -174,6 +181,26 @@ async function request<T>(path: string, init: RequestInit): Promise<T> {
     throw new ApiError(detail || `Request failed (${response.status})`, response.status)
   }
   return (await response.json()) as T
+}
+
+/**
+ * A DELETE, which answers 204 with no body.
+ *
+ * Not [request]: asking for JSON that is not there turns a successful delete into an
+ * error, which is how a row vanishes from the server and stays on the screen.
+ */
+export async function remove(path: string): Promise<void> {
+  const response = await fetch(`${BASE_URL}${path}`, {
+    method: 'DELETE',
+    headers: {
+      'ngrok-skip-browser-warning': 'true',
+      ...(token() ? { Authorization: `Bearer ${token()}` } : {}),
+    },
+  })
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '')
+    throw new ApiError(detail || `Request failed (${response.status})`, response.status)
+  }
 }
 
 /** Keeps the mock path feeling like a network call rather than a synchronous read. */
@@ -551,12 +578,71 @@ interface RawAttendance {
  * without another change here.
  */
 export async function fetchHolidays(year: number): Promise<Holiday[]> {
-  const published = holidaysFor(year)
-  if (!isLive) return mocked(published)
+  return (await fetchHolidayCalendar(year)).holidays
+}
 
-  return get<Holiday[]>(`/api/holidays?year=${year}`)
-    .then((rows) => (rows.length > 0 ? rows : published))
-    .catch(() => published)
+/**
+ * The calendar for one year, and the years the server has anything for.
+ *
+ * Reads both envelopes: the documented `{ year, years, holidays }` and a bare array,
+ * because the console asked for one and the endpoint may well answer with the other.
+ * Cheaper to accept both than to break on the difference.
+ *
+ * **No fallback to the built-in list when live.** It used to fall back, which was right
+ * while the calendar was published content nobody could edit. Now that it can be
+ * edited, showing the built-in list over an empty server would offer rows that do not
+ * exist to edit — the empty state is the honest answer, and it tells an Admin there is
+ * a calendar to enter.
+ */
+export async function fetchHolidayCalendar(
+  year: number,
+): Promise<{ holidays: Holiday[]; years: number[] }> {
+  if (!isLive) return mocked({ holidays: holidaysFor(year), years: holidayYears() })
+
+  const raw = await get<unknown>(`/api/holidays?year=${year}`)
+  const body = (Array.isArray(raw) ? { holidays: raw } : raw) as {
+    holidays?: unknown
+    years?: unknown
+  }
+
+  return {
+    holidays: Array.isArray(body.holidays) ? (body.holidays as Holiday[]) : [],
+    years: Array.isArray(body.years) ? (body.years as number[]).map(Number) : [],
+  }
+}
+
+/**
+ * The regions a holiday may apply to.
+ *
+ * Falls back to the console's own list rather than failing: the picker is unusable
+ * without one, and a stale region list is a smaller problem than a page that will not
+ * open. See docs/HOLIDAYS_BACKEND.md for why free text was replaced.
+ */
+export async function fetchHolidayRegions(): Promise<string[]> {
+  if (!isLive) return mocked([...REGIONS])
+
+  return get<unknown>('/api/holidays/regions')
+    .then((raw) => {
+      const list = Array.isArray(raw) ? raw : (raw as { regions?: unknown }).regions
+      const names = Array.isArray(list) ? list.map(String).filter(Boolean) : []
+      return names.length > 0 ? names : [...REGIONS]
+    })
+    .catch(() => [...REGIONS])
+}
+
+export function createHoliday(draft: HolidayDraft): Promise<Holiday> {
+  return request<Holiday>('/api/holidays', { method: 'POST', body: JSON.stringify(draft) })
+}
+
+export function updateHoliday(id: string, patch: Partial<HolidayDraft>): Promise<Holiday> {
+  return request<Holiday>(`/api/holidays/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  })
+}
+
+export function deleteHoliday(id: string): Promise<void> {
+  return remove(`/api/holidays/${encodeURIComponent(id)}`)
 }
 
 // ---------------------------------------------------------------------- stats
