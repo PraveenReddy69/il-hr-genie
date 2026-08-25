@@ -21,7 +21,7 @@
  */
 
 import * as api from './api.js'
-import { holidaysFor, holidayYears, type Holiday } from './holidays.js'
+import { inDateOrder, yearsIn, type Holiday } from './holidays.js'
 
 // ------------------------------------------------------------------ the data
 
@@ -52,17 +52,26 @@ export async function savePulseJson(answers: Record<string, string>): Promise<un
   return { saved: true }
 }
 
-/** The calendar, with today marked so the page can lead with what is next. */
-export function holidaysJson(year?: number): unknown {
+/**
+ * The calendar, with today marked so the page can lead with what is next.
+ *
+ * Throws when the service is unreachable, which [tabData] turns into a message on the
+ * page. That is the wanted behaviour: this used to be served from a list bundled with
+ * the bot, so it could never fail and could never be right either.
+ */
+export async function holidaysJson(year?: number): Promise<unknown> {
   const now = new Date()
   const chosen = year ?? now.getFullYear()
   const month = `${now.getMonth() + 1}`.padStart(2, '0')
   const day = `${now.getDate()}`.padStart(2, '0')
+  const holidays = inDateOrder(await api.gateway.holidays(chosen))
   return {
     year: chosen,
-    years: holidayYears(),
+    // Only what the server actually has. An empty year offers no year to switch to,
+    // rather than offering one and then showing nothing under it.
+    years: yearsIn(holidays),
     today: `${now.getFullYear()}-${month}-${day}`,
-    holidays: holidaysFor(chosen) as Holiday[],
+    holidays: holidays as Holiday[],
   }
 }
 

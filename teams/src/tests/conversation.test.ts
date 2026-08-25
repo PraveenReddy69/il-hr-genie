@@ -65,6 +65,9 @@ function stubAll(overrides: Partial<typeof gateway> = {}): void {
       calls.markSeen += 1
     },
     celebrations: async () => ({ birthdays: [], anniversaries: [], newJoiners: [] }),
+    holidays: async () => [
+      { name: 'Diwali', isoDate: '2026-11-08', kind: 'FIXED' as const, region: 'All India' },
+    ],
     ...overrides,
   })
 }
@@ -825,5 +828,60 @@ describe('a ticket question with the reference mistyped', () => {
   it('does not treat a policy question with a number in it as a reference', async () => {
     const replies = await handle(newState(), { text: 'how many leaves after 90 days' })
     assert.match(JSON.stringify(replies), /Twelve days/)
+  })
+})
+
+// -------------------------------------------------------------- the calendar
+
+describe('holidays in chat', () => {
+  it('shows what the service returned, not a list shipped with the bot', async () => {
+    // The bug this exists to prevent: the bot carried its own copy of the calendar, so
+    // a holiday HR added in the console never appeared here and nobody could tell.
+    stubAll({
+      holidays: async () => [
+        { name: 'Founders Day', isoDate: '2026-09-30', kind: 'FIXED', region: 'All India' },
+      ],
+    })
+
+    const replies = await handle(newState(), { action: { kind: 'holidays' } })
+    assert.match(JSON.stringify(replies), /Founders Day/)
+  })
+
+  it('asks for the year that is running now', async () => {
+    let asked: number | null = null
+    stubAll({
+      holidays: async (year: number) => {
+        asked = year
+        return []
+      },
+    })
+
+    await handle(newState(), { action: { kind: 'holidays' } })
+    assert.equal(asked, new Date().getFullYear())
+  })
+
+  it('puts the calendar in date order whatever order it arrives in', async () => {
+    stubAll({
+      holidays: async () => [
+        { name: 'Later', isoDate: '2026-12-25', kind: 'FIXED', region: 'All India' },
+        { name: 'Sooner', isoDate: '2026-01-01', kind: 'FIXED', region: 'All India' },
+      ],
+    })
+
+    const shown = JSON.stringify(await handle(newState(), { action: { kind: 'holidays' } }))
+    assert.ok(shown.indexOf('Sooner') < shown.indexOf('Later'), 'earliest date first')
+  })
+
+  it('says it could not reach the calendar rather than showing a stale one', async () => {
+    // The important half. Falling back to a bundled list here would show a date HR had
+    // withdrawn, and somebody would not come to work.
+    stubAll({
+      holidays: async () => {
+        throw new Error('service down')
+      },
+    })
+
+    const replies = await handle(newState(), { action: { kind: 'holidays' } })
+    assert.match(JSON.stringify(replies), /could not reach/i)
   })
 })

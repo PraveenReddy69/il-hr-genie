@@ -8,7 +8,7 @@
  */
 
 import * as api from './api.js'
-import { holidaysFor } from './holidays.js'
+import { inDateOrder } from './holidays.js'
 import type { Mood } from './api.js'
 import {
   answerCard,
@@ -603,14 +603,31 @@ async function saveMood(
 /**
  * The calendar, from chat.
  *
- * Local data, so this cannot fail — see holidays.ts for why it is not fetched.
+ * Fetched, not bundled. HR edits this in the console and expects the change to be the
+ * one employees see; a copy shipped with the bot would go stale at the worst possible
+ * moment, which is the day a date moves.
+ *
+ * A failure says so rather than falling back to anything. There is nothing to fall back
+ * to on purpose — see holidays.ts.
  */
 async function showHolidays(): Promise<Reply[]> {
   const now = new Date()
   const month = `${now.getMonth() + 1}`.padStart(2, '0')
   const day = `${now.getDate()}`.padStart(2, '0')
   const todayIso = `${now.getFullYear()}-${month}-${day}`
-  return [{ card: holidaysCard(holidaysFor(now.getFullYear()), todayIso) }]
+
+  try {
+    const calendar = await api.gateway.holidays(now.getFullYear())
+    return [{ card: holidaysCard(inDateOrder(calendar), todayIso) }]
+  } catch (error) {
+    return [
+      {
+        text:
+          'I could not reach the holiday calendar just then. Try again in a moment — ' +
+          `and the Holidays tab has it too. (${message(error)})`,
+      },
+    ]
+  }
 }
 
 /** Today's birthdays and anniversaries, from chat rather than only the tab. */

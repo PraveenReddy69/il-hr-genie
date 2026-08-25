@@ -8,6 +8,8 @@
 
 import { AsyncLocalStorage } from 'node:async_hooks'
 
+import type { Holiday } from './holidays.js'
+
 const BASE_URL = (
   process.env.HRGENIE_BASE_URL ?? 'https://hrgenie-api.devinfinitylearn.in'
 ).replace(/\/$/, '')
@@ -488,6 +490,39 @@ export async function celebrations(): Promise<Celebrations> {
   }
 }
 
+/**
+ * The published calendar for one year.
+ *
+ * Read-only here. HR maintains it in the console, and this is the same
+ * `GET /api/holidays` the console reads back — one calendar, not a copy per client,
+ * which is the entire reason a holiday added in the console now appears in chat.
+ *
+ * Field names are taken defensively. The service answers with the console's shape
+ * today; `date`/`type` are tolerated because this list is one of the oldest things in
+ * the product and has been spelled more than one way.
+ */
+export async function holidays(year: number): Promise<Holiday[]> {
+  const session = await signIn()
+  const raw = await request<unknown>(`/api/holidays?year=${year}`, {
+    token: session.token,
+  })
+  const rows = Array.isArray(raw) ? raw : ((raw as { holidays?: unknown[] }).holidays ?? [])
+
+  return rows
+    .map((row) => {
+      const one = row as Record<string, unknown>
+      const kind = String(one.kind ?? one.type ?? 'FIXED').toUpperCase()
+      return {
+        name: String(one.name ?? ''),
+        isoDate: String(one.isoDate ?? one.date ?? '').slice(0, 10),
+        kind: kind === 'OPTIONAL' ? 'OPTIONAL' : 'FIXED',
+        region: String(one.region ?? 'All India'),
+      } as Holiday
+    })
+    // A row without a name or a date cannot be drawn and cannot be reasoned about.
+    .filter((one) => one.name && /^d{4}-d{2}-d{2}$/.test(one.isoDate))
+}
+
 export async function categories(): Promise<string[]> {
   const session = await signIn()
   const raw = await request<unknown>('/api/tickets/categories', { token: session.token })
@@ -611,6 +646,7 @@ export const gateway = {
   unseenTickets,
   markTicketsSeen,
   celebrations,
+  holidays,
 }
 
 /** Restores the real implementations. Call it after a test that swapped any. */
