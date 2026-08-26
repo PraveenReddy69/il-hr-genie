@@ -48,35 +48,58 @@ For `HR`, the same list without `tickets.assign`, `holidays.edit`, `pulse.publis
 
 ---
 
-## 2. An HRBP sees nobody — scope `/api/employees` by the tag as well
+## 2. An HRBP sees nobody — measured, not inferred
 
-`HYD606840` (Deepak Patil, role `HR`) comes back with `"departments": []`, and
-`GET /api/employees` returns **zero rows** for him. The People page is empty, and so is
-everything that reads the directory.
+Three calls with the same bearer, `HYD606840` (Deepak Patil, role `HR`,
+`departments: []`), within the same minute on 26 August 2026:
 
-An empty `departments` on an HR account means no access to anybody, deliberately — an
-unassigned HRBP showing the whole organisation is the leak scoping exists to prevent. So
-the rule is right. What is missing is the other half of it.
+| Call | Answer |
+|---|---|
+| `GET /api/employees` | `200` · `[]` |
+| `GET /api/tickets` | `200` · `[]` |
+| `GET /api/employees/celebrations` | `200` · the whole organisation |
 
-**An HRBP covers two sets of people, not one:**
+An HRBP can read every colleague's birthday and date of joining, and cannot see a single
+employee record or a single ticket. Whatever scoping is meant to be, it is not being
+applied the same way twice.
+
+`GET /api/employees/me` for the same account confirms the inputs:
+
+```jsonc
+{ "employeeId": "HYD606840", "role": "HR", "departments": [],
+  "hrbpId": "HYD604982", "l1ManagerId": "HYD608460" }
+```
+
+### Why both empties are wrong
+
+`departments: []` on an HR account means access to nobody, deliberately — an unassigned
+HRBP showing the whole organisation is the leak scoping exists to prevent. The rule is
+right. The half that is missing is the tag.
+
+**An HRBP covers two sets of people:**
 
 ```
 employees whose hrbpId is this HR account     ← the tag. Someone decided this.
         ∪
-employees in the departments they cover       ← the inference we already do.
+employees in the departments they cover       ← the inference already made.
 ```
 
-Today only the second is applied, and it is empty for everybody. The first is the one
-that actually holds the association: `hrbpId` is on the employee record now, and
-`EMP3801` names `HYD606840` — so Deepak already has people, and the directory does not
-say so.
+Only the second is applied, and it is empty for every HRBP. The first has data today:
+`EMP3801` names `HYD606840`, so Deepak already has people and the directory says he has
+none. Applying the union fixes People, Attendance and the ticket scope together.
 
-This is the same union the ticket queue needs, and the same one behind item 3. Fixing it
-here fixes People, Attendance, Celebrations and the ticket scope in one change.
+The ticket queue is the sharper case. An Admin's console shows 22 open tickets,
+including one raised by `EMP3801` — whose HRBP is Deepak. He cannot see the ticket
+raised by his own employee.
 
-Filling `departments` on each HRBP account is still worth doing — it is what covers
-someone in the department who has no HRBP tagged yet — but the tag is the half that can
-be derived from data you already hold.
+### And celebrations is scoped the other way
+
+It returns the whole organisation to an account the other two endpoints give nothing.
+Both cannot be the intended rule. Our reading is that celebrations is fine as it is —
+a birthday list is meant to be broad — and that `employees` and `tickets` are the two
+that are wrong. Worth confirming rather than assuming, because if celebrations is the
+one that is too wide, that is a live data-exposure question rather than a missing
+feature.
 
 ### Cache headers on authenticated endpoints
 
