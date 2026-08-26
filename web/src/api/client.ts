@@ -225,6 +225,22 @@ export async function request<T>(path: string, init: RequestInit): Promise<T> {
   const bearer = token()
   const response = await fetch(`${BASE_URL}${path}`, {
     ...init,
+    /*
+     * Never from the HTTP cache.
+     *
+     * Every response here is scoped to one bearer: the directory an HRBP may read, the
+     * tickets in their queue, their own record. The browser caches by URL, so two
+     * accounts share one entry — and these were coming back 304, meaning the body on
+     * screen was whatever had been stored earlier rather than what the server would
+     * say now.
+     *
+     * That survives a sign-out. It also survives a backend fix: an empty directory
+     * stays empty on the screen until something invalidates the entry, which makes a
+     * change that did work look like one that did not.
+     *
+     * `no-store` costs a round trip on data that is small and changes under us anyway.
+     */
+    cache: 'no-store',
     headers: {
       'Content-Type': 'application/json',
       // The tunnel serves a browser interstitial without this, which would come back
@@ -251,6 +267,7 @@ export async function request<T>(path: string, init: RequestInit): Promise<T> {
 export async function remove(path: string): Promise<void> {
   const response = await fetch(`${BASE_URL}${path}`, {
     method: 'DELETE',
+    cache: 'no-store',
     headers: {
       'ngrok-skip-browser-warning': 'true',
       ...(token() ? { Authorization: `Bearer ${token()}` } : {}),

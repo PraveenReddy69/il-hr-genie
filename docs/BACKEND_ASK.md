@@ -78,6 +78,28 @@ Filling `departments` on each HRBP account is still worth doing — it is what c
 someone in the department who has no HRBP tagged yet — but the tag is the half that can
 be derived from data you already hold.
 
+### Cache headers on authenticated endpoints
+
+`/api/employees` and `/api/employees/me` come back **304 Not Modified** in the browser,
+which means the page is rendering a stored body rather than the current answer.
+
+That is worth fixing regardless of the scoping above, for two reasons:
+
+**A shared cache would serve one employee's scoped view to another.** These responses
+differ per bearer — the directory an HRBP may read is not the one an Admin may read —
+and the browser caches by URL alone. Any proxy in front of the API would do the same.
+`Cache-Control: no-store` on authenticated routes, or at minimum
+`Cache-Control: private, no-cache` plus `Vary: Authorization`.
+
+**It will hide the fix.** If the ETag is computed over the underlying collection rather
+than the scoped response, changing how scoping works will not change the ETag — so a
+correct fix would land and Deepak's browser would go on showing an empty directory. If
+that happens, it is this, not the fix.
+
+The console now sends `cache: 'no-store'` on every API call, which handles the browser.
+It does nothing about a shared cache, which is the half only the response headers can
+fix.
+
 ### What the console does meanwhile
 
 The People page now offers a **"Tagged to me"** filter, counted from `hrbpId` on the
