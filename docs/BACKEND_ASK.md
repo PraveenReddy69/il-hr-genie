@@ -48,21 +48,41 @@ For `HR`, the same list without `tickets.assign`, `holidays.edit`, `pulse.publis
 
 ---
 
-## 2. An HRBP with no departments sees nothing
+## 2. An HRBP sees nobody — scope `/api/employees` by the tag as well
 
-`HYD606840` (Deepak Patil, role `HR`) comes back with `"departments": []`.
+`HYD606840` (Deepak Patil, role `HR`) comes back with `"departments": []`, and
+`GET /api/employees` returns **zero rows** for him. The People page is empty, and so is
+everything that reads the directory.
 
-An empty list on an HR account means **no access to anybody**, deliberately — an
-unassigned HRBP showing the whole organisation is the leak the scoping exists to
-prevent. So the behaviour is correct and the data is not: he signs in to an empty ticket
-queue and an empty directory.
+An empty `departments` on an HR account means no access to anybody, deliberately — an
+unassigned HRBP showing the whole organisation is the leak scoping exists to prevent. So
+the rule is right. What is missing is the other half of it.
 
-Empty is right for `HR_ADMIN` and `HR_HEAD`, where it means organisation-wide. It is
-only a problem on `HR`.
+**An HRBP covers two sets of people, not one:**
 
-**Which departments does each HRBP cover?** That mapping has to come from somewhere —
-either `departments` on the account, or derived from `hrbpId`, which the employee
-records already carry.
+```
+employees whose hrbpId is this HR account     ← the tag. Someone decided this.
+        ∪
+employees in the departments they cover       ← the inference we already do.
+```
+
+Today only the second is applied, and it is empty for everybody. The first is the one
+that actually holds the association: `hrbpId` is on the employee record now, and
+`EMP3801` names `HYD606840` — so Deepak already has people, and the directory does not
+say so.
+
+This is the same union the ticket queue needs, and the same one behind item 3. Fixing it
+here fixes People, Attendance, Celebrations and the ticket scope in one change.
+
+Filling `departments` on each HRBP account is still worth doing — it is what covers
+someone in the department who has no HRBP tagged yet — but the tag is the half that can
+be derived from data you already hold.
+
+### What the console does meanwhile
+
+The People page now offers a **"Tagged to me"** filter, counted from `hrbpId` on the
+rows it was sent. It appears only when there is somebody to show, so today nobody has
+it. Its empty state also stopped telling an HRBP to clear a filter they had not set.
 
 ---
 

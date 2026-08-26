@@ -18,7 +18,10 @@ const TOP_DEPARTMENTS = 8
 /** Rows rendered at once; the directory is far too long to paint in full. */
 const PAGE_SIZE = 50
 
-export function People() {
+/** Filter value for "the people tagged to me". Not a department — see MINE below. */
+const MINE = '__mine__'
+
+export function People({ viewer }: { viewer: Employee }) {
   const [people, setPeople] = useState<Employee[] | null>(null)
   const [query, setQuery] = useState('')
   const [department, setDepartment] = useState<string | null>(null)
@@ -37,13 +40,29 @@ export function People() {
     return [...counts.entries()].sort((a, b) => b[1] - a[1])
   }, [people])
 
+  /**
+   * The people this HRBP is tagged to, by `hrbpId` rather than by department.
+   *
+   * The tag is the association somebody actually made; a department is an inference.
+   * An HRBP whose `departments` is empty — which is all of them today — covers nobody
+   * by department and can still be the named HRBP for a hundred people.
+   *
+   * Counted from the rows the server sent. The chip below only appears when this is
+   * non-empty, so it never offers a filter that would empty the page.
+   */
+  const taggedToMe = useMemo(
+    () => (people ?? []).filter((one) => one.hrbpId === viewer.employeeId),
+    [people, viewer.employeeId],
+  )
+
   if (!people) return <Loading />
 
   // Name, id, title and department all match, because HR searches by whatever they
   // happen to have — a name from a meeting, an ID from a ticket.
   const needle = query.trim().toLowerCase()
   const matches = people.filter((person) => {
-    if (department && person.department !== department) return false
+    if (department === MINE && person.hrbpId !== viewer.employeeId) return false
+    if (department && department !== MINE && person.department !== department) return false
     if (!needle) return true
     return [person.name, person.employeeId, person.title, person.department]
       .join(' ')
@@ -86,6 +105,19 @@ export function People() {
           >
             All {people.length}
           </button>
+          {/*
+            Only where there is somebody to show. A chip that filters to nought is a
+            control that looks broken, and every HRBP would have one until the
+            directory carries the tag.
+          */}
+          {taggedToMe.length > 0 && (
+            <button
+              className={`chip ${department === MINE ? 'chip--on' : ''}`}
+              onClick={() => setDepartment(department === MINE ? null : MINE)}
+            >
+              Tagged to me {taggedToMe.length}
+            </button>
+          )}
           {shownDepartments.map(([name, count]) => (
             <button
               key={name}
@@ -105,9 +137,21 @@ export function People() {
         </div>
 
         <div style={{ marginTop: 12 }}>
-          {filtered.length === 0 && (
-            <Empty>Nobody matches “{query}”. Try an ID, or clear the filter.</Empty>
-          )}
+          {filtered.length === 0 &&
+            (people.length === 0 ? (
+              /*
+               * Nobody at all, rather than nobody matching. The old message blamed a
+               * filter that was not set — it read "Nobody matches ''. Try an ID, or
+               * clear the filter" on an empty search box, which tells an HRBP with an
+               * empty directory to clear something they never typed.
+               */
+              <Empty>
+                Nobody is in your scope yet. An HRBP sees the people tagged to them and
+                the departments they cover — ask an Admin if this looks wrong.
+              </Empty>
+            ) : (
+              <Empty>Nobody matches “{query}”. Try an ID, or clear the filter.</Empty>
+            ))}
           {hidden > 0 && (
             <div className="row__meta" style={{ padding: '4px 2px 10px' }}>
               Showing {filtered.length} of {matches.length}. Search or pick a department

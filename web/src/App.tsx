@@ -173,7 +173,7 @@ export default function App() {
             path="/tickets"
             element={gate('tickets.view', <Tickets actorId={hr.employeeId} viewer={hr} />)}
           />
-          <Route path="/people" element={gate('people.view', <People />)} />
+          <Route path="/people" element={gate('people.view', <People viewer={hr} />)} />
           <Route path="/attendance" element={gate('attendance.view', <Attendance />)} />
           <Route
             path="/celebrations"
