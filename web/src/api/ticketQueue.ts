@@ -81,16 +81,38 @@ export function suggestedAssignee(
   hrAccounts: Employee[],
   employee: Employee | undefined,
 ): Employee | null {
-  if (employee?.hrbpId) {
-    const tagged = hrAccounts.find((one) => one.employeeId === employee.hrbpId)
-    if (tagged) return tagged
-  }
+  return assignmentSuggestion(hrAccounts, employee)?.who ?? null
+}
+
+/**
+ * The same suggestion, with the reason it was made.
+ *
+ * Who is not enough on its own. "Deepak Patil" in a picker is a name an Admin has to
+ * take on trust; "Deepak Patil - their HRBP" is a fact they can check, and one they
+ * can overrule knowing what they are overruling. The two reasons carry very different
+ * weight: a tag is a decision somebody made about this employee, department cover is
+ * an inference we drew.
+ */
+export type SuggestionReason = 'TAGGED' | 'DEPARTMENT'
+
+export function assignmentSuggestion(
+  hrAccounts: Employee[],
+  employee: Employee | undefined,
+): { who: Employee; reason: SuggestionReason } | null {
   if (!employee) return null
-  return (
-    hrAccounts.find(
-      (one) => one.role === 'HR' && (one.departments ?? []).includes(employee.department),
-    ) ?? null
+
+  if (employee.hrbpId) {
+    const tagged = hrAccounts.find((one) => one.employeeId === employee.hrbpId)
+    // A tag that names somebody who is not an HR account is not a suggestion. It falls
+    // through to department cover rather than being offered, because handing a ticket
+    // to a non-HR account is the one outcome assignment must never produce.
+    if (tagged) return { who: tagged, reason: 'TAGGED' }
+  }
+
+  const covering = hrAccounts.find(
+    (one) => one.role === 'HR' && (one.departments ?? []).includes(employee.department),
   )
+  return covering ? { who: covering, reason: 'DEPARTMENT' } : null
 }
 
 /** Why an assignment is refused, as a sentence, or null. */

@@ -16,6 +16,7 @@ import {
   canAssign,
   daysWaiting,
   refusalFor,
+  assignmentSuggestion,
   suggestedAssignee,
   unassignedCount,
   visibleTickets,
@@ -256,5 +257,42 @@ describe('the unassigned chip and the unassigned list agree', () => {
     // however empty its assignee field happens to be.
     expect(byAssignee(queue, UNASSIGNED, 'HR000').map((one) => one.id)).toEqual(['A'])
     expect(unassignedCount(queue)).toBe(1)
+  })
+})
+
+describe('why a suggestion was made', () => {
+  const hrAccounts = [priya, raj, admin]
+
+  it('prefers the tagged HRBP and says the tag is why', () => {
+    // Raj covers Brand Marketing, not Finance. The tag still wins: somebody decided
+    // this employee is Raj's, and that outranks anything we infer from a department.
+    const employee = person('EMP1', 'EMPLOYEE', { department: 'Finance', hrbpId: 'HR003' })
+    const suggestion = assignmentSuggestion(hrAccounts, employee)
+
+    expect(suggestion?.who.employeeId).toBe('HR003')
+    expect(suggestion?.reason).toBe('TAGGED')
+  })
+
+  it('marks department cover as the weaker reason it is', () => {
+    const employee = person('EMP1', 'EMPLOYEE', { department: 'Experience' })
+    const suggestion = assignmentSuggestion(hrAccounts, employee)
+
+    expect(suggestion?.who.employeeId).toBe('HR000')
+    expect(suggestion?.reason).toBe('DEPARTMENT')
+  })
+
+  it('falls through a tag naming somebody who is not an HR account here', () => {
+    // Handing a ticket to a non-HR account is the one outcome assignment must never
+    // produce, so a tag we cannot resolve is not offered — cover is tried instead.
+    const employee = person('EMP1', 'EMPLOYEE', { department: 'Experience', hrbpId: 'GONE' })
+    const suggestion = assignmentSuggestion(hrAccounts, employee)
+
+    expect(suggestion?.who.employeeId).toBe('HR000')
+    expect(suggestion?.reason).toBe('DEPARTMENT')
+  })
+
+  it('suggests nobody when there is neither a tag nor cover', () => {
+    expect(assignmentSuggestion(hrAccounts, person('EMP1', 'EMPLOYEE', { department: 'Legal' })))
+      .toBeNull()
   })
 })

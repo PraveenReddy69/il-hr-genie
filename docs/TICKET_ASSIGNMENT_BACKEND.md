@@ -83,24 +83,64 @@ replies, and the assignment is a label rather than a handover.
 
 ---
 
-## 4. What we would like from the directory
+## 4. Assign it on the way in
 
-The console suggests an assignee rather than picking one. Today it can only guess from
-department coverage. One optional field would make the suggestion right most of the
-time:
+`hrbpId` now arrives on the employee record, alongside `l1ManagerId`:
 
 ```jsonc
-{ "employeeId": "EMP3801", "hrbpId": "HR000" }   // on /api/employees
+{ "employeeId": "EMP3801", "hrbpId": "HYD606840", "l1ManagerId": "HYD608263" }
 ```
 
-The HR account tagged as that employee's HRBP. The console already reads it where
-present and falls back to department coverage where it is not, so this can land whenever
-it suits — nothing breaks in the meantime.
+That settles a question this document previously left open. **A ticket should be
+assigned to the raiser's tagged HRBP when it is created**, not left for an Admin to
+route by hand.
 
-**Even with it, nothing is auto-assigned.** The suggestion fills the top of the picker
-and says why. A queue that grows owners nobody chose is one where, the first time an
-assignment is wrong, there is no record of who decided — and the honest answer would be
-"nobody did".
+```
+POST /api/tickets
+  → look up the raiser's hrbpId
+  → that id resolves to an active HR account  →  assigneeId = hrbpId
+  → it does not, or there is no tag           →  assigneeId = null
+```
+
+An unresolvable tag means unassigned, never a guess. An HRBP who has left, or an id
+that points at somebody who is not an HR account, must not become an owner — a ticket
+sitting in a departed employee's queue is invisible in a way an unassigned one is not.
+Unassigned is a state the console already shows, counts and prompts on.
+
+This replaces an earlier position in this file, which was that nothing should ever be
+auto-assigned: a queue that grows owners nobody chose has no record of who decided, and
+the honest answer the first time one is wrong would be "nobody did". That objection is
+answered rather than dropped — see the next paragraph — and it does not outweigh the
+cost of the alternative, which is every ticket landing in a pile for one Admin to
+hand-route before anyone can act on it.
+
+**So record that the system did it.** Whatever the audit log ends up being, an
+auto-assignment is not the same event as a person assigning, and reading them back as
+identical is the failure the original objection was about:
+
+```jsonc
+{ "ticketId": "HRG-0036", "assigneeId": "HYD606840",
+  "assignedBy": "SYSTEM", "reason": "HRBP_TAG" }
+```
+
+`assignedBy: "SYSTEM"` with `reason: "HRBP_TAG"` says a rule did this and which rule.
+An Admin reassigning later is `assignedBy: "<their id>"`, and the difference is the
+whole point.
+
+**Reassignment stays a person's decision.** Auto-assignment applies at creation only.
+Nothing should re-run the rule afterwards — an Admin who moves a ticket has overruled
+the tag deliberately, and a rule that quietly puts it back is worse than no rule.
+
+### What the console does with the tag
+
+It suggests, and says why. The picker puts the tagged HRBP first, labelled
+**"their HRBP"**, and department cover — the weaker, inferred reason — is labelled
+separately as such. Where there is neither, the drawer says so plainly rather than
+implying somebody will pick it up.
+
+That stays useful after auto-assignment lands: it is what an Admin sees when they open
+a ticket the rule could not route, and what they check against when overruling one it
+did.
 
 ---
 

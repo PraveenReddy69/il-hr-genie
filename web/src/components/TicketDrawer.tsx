@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Drawer } from './Drawer'
 import { STATUS_COLOUR, relativeTime } from './Bits'
 import { assignTicket, employeeName, updateTicketStatus } from '../api/client'
-import { canAssign, suggestedAssignee } from '../api/ticketQueue'
+import { assignmentSuggestion, canAssign } from '../api/ticketQueue'
 import {
   STATUS_LABEL,
   TICKET_STATUSES,
@@ -38,7 +38,8 @@ export function TicketDrawer({
 }) {
   const isResolved = ticket.status === 'RESOLVED'
   const [assigning, setAssigning] = useState(false)
-  const suggested = suggestedAssignee(hrAccounts, employee)
+  const suggestion = assignmentSuggestion(hrAccounts, employee)
+  const suggested = suggestion?.who ?? null
   const owner = hrAccounts.find((one) => one.employeeId === ticket.assigneeId) ?? null
   const [reopening, setReopening] = useState(false)
   const [selected, setSelected] = useState<TicketStatus | null>(null)
@@ -100,16 +101,27 @@ export function TicketDrawer({
             {hrAccounts.map((one) => (
               <option key={one.employeeId} value={one.employeeId}>
                 {one.name}
-                {one.employeeId === suggested?.employeeId ? ' — covers this department' : ''}
+                {one.employeeId === suggested?.employeeId
+                  ? suggestion?.reason === 'TAGGED'
+                    ? ' — their HRBP'
+                    : ' — covers this department'
+                  : ''}
               </option>
             ))}
           </select>
           <div className="field-foot">
             {ticket.assigneeId
               ? 'Only they and an Admin see this ticket now.'
-              : suggested
-                ? `${suggested.name} covers ${employee?.department ?? 'this department'}.`
-                : 'Nobody covers this department yet — anyone in scope can pick it up.'}
+              : suggestion?.reason === 'TAGGED'
+                ? `${suggestion.who.name} is their tagged HRBP.`
+                : suggestion
+                  ? `${suggestion.who.name} covers ${employee?.department ?? 'this department'}.`
+                  : /*
+                     * Said plainly, because it is the state that needs a person. The
+                     * employee has no HRBP tagged and nobody covers their department,
+                     * so there is nothing to suggest and no rule that will pick one.
+                     */
+                    'No HRBP is tagged to them and nobody covers their department — pick an owner.'}
           </div>
         </>
       ) : (

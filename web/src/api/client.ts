@@ -307,6 +307,9 @@ interface RawEmployee {
   permissions?: Permission[]
   dateOfJoining?: string
   reportees?: number
+  /** The HRBP this employee is tagged to, and their line manager. */
+  hrbpId?: string
+  l1ManagerId?: string
 }
 
 function toEmployee(raw: RawEmployee): Employee {
@@ -325,6 +328,12 @@ function toEmployee(raw: RawEmployee): Employee {
     permissions: raw.permissions,
     dateOfJoining: raw.dateOfJoining,
     reportees: raw.reportees,
+    // Read off the wire rather than inferred. Without these the ticket queue fell
+    // back to matching an employee's department against an HRBP's `departments`,
+    // which is empty on every HRBP account today - so no ticket ever had a
+    // suggested owner and every one of them read "Needs an owner".
+    hrbpId: raw.hrbpId,
+    l1ManagerId: raw.l1ManagerId,
   }
 }
 

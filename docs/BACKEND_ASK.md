@@ -12,6 +12,12 @@ says how.
 resolved `permissions` array, and the write guard accepts an Admin. The console has
 deleted the id-to-role map it was carrying to work around this.
 
+**The holiday calendar is seeded.** `GET /api/holidays?year=2026` returns the full year
+including holidays added from the console, so the open question about whether it had any
+rows is closed. The Teams bot reads it from there now instead of shipping its own copy.
+
+**`hrbpId` and `l1ManagerId` are on the employee record.** That unblocks item 3.
+
 ---
 
 ## 1. Two permissions are missing from the list
@@ -62,31 +68,44 @@ records already carry.
 
 ## 3. Ticket assignment — the last piece of the primary feature
 
-`PATCH /api/tickets/{id}/assignee` returns **404**. Tickets is the highest-priority
-screen and assignment is the one thing on it still running on a mock.
+Two halves, and the first one is the one that matters.
 
-One field on the ticket, one route, and one rule about who may see what — all in
-`docs/TICKET_ASSIGNMENT_BACKEND.md`. The rule is the part that matters:
+### Assign to the raiser's HRBP on creation
+
+`hrbpId` is on the employee record now, so `POST /api/tickets` can route the ticket
+itself:
+
+```
+raiser's hrbpId resolves to an active HR account  →  assigneeId = that id
+no tag, or it does not resolve                    →  assigneeId = null
+```
+
+Unresolvable means unassigned, never a guess — a ticket in a departed HRBP's queue is
+invisible in a way an unassigned one is not, and the console already counts and prompts
+on unassigned.
+
+Record it as the system's doing, not a person's: `assignedBy: "SYSTEM"`,
+`reason: "HRBP_TAG"`. An Admin overruling it later is a different event and has to read
+back as one.
+
+Nothing re-runs the rule after creation. An Admin who moves a ticket meant to.
+
+### `PATCH /api/tickets/{id}/assignee` — still 404
+
+Checked again today. Until it exists an Admin cannot reassign at all: the console has
+the picker, the HR list and the permission check, and the call fails. Auto-assignment
+without this is worse than neither, because the one ticket the rule gets wrong is then
+stuck.
+
+Both are specified in `docs/TICKET_ASSIGNMENT_BACKEND.md`, including the visibility
+rule, which is the part that makes assignment a handover rather than a label:
 
 > An assigned ticket goes to its assignee and leaves everyone else's queue. Admin and
 > above still see everything.
 
-Without the rule enforced server-side, assignment is a label rather than a handover.
-
 ---
 
-## 4. Is the calendar seeded?
-
-`GET /api/holidays` answers, but we cannot see whether it has any rows. The console no
-longer falls back to its built-in list when live — it used to, and with editing now real
-that would have offered rows to edit which do not exist on the server.
-
-So an empty calendar means an empty page. `docs/holidays.json` is the published 2026
-calendar, ready to load.
-
----
-
-## 5. Does anything read pulse selections yet?
+## 4. Does anything read pulse selections yet?
 
 `/api/pulse/selections` exists and the console writes to it. But the Teams bot and the
 Android app still read `/api/pulse/questions` and ask everyone the whole bank.
@@ -97,7 +116,7 @@ like a bug in the console. See §0c of `docs/PULSE_QUESTIONS_BACKEND.md`.
 
 ---
 
-## 6. Two small ones, both outstanding a while
+## 5. Two small ones, both outstanding a while
 
 **`department` on each celebrant** — `/api/employees/celebrations` sends none, so the
 console joins against the directory to decide which HRBP may see whom. That join fails

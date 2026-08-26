@@ -47,6 +47,8 @@ export interface Employee {
    * a second pass then.
    */
   hrbpId?: string
+  /** Their line manager. Not an HR account — shown so HR knows who to escalate to. */
+  l1ManagerId?: string
 }
 
 /**
