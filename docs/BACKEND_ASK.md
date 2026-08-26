@@ -116,12 +116,7 @@ like a bug in the console. See §0c of `docs/PULSE_QUESTIONS_BACKEND.md`.
 
 ---
 
-## 5. Three small ones
-
-**`"Attendance"` in the ticket categories.** The bot draws its category list from
-`/api/tickets/categories`. It already has the icon and the hint for Attendance —
-*"Regularisation, missed punches, shift timings and work from home"* — and cannot offer
-it until the list includes it, so employees have nowhere to file a regularisation.
+## 5. Two small ones, both outstanding a while
 
 
 **`department` on each celebrant** — `/api/employees/celebrations` sends none, so the

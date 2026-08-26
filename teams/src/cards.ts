@@ -864,6 +864,11 @@ export function welcomeCard(firstName: string): AdaptiveCard {
  *
  * A category the server adds later falls back to the catch-all rather than showing a
  * broken image — the names come from the API, not from here.
+ *
+ * `Attendance` is here and not in the API's list. It was parked for this phase rather
+ * than dropped, so the entry stays: it costs nothing while the server never sends the
+ * name, and the glyph is already drawn. Nothing renders it until the category is asked
+ * for again.
  */
 const CATEGORY_ICON: Record<string, string> = {
   Payroll: 'payroll',
