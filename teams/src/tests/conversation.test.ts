@@ -416,7 +416,7 @@ describe('the monthly pulse', () => {
 describe('typing instead of pressing', () => {
   const shortcuts: [string, RegExp][] = [
     ['raise a ticket', /about/i],
-    ['my tickets', /with HR|Nothing with HR/i],
+    ['my tickets', /still open|All resolved|Nothing with HR/i],
     ['check in', /how are you today/i],
     ['pulse', /Four questions/i],
   ]

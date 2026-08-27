@@ -355,7 +355,7 @@ describe("HR's reply in the ticket list", () => {
       targetElements?: string[]
     }
     assert.ok(toggle, 'a toggle')
-    assert.match(toggle.title!, /Track this ticket/)
+    assert.match(toggle.title!, /What HR said/)
     for (const target of toggle.targetElements ?? []) assert.ok(hidden.includes(target))
     assert.match(JSON.stringify(card), /Updated from the September run/)
   })
@@ -578,21 +578,59 @@ describe('a ticket row, as the Android list has it', () => {
     comments: [],
   })
 
-  it('marks the status twice — a glyph and the word', () => {
-    // Nothing should depend on colour alone, and a glyph is what makes a stack of
-    // tickets scannable. Same reasoning as item_my_ticket.xml.
-    const card = JSON.stringify(ticketsCard([at('HRG-1', 'RESOLVED')]))
-    assert.match(card, /"text":"✓"/, 'the glyph')
-    assert.match(card, /"text":"Resolved"/, 'and the word')
+  it('states the status once, in words', () => {
+    /*
+     * This used to assert the opposite — that the status was marked twice, as a glyph
+     * and as the word, so nothing depended on colour alone. The second half of that is
+     * still right and is what the word is for.
+     *
+     * The glyph was not carrying it. "!" for a waiting ticket and "⋯" for one in
+     * progress read as an error and a loading state, and with the button beneath also
+     * titled by status, a single row said "In progress" three times.
+     */
+    const one = ticketsCard([at('HRG-1', 'RESOLVED')])
+    const card = JSON.stringify(one)
+    const toggle = [...nodes(one)].find((n) => n.type === 'Action.ToggleVisibility') as {
+      title?: string
+    }
+
+    assert.match(card, /"text":"Resolved"/, 'the word, so nothing rests on colour')
+    assert.ok(!/"text":"✓"/.test(card), 'no glyph')
+    // The timeline behind the toggle has a "Resolved" stop of its own, which is a
+    // different statement — a step in a journey, not a badge. What must not happen is
+    // the button repeating the badge directly beneath it.
+    assert.ok(!/Resolved/.test(toggle.title ?? ''), 'the button does not repeat it')
   })
 
-  it('gives each status its own glyph', () => {
+  it('anchors each row with the category, not the status', () => {
+    // The fact the row was missing. Status is on the meta line; what the ticket is
+    // about was nowhere except inside the subject line.
+    const card = JSON.stringify(ticketsCard([at('HRG-1', 'OPEN')]))
+
+    assert.match(card, /payroll\.png/, 'the category icon')
+    assert.match(card, /"altText":"Payroll"/, 'named for screen readers')
+    assert.ok(!/"text":"!"/.test(card), 'not the old glyph')
+  })
+
+  it('does not promise more rows than it can show', () => {
+    // "34 with HR" over ten rows invites a search for the other twenty-four.
+    const many = Array.from({ length: 34 }, (_, i) => at(`HRG-${i}`, 'OPEN'))
+    const card = JSON.stringify(ticketsCard(many))
+
+    assert.match(card, /34 in all · newest 10 shown/)
+    assert.ok(!/34 with HR/.test(card), 'and does not reuse the OPEN status label')
+  })
+
+  it('leads with the number a person can act on', () => {
     const card = JSON.stringify(
-      ticketsCard([at('HRG-1', 'OPEN'), at('HRG-2', 'IN_PROGRESS'), at('HRG-3', 'RESOLVED')]),
+      ticketsCard([at('HRG-1', 'OPEN'), at('HRG-2', 'RESOLVED')]),
     )
-    assert.match(card, /"text":"!"/)
-    assert.match(card, /"text":"⋯"/)
-    assert.match(card, /"text":"✓"/)
+    assert.match(card, /"text":"1 still open"/)
+  })
+
+  it('says so when nothing is outstanding', () => {
+    const card = JSON.stringify(ticketsCard([at('HRG-1', 'RESOLVED')]))
+    assert.match(card, /All resolved/)
   })
 
   it('monospaces the reference', () => {

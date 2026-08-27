@@ -1254,11 +1254,25 @@ export function ticketsCard(tickets: Ticket[]): AdaptiveCard {
   }
 
   const open = tickets.filter((ticket) => ticket.status !== 'RESOLVED').length
+  /*
+   * The list is capped at ten however many exist, so the header has to say so.
+   * It read "34 with HR" over ten rows, which invites you to look for the other
+   * twenty-four.
+   */
+  const shown = Math.min(tickets.length, 10)
+  const scope =
+    tickets.length > shown
+      ? `${tickets.length} in all · newest ${shown} shown`
+      : 'newest first'
+
   return card([
     header(
       'My tickets',
-      `${tickets.length} with HR`,
-      `${open} still open · newest first`,
+      // The open count leads, because it is the one a person can act on. It also used
+      // to say "34 with HR", which is the same phrase as the OPEN status label on the
+      // rows below — one of them meaning "all of them" and the other "not started".
+      open === 0 ? 'All resolved' : `${open} still open`,
+      scope,
     ),
     body([
       ...tickets.slice(0, TICKETS_IN_CHAT).map((ticket, index) => ticketRow(ticket, index)),
@@ -1296,11 +1310,6 @@ export function ticketsCard(tickets: Ticket[]): AdaptiveCard {
   ])
 }
 
-/** The badge tint behind a status. `good` for done, `warning` for waiting. */
-function statusStyle(status: Ticket['status']): string {
-  return status === 'RESOLVED' ? 'good' : status === 'IN_PROGRESS' ? 'accent' : 'warning'
-}
-
 /** "today", "4 days ago" — how long this has been sitting with HR. */
 function ago(millis: number): string {
   const days = Math.floor((Date.now() - millis) / 86400000)
@@ -1312,20 +1321,21 @@ function ago(millis: number): string {
 }
 
 /**
- * One of the employee's own tickets, laid out like the Android list.
+ * One of the employee's own tickets.
  *
- * The status reads twice on purpose: a glyph on the left for scanning down the stack,
- * and the word on the meta line so nothing depends on colour alone — the same
- * reasoning as `item_my_ticket.xml`, and worth keeping because the two surfaces show
- * the same tickets to the same person.
+ * Each fact is drawn exactly once. The status used to appear three times in a single
+ * row — a tinted disc, the coloured word on the meta line, and again in the button's
+ * title — which is most of why the stack was hard to read: three things competing for
+ * the eye that all said the same word.
+ *
+ * The left anchor is now the **category** icon, the one fact the row was missing. The
+ * disc it replaces held "!" for a waiting ticket and "⋯" for one in progress, which
+ * read as an error and a loading state rather than as status.
  *
  * The reference is monospaced. `HRG-0012` is a thing people read out and type into a
  * search box, and proportional digits make that harder than it needs to be.
  */
 function ticketRow(ticket: Ticket, index: number): unknown {
-  const glyph =
-    ticket.status === 'RESOLVED' ? '✓' : ticket.status === 'IN_PROGRESS' ? '⋯' : '!'
-
   return {
     type: 'Container',
     ...TILE_SURFACE,
@@ -1343,27 +1353,13 @@ function ticketRow(ticket: Ticket, index: number): unknown {
                 verticalContentAlignment: 'Center',
                 items: [
                   {
-                    // A tinted disc with the status in it. Container styles are the
-                    // only fill Adaptive Cards offers, and Teams draws the tint — so
-                    // it follows light and dark without a second palette.
-                    type: 'Container',
-                    style: statusStyle(ticket.status),
-                    roundedCorners: true,
-                    minHeight: '38px',
-                    verticalContentAlignment: 'Center',
-                    spacing: 'None',
-                    items: [
-                      {
-                        type: 'TextBlock',
-                        text: glyph,
-                        size: 'Medium',
-                        weight: 'Bolder',
-                        color: statusColour(ticket.status),
-                        horizontalAlignment: 'Center',
-                        spacing: 'None',
-                        wrap: false,
-                      },
-                    ],
+                    // The same glyph the picker offers when raising one, so a ticket
+                    // looks like the thing that was chosen to create it.
+                    type: 'Image',
+                    url: iconUrl(iconFor(ticket.category)),
+                    width: '32px',
+                    height: '32px',
+                    altText: ticket.category,
                   },
                 ],
               },
@@ -1513,7 +1509,17 @@ function replyBlock(ticket: Ticket, index: number): unknown[] {
       actions: [
         {
           type: 'Action.ToggleVisibility',
-          title: `Track this ticket · ${statusLabel(ticket.status)}`,
+          /*
+           * Named for what is behind it, not for the status.
+           *
+           * It read "Track this ticket · In progress" directly beneath the words
+           * "In progress" — a button whose title repeats the line above it reads as a
+           * status badge somebody made clickable by accident.
+           *
+           * What it actually opens is HR's reply and the ticket's timeline, so it says
+           * so, and says which of the two is worth opening it for.
+           */
+          title: latest ? "What HR said" : 'Track progress',
           targetElements: [id],
         },
       ],
