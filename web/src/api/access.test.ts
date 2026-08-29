@@ -18,7 +18,6 @@ import {
   HR_ROLES,
   RANK,
   can,
-  permissionsOf,
   inScope,
   isConsoleRole,
   isLastHead,
