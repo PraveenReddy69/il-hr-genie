@@ -16,7 +16,7 @@
  * honestly incomplete list beats a complete-looking one that quietly omits birthdays.
  */
 
-import { inScope } from './access'
+import { inScope, scopeOf } from './access'
 import type { Employee } from './types'
 
 /** One person with something to celebrate. Mirrors the bot's shape in teams/src/api.ts. */
@@ -179,12 +179,30 @@ export function upcoming(
   return entries.sort((a, b) => a.inDays - b.inDays || a.isoDate.localeCompare(b.isoDate))
 }
 
-/** Only the departments this account covers. Admin and above see everyone. */
-export function inViewerScope<T extends { department?: string }>(
+/**
+ * Only this account's own people. Admin and above see everyone.
+ *
+ * Unlike the ticket queue, `/api/employees/celebrations` is **not** scoped server-side —
+ * it returns the whole organisation to anybody who asks — so this narrowing is doing
+ * real work rather than duplicating the API's.
+ *
+ * It reads the tag first and the department second, in that order, because that is the
+ * order the API now scopes by. Scoping on department alone left an HRBP seeing nobody:
+ * `departments` is empty on every HRBP account, and an empty scope means nothing by
+ * design.
+ *
+ * A celebrant the directory does not know has neither field and stays hidden. That is
+ * the safe direction: an unknown person shown to everybody is a leak, an unknown person
+ * shown to nobody is a gap somebody will report.
+ */
+export function inViewerScope<T extends { department?: string; hrbpId?: string }>(
   rows: T[],
   viewer: Employee,
 ): T[] {
-  return rows.filter((row) => inScope(viewer, row.department ?? ''))
+  if (scopeOf(viewer) === null) return rows
+  return rows.filter(
+    (row) => row.hrbpId === viewer.employeeId || inScope(viewer, row.department ?? ''),
+  )
 }
 
 /**
@@ -196,8 +214,13 @@ export function inViewerScope<T extends { department?: string }>(
  * will report.
  */
 export function withDepartments(people: Celebrant[], directory: Employee[]): Celebrant[] {
-  const byId = new Map(directory.map((one) => [one.employeeId, one.department]))
-  return people.map((one) => ({ ...one, department: byId.get(one.employeeId) }))
+  const byId = new Map(directory.map((one) => [one.employeeId, one]))
+  return people.map((one) => {
+    const known = byId.get(one.employeeId)
+    // The tag as well as the department: it is what the scope check reads first, and
+    // the celebrations endpoint sends neither.
+    return { ...one, department: known?.department, hrbpId: known?.hrbpId }
+  })
 }
 
 export function totalToday(today: Celebrations): number {

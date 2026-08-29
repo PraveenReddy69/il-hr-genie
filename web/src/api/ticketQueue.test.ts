@@ -39,13 +39,6 @@ const raj = person('HR003', 'HR', { name: 'Raj', departments: ['Brand Marketing'
 const admin = person('HR001', 'HR_ADMIN', { name: 'Admin' })
 const head = person('HR002', 'HR_HEAD', { name: 'Head' })
 
-const staff: Record<string, string> = {
-  EMP1: 'Experience',
-  EMP2: 'Brand Marketing',
-  EMP3: 'Finance',
-}
-const departmentOf = (employeeId: string) => staff[employeeId] ?? ''
-
 const ticket = (over: Partial<Ticket> = {}): Ticket => ({
   id: 'HRG-0001',
   employeeId: 'EMP1',
@@ -87,47 +80,61 @@ describe('who may assign', () => {
 })
 
 describe('an unassigned ticket', () => {
-  it('is in the queue of every HRBP covering that department', () => {
-    expect(visibleTo(ticket(), priya, departmentOf)).toBe(true)
+  /*
+   * Scope is no longer decided here.
+   *
+   * The API scopes the queue by the HRBP tagged on each raiser, and these rows arrive
+   * already narrowed. This module used to re-derive that from `viewer.departments`;
+   * when the API moved to the tag, the stale copy deleted every row and an HRBP with
+   * thirty-six tickets saw an empty queue.
+   */
+  it('is in the queue of whoever the server sent it to', () => {
+    expect(visibleTo(ticket(), priya)).toBe(true)
   })
 
-  it('is not in the queue of an HRBP covering somewhere else', () => {
-    expect(visibleTo(ticket(), raj, departmentOf)).toBe(false)
+  it('does not second-guess the server with a department rule of its own', () => {
+    // Raj covers Brand Marketing and the raiser is in Experience. Once this row has
+    // been handed to him, hiding it is the console overruling the API on a question
+    // the API is the authority on.
+    expect(visibleTo(ticket(), raj)).toBe(true)
   })
 
-  it('is visible to Admin whatever the department', () => {
-    expect(visibleTo(ticket({ employeeId: 'EMP3' }), admin, departmentOf)).toBe(true)
-    expect(visibleTo(ticket({ employeeId: 'EMP3' }), head, departmentOf)).toBe(true)
+  it('is visible to Admin, who is sent everything', () => {
+    expect(visibleTo(ticket({ employeeId: 'EMP3' }), admin)).toBe(true)
+    expect(visibleTo(ticket({ employeeId: 'EMP3' }), head)).toBe(true)
+  })
+
+  it('is not hidden from an HRBP whose departments are empty', () => {
+    // The regression, stated directly. Every HRBP account has `departments: []` today,
+    // and an empty scope means nobody — so the old rule emptied the queue for all of
+    // them at once.
+    const untagged = person('HR009', 'HR', { departments: [] })
+    expect(visibleTo(ticket(), untagged)).toBe(true)
   })
 })
 
 describe('an assigned ticket narrows', () => {
   it('goes to its assignee', () => {
-    expect(visibleTo(ticket({ assigneeId: 'HR000' }), priya, departmentOf)).toBe(true)
+    expect(visibleTo(ticket({ assigneeId: 'HR000' }), priya)).toBe(true)
   })
 
-  it('leaves the queue of everyone else in that department', () => {
-    // The whole feature. Without this, assignment is a label: the rest of the
-    // department still sees it, still replies, and nothing was handed over.
+  it('leaves the queue of everyone else', () => {
+    // The whole feature, and the one narrowing the console still owns: the API does
+    // not apply it yet. Without this, assignment is a label — everyone in scope still
+    // sees the ticket, still replies, and nothing was handed over.
     const alsoExperience = person('HR004', 'HR', { departments: ['Experience'] })
-    expect(visibleTo(ticket({ assigneeId: 'HR000' }), alsoExperience, departmentOf)).toBe(false)
+    expect(visibleTo(ticket({ assigneeId: 'HR000' }), alsoExperience)).toBe(false)
   })
 
   it('reaches an assignee who does not cover that department', () => {
-    // Assigning gives them the ticket, not the department. Raj covers Brand Marketing
-    // and can still be handed an Experience ticket.
-    expect(visibleTo(ticket({ assigneeId: 'HR003' }), raj, departmentOf)).toBe(true)
-  })
-
-  it('does not give that assignee anything else from the department', () => {
-    const another = ticket({ id: 'HRG-0009', employeeId: 'EMP1' })
-    expect(visibleTo(another, raj, departmentOf)).toBe(false)
+    // Assigning gives them the ticket, not the department.
+    expect(visibleTo(ticket({ assigneeId: 'HR003' }), raj)).toBe(true)
   })
 
   it('stays visible to Admin', () => {
     // Somebody has to find a ticket whose assignee is on leave. That is most of what
     // an escalation is.
-    expect(visibleTo(ticket({ assigneeId: 'HR000' }), admin, departmentOf)).toBe(true)
+    expect(visibleTo(ticket({ assigneeId: 'HR000' }), admin)).toBe(true)
   })
 })
 
@@ -139,16 +146,16 @@ describe('the queue as a list', () => {
     ticket({ id: 'D', employeeId: 'EMP1', assigneeId: 'HR003' }),
   ]
 
-  it('shows an HRBP their own and their unassigned', () => {
-    expect(visibleTickets(queue, priya, departmentOf).map((one) => one.id)).toEqual(['A', 'C'])
+  it('shows an HRBP the unassigned rows plus their own', () => {
+    expect(visibleTickets(queue, priya).map((one) => one.id)).toEqual(['A', 'B', 'C'])
   })
 
-  it('shows another HRBP only what was handed to them', () => {
-    expect(visibleTickets(queue, raj, departmentOf).map((one) => one.id)).toEqual(['B', 'D'])
+  it('shows another HRBP the unassigned rows plus theirs', () => {
+    expect(visibleTickets(queue, raj).map((one) => one.id)).toEqual(['A', 'B', 'D'])
   })
 
-  it('shows Admin the lot', () => {
-    expect(visibleTickets(queue, admin, departmentOf)).toHaveLength(4)
+  it('shows Admin the lot, assigned elsewhere or not', () => {
+    expect(visibleTickets(queue, admin)).toHaveLength(4)
   })
 })
 

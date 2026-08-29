@@ -180,6 +180,21 @@ describe('scoping the list to an HRBP', () => {
     expect(inViewerScope(rows, admin)).toHaveLength(3)
   })
 
+  it('keeps their own people whatever the department', () => {
+    /*
+     * The tag, which is how the API scopes. Scoping on department alone showed an
+     * HRBP nobody: `departments` is empty on every HRBP account today, and an empty
+     * scope means nobody by design.
+     */
+    const tagged = [
+      { department: 'Finance', name: 'mine', hrbpId: hrbp.employeeId },
+      { department: 'Finance', name: 'somebody else’s', hrbpId: 'HR999' },
+    ]
+    const unscoped = { ...hrbp, departments: [] }
+
+    expect(inViewerScope(tagged, unscoped).map((one) => one.name)).toEqual(['mine'])
+  })
+
   it('hides somebody the directory does not know from a scoped account', () => {
     // The safe direction. An unknown person shown to everybody is the leak; shown to
     // nobody, it is a gap that gets reported.

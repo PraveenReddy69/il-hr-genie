@@ -107,21 +107,13 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
       .catch(() => setPeople([]))
   }, [])
 
-  const departmentOf = useMemo(() => {
-    const byId = new Map(people.map((one) => [one.employeeId, one.department]))
-    return (employeeId: string) => byId.get(employeeId) ?? ''
-  }, [people])
-
   const employeeById = useMemo(() => new Map(people.map((one) => [one.employeeId, one])), [people])
 
   /** HR accounts a ticket can be handed to. Admins included: they cover holidays. */
   const hrAccounts = useMemo(() => people.filter((one) => isConsoleRole(one.role)), [people])
 
   /** Everything this account may see, before either filter. */
-  const mine = useMemo(
-    () => visibleTickets(tickets ?? [], viewer, departmentOf),
-    [tickets, viewer, departmentOf],
-  )
+  const mine = useMemo(() => visibleTickets(tickets ?? [], viewer), [tickets, viewer])
 
   const now = Date.now()
 

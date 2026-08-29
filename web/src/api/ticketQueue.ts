@@ -21,7 +21,7 @@
  * rather than a boundary.
  */
 
-import { RANK, can, inScope } from './access'
+import { RANK, can } from './access'
 import type { Employee } from './types'
 import type { Ticket } from './types'
 
@@ -38,34 +38,38 @@ export function canAssign(who: Employee | null): boolean {
 /**
  * Whether one ticket should be in this person's queue at all.
  *
- * Admin and above see everything — somebody has to be able to find a ticket whose
- * assignee is on leave, and that is most of what an escalation is.
+ * **Scope is the server's answer, not ours.** The rows handed to this function are
+ * already the ones this account may see: the API scopes the queue by the HRBP tagged on
+ * each raiser. This used to re-derive that from `viewer.departments`, and when the API
+ * moved to the tag, that copy of the rule went stale and silently deleted every row —
+ * an HRBP with 36 tickets saw an empty queue, and the console looked broken while the
+ * backend was right. A client cannot enforce scope anyway; a filtered list from an
+ * unfiltered endpoint is a courtesy, and re-implementing the rule bought nothing but
+ * the chance to disagree with the server.
  *
- * For an HRBP:
- *   - assigned to them        → yes, whatever the department
+ * What is left is the one narrowing the console owns:
+ *
+ *   - assigned to them         → yes
  *   - assigned to someone else → no
- *   - unassigned              → yes, if the raiser's department is theirs
+ *   - unassigned               → yes
  *
  * The middle case is the whole feature. Without it "assign" is decoration: everyone in
- * the department still sees the ticket, still gets to reply, and the assignment is a
- * label rather than a handover.
+ * scope still sees the ticket, still gets to reply, and the assignment is a label rather
+ * than a handover. It stays here because the API does not apply it yet — see §4c of
+ * docs/BACKEND_HANDOVER.md — and the day it does, this becomes belt and braces rather
+ * than the only thing holding.
+ *
+ * Admin and above see everything, including tickets assigned to somebody else: finding
+ * the one whose owner is on leave is most of what an escalation is.
  */
-export function visibleTo(
-  ticket: Ticket,
-  viewer: Employee,
-  departmentOf: (employeeId: string) => string,
-): boolean {
+export function visibleTo(ticket: Ticket, viewer: Employee): boolean {
   if (RANK[viewer.role] >= RANK.HR_ADMIN) return true
   if (ticket.assigneeId) return ticket.assigneeId === viewer.employeeId
-  return inScope(viewer, departmentOf(ticket.employeeId))
+  return true
 }
 
-export function visibleTickets(
-  tickets: Ticket[],
-  viewer: Employee,
-  departmentOf: (employeeId: string) => string,
-): Ticket[] {
-  return tickets.filter((ticket) => visibleTo(ticket, viewer, departmentOf))
+export function visibleTickets(tickets: Ticket[], viewer: Employee): Ticket[] {
+  return tickets.filter((ticket) => visibleTo(ticket, viewer))
 }
 
 /**
