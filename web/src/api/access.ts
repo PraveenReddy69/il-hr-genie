@@ -100,30 +100,18 @@ export const BUNDLES: Record<Role, Permission[]> = {
 export const HEAD_GRANTABLE_ONLY: Permission[] = ['access.manage', 'roles.assign']
 
 /**
- * Permissions the console adds to a server list that predates them.
+ * What an account can actually do. Server-resolved when present, bundle otherwise.
  *
- * `celebrations.view` was specified after the API implemented its permission set, so
- * the server sends a list without it and the Celebrations page disappears for everyone
- * — a working feature removed by a spec gap rather than by a decision.
+ * There was a bridge here that granted `celebrations.view` alongside `people.view`,
+ * because the API's permission set predated that string and sending a list without it
+ * removed a working page for everyone. The API includes it as of 29 August 2026, so the
+ * bridge is gone — as its own comment said it should be the moment this happened.
  *
- * Granted alongside `people.view` because it is the same kind of read of the same
- * directory, and no role is meant to be without it.
- *
- * **Delete this the moment the API includes `celebrations.view`.** It is a bridge over
- * one missing string, not a licence for the console to grant itself anything.
+ * Nothing is added to a list the server sends. That is the point: the server decides,
+ * and a console that quietly tops up its own permissions is one nobody can reason about.
  */
-const IMPLIED: readonly [Permission, Permission][] = [['people.view', 'celebrations.view']]
-
-/** What an account can actually do. Server-resolved when present, bundle otherwise. */
 export function permissionsOf(who: Employee): Permission[] {
-  const sent = who.permissions
-  if (!sent) return BUNDLES[who.role] ?? []
-
-  const filled = [...sent]
-  for (const [given, implied] of IMPLIED) {
-    if (filled.includes(given) && !filled.includes(implied)) filled.push(implied)
-  }
-  return filled
+  return who.permissions ?? BUNDLES[who.role] ?? []
 }
 
 export function can(who: Employee | null, permission: Permission): boolean {

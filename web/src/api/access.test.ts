@@ -18,6 +18,7 @@ import {
   HR_ROLES,
   RANK,
   can,
+  permissionsOf,
   inScope,
   isConsoleRole,
   isLastHead,
@@ -297,11 +298,14 @@ describe('the sign-in gate', () => {
   })
 })
 
-describe('a permission list from a server that predates a permission', () => {
+describe('a permission list the server sent', () => {
   /*
-   * The API sends its own list now. It was built from the spec as it stood, so it has
-   * no `celebrations.view` — and because the server list wins over the bundle, a page
-   * that works disappeared for everybody.
+   * The API's list is authoritative and nothing is added to it.
+   *
+   * A bridge used to sit here granting `celebrations.view` alongside `people.view`,
+   * because the API's permission set predated that string and a list without it removed
+   * a working page for everybody. The API includes it as of 29 August 2026, so the
+   * bridge went — and these tests changed from proving it worked to proving it is gone.
    */
   const sentByServer: Permission[] = [
     'dashboard.view',
@@ -309,35 +313,36 @@ describe('a permission list from a server that predates a permission', () => {
     'tickets.resolve',
     'people.view',
     'attendance.view',
+    'celebrations.view',
     'trends.view',
     'analytics.view',
     'holidays.view',
     'pulse.view',
   ]
 
-  it('keeps Celebrations reachable for anyone who can read the directory', () => {
+  it('is used exactly as sent', () => {
     const hrbp = person('HYD606840', 'HR', { permissions: sentByServer })
-    expect(can(hrbp, 'celebrations.view')).toBe(true)
+    expect(permissionsOf(hrbp)).toEqual(sentByServer)
   })
 
-  it('adds nothing else the server withheld', () => {
-    // The bridge covers one missing string. It must not become a way for the console
-    // to grant itself the administrative half.
+  it('grants nothing the server withheld', () => {
     const hrbp = person('HYD606840', 'HR', { permissions: sentByServer })
     expect(can(hrbp, 'holidays.edit')).toBe(false)
     expect(can(hrbp, 'pulse.publish')).toBe(false)
     expect(can(hrbp, 'access.manage')).toBe(false)
   })
 
-  it('does not invent a read for somebody who cannot read the directory', () => {
+  it('withholds a page when the server withholds its permission', () => {
+    // The behaviour the bridge was working around, now allowed to happen. If a page
+    // vanishes, the list is the thing to fix — not the console.
     const stripped = person('X', 'HR', { permissions: ['dashboard.view'] as Permission[] })
     expect(can(stripped, 'celebrations.view')).toBe(false)
+    expect(can(stripped, 'people.view')).toBe(false)
   })
 
-  it('leaves a list that already has it alone', () => {
-    const full = person('X', 'HR', {
-      permissions: ['people.view', 'celebrations.view'] as Permission[],
-    })
-    expect(permissionsOf(full)).toEqual(['people.view', 'celebrations.view'])
+  it('falls back to the bundle only when no list was sent at all', () => {
+    const noList = person('X', 'HR')
+    expect(can(noList, 'celebrations.view')).toBe(true)
+    expect(can(noList, 'holidays.edit')).toBe(false)
   })
 })
