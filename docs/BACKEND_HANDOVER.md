@@ -41,8 +41,9 @@ Roles, in rank order: `EMPLOYEE` → `HR` (HRBP) → `HR_ADMIN` (Admin) → `HR_
 | Holiday regions route | **Fixed 29 Aug.** Returns `["All India","Telangana"]`. |
 | `celebrations.view` | **Fixed 29 Aug.** Now in the `HR` permission list. |
 | **Auto-assign on ticket creation** | **Not seen yet.** Every ticket is `assigneeId: null`. Section 4a. |
-| **Employees with no HRBP tagged** | **New gap** created by the fix. Section 3b. |
-| `tickets.assign` on `HR_ADMIN` | Unverified — needs an Admin token. Section 5. |
+| **177 employees have no HRBP tagged** | **New gap**, and it is not theoretical. Section 3b. |
+| `tickets.assign` on `HR_ADMIN` | **Confirmed 29 Aug.** All 16 Admin permissions present. |
+| `PATCH .../assignee` | **Confirmed 29 Aug.** Route reached, guard passes for an Admin. |
 
 ---
 
@@ -82,9 +83,26 @@ Two ways to close it, either is fine:
 - Or guarantee at the data level that every active employee has an `hrbpId`, and give us
   a way to see the ones that do not.
 
-**What we would like to know either way: how many active employees currently have no
-`hrbpId`?** If the answer is zero, this is theoretical. If it is not, those people are
-silently unsupported right now.
+### Measured 29 August, with an Admin bearer
+
+`GET /api/employees` as `HR_ADMIN` returns the whole organisation, so this is countable:
+
+| | |
+|---|---|
+| Employees in the directory | **2,247** |
+| Distinct HRBPs tagged | **7** |
+| **Employees with no `hrbpId`** | **177** |
+
+So it is not theoretical. **177 people are currently supported by nobody** as far as this
+system is concerned: they appear in no HRBP's directory, and the moment one of them
+raises a ticket it lands in nobody's queue.
+
+None of the 177 has raised a ticket yet, which is the only reason this has not been
+noticed. That is luck rather than design.
+
+The largest HRBP covers 529 people and the smallest 143, so the tagging is real and
+mostly complete — this looks like a gap in the data rather than a missing feature. Worth
+a query on your side either way.
 
 ---
 
@@ -114,22 +132,33 @@ Nothing re-runs the rule after creation. An Admin who moves a ticket meant to, a
 rule that quietly puts it back is worse than no rule.
 
 **Status on 29 August: not seen yet.** `assigneeId` is now a real field on every ticket,
-which is the half that was missing — but all 36 come back `null`, including `HRG-0036`,
-raised by `EMP3801`, whose `hrbpId` is `HYD606840`.
+which is the half that was missing — but all 37 in the org come back `null`, including
+`HRG-0036`, raised by `EMP3801` whose `hrbpId` is `HYD606840`.
 
 That does not prove 4a is missing: all 36 predate the change, and the rule applies at
 creation. **Raising one new ticket settles it.** If it comes back with
 `assigneeId: "HYD606840"`, this is done.
 
-**Please also backfill the existing ones.** Thirty-six tickets sitting at `null` stay in
-the "needs an owner" pile forever unless an Admin routes each by hand. Same rule, same
+**Please also backfill the existing ones.** All 37 sit at `null` and stay in the "needs an
+owner" pile forever unless an Admin routes each by hand. Same rule, same
 `assignedBy: "SYSTEM"`.
 
 ### 4b. `PATCH /api/tickets/{id}/assignee` — the route now exists
 
-It answered `404` on 26 August and answers `401` unauthenticated on 29 August, so it is
-built. We have not exercised it against real data — that needs an Admin token, and we
-would rather not reassign somebody's live ticket to find out.
+**Confirmed working 29 August.** Called as `HR_ADMIN` against a deliberately invalid
+reference so that nothing could be mutated:
+
+```http
+PATCH /api/tickets/HRG-DOES-NOT-EXIST/assignee
+{ "assigneeId": "HYD606840" }
+
+→ 404 {"message":"Ticket 'HRG-DOES-NOT-EXIST' not found."}
+```
+
+That is the handler replying, not a missing route, and the Admin's `tickets.assign`
+passed the guard on the way in. We have not written a real assignment — that would move
+somebody's live ticket into an HRBP's queue and out of everyone else's, which is not ours
+to do uninvited.
 
 ```http
 PATCH /api/tickets/{id}/assignee
@@ -169,7 +198,7 @@ Stated in one line: **assignment narrows, it never widens.**
 
 ---
 
-## 5. Two permission strings are missing
+## 5. Permissions — done
 
 The console prefers the `permissions` array you send over its own defaults — that is the
 point of sending it — so anything absent is switched off.
@@ -184,8 +213,8 @@ point of sending it — so anything absent is switched off.
 **`celebrations.view` — done 29 August.** It is in the `HR` list now, so the temporary
 bridge the console was carrying comes out.
 
-**`tickets.assign` on `HR_ADMIN` — unverified.** We have only checked an `HR` token,
-which would not carry it either way. Needed before an Admin can use section 4b.
+**`tickets.assign` on `HR_ADMIN` — done 29 August.** The Admin token carries all sixteen
+permissions, exactly the list below. Section 5 is closed.
 
 Expected for `HR_ADMIN`:
 
@@ -315,13 +344,14 @@ runs after routing, so the two are reliably different.
 ## 10. What is left
 
 1. **Section 4a** — raise one new ticket and tell us whether it comes back assigned. If
-   not, the rule; if so, a backfill for the existing 36.
-2. **Section 3b** — how many active employees have no `hrbpId`, and which way you would
-   rather close that gap.
-3. **Section 5** — confirm `tickets.assign` is on `HR_ADMIN`.
-4. **Section 6b** — cache headers on authenticated routes. Small, and still open.
-5. **Section 6c** — pulse delivery reading selections.
-6. **Section 7** — the three questions, whenever suits.
+   not, the rule; either way, a backfill for the existing 37.
+2. **Section 3b** — the 177 employees with no `hrbpId`. Tag them, or cover them by
+   department, but they are unsupported until one or the other.
+3. **Section 6b** — cache headers on authenticated routes. Small, and still open.
+4. **Section 6c** — pulse delivery reading selections.
+5. **Section 7** — the three questions, whenever suits.
+
+Sections 3a, 4b, 5 and 6a are done.
 
 Everything else on this list is done.
 
