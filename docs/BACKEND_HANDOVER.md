@@ -40,7 +40,7 @@ Roles, in rank order: `EMPLOYEE` → `HR` (HRBP) → `HR_ADMIN` (Admin) → `HR_
 | Ticket queue for HRBPs | **Fixed 29 Aug.** 36 tickets, none raised from outside that set. |
 | Holiday regions route | **Fixed 29 Aug.** Returns `["All India","Telangana"]`. |
 | `celebrations.view` | **Fixed 29 Aug.** Now in the `HR` permission list. |
-| **Auto-assign on ticket creation** | **Not seen yet.** Every ticket is `assigneeId: null`. Section 4a. |
+| **Auto-assign on ticket creation** | **Not implemented.** Tested 31 Aug with a fresh ticket — no assignee. Section 4a. |
 | **177 employees have no HRBP tagged** | **New gap**, and it is not theoretical. Section 3b. |
 | `tickets.assign` on `HR_ADMIN` | **Confirmed 29 Aug.** All 16 Admin permissions present. |
 | `PATCH .../assignee` | **Confirmed 29 Aug.** Route reached, guard passes for an Admin. |
@@ -134,17 +134,25 @@ Record it as the system's doing, so it does not read back as a person's decision
 Nothing re-runs the rule after creation. An Admin who moves a ticket meant to, and a
 rule that quietly puts it back is worse than no rule.
 
-**Status on 29 August: not seen yet.** `assigneeId` is now a real field on every ticket,
-which is the half that was missing — but all 37 in the org come back `null`, including
-`HRG-0036`, raised by `EMP3801` whose `hrbpId` is `HYD606840`.
+### Tested 31 August: not implemented
 
-That does not prove 4a is missing: all 36 predate the change, and the rule applies at
-creation. **Raising one new ticket settles it.** If it comes back with
-`assigneeId: "HYD606840"`, this is done.
+On 29 August every ticket came back `assigneeId: null`, but all of them predated the
+change, so it proved nothing — the rule applies at creation. We said one new ticket would
+settle it.
 
-**Please also backfill the existing ones.** All 37 sit at `null` and stay in the "needs an
-owner" pile forever unless an Admin routes each by hand. Same rule, same
-`assignedBy: "SYSTEM"`.
+**`HRG-0040` was raised from the bot by `EMP3801` on 31 August. It came back with no
+assignee.**
+
+`EMP3801`'s `hrbpId` is `HYD606840` (Deepak Patil), an active `HR` account. There is
+nothing ambiguous left in the inputs: the tag is on the employee record, the field is on
+the ticket, and creation did not connect them.
+
+It appears in Deepak's queue — correctly, because the raiser is tagged to him — as
+"Needs an owner". So the scoping from section 3 is doing its job and this is the one
+remaining piece.
+
+**Please also backfill.** All 38 now sit at `null` and stay in the "needs an owner" pile
+forever unless somebody routes each by hand. Same rule, same `assignedBy: "SYSTEM"`.
 
 ### 4b. `PATCH /api/tickets/{id}/assignee` — the route now exists
 
@@ -429,12 +437,13 @@ runs after routing, so the two are reliably different.
 
 ## 10. What is left
 
-1. **Sections 4d, 4e and 4f** — the assignment feature, in three small pieces. Two
+1. **Section 4a** — auto-assignment on creation. Now tested and confirmed missing, and
+   it is the feature everything else in section 4 exists to support. Plus a backfill for
+   the 38 already sitting unowned.
+2. **Sections 4d, 4e and 4f** — the rest of assignment, in three small pieces. Two
    permission lists to correct in opposite directions (an Admin cannot resolve a ticket
    their list grants; an HRBP cannot assign one and now should), and one endpoint that
    lists HR accounts, without which an HRBP can only assign to themselves.
-2. **Section 4a** — raise one new ticket and tell us whether it comes back assigned. If
-   not, the rule; either way, a backfill for the existing 37.
 3. **Section 3b** — the 177 employees with no `hrbpId`. Tag them, or cover them by
    department, but they are unsupported until one or the other.
 4. **Section 6b** — cache headers on authenticated routes. Small, and still open.
