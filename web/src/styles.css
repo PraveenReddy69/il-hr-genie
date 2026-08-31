@@ -1878,9 +1878,9 @@ textarea:focus {
 /*
  * A stat is a filter, so it has to look like one before it is clicked.
  *
- * `text-align: left` and the font reset are because this is a <button> now: without
- * them the browser centres the label and drops to its own UI font, and four cards
- * quietly stop matching the rest of the page.
+ * `text-align: left` and the font reset are because this is a <button>: without them
+ * the browser centres the label and drops to its own UI font, and four cards quietly
+ * stop matching the rest of the page.
  */
 .stat {
   background: var(--surface);
@@ -1896,25 +1896,47 @@ textarea:focus {
   font: inherit;
   color: inherit;
   cursor: pointer;
-  transition: background 120ms ease;
+  transition:
+    background 140ms ease,
+    color 140ms ease;
 }
 
 .stat:hover {
   background: var(--ink-05);
 }
 
-.stat:focus-visible {
-  outline: 2px solid var(--blue-primary);
-  outline-offset: -2px;
+/*
+ * The rail carries the selection.
+ *
+ * It is already on every card as a short inset mark; selecting one runs it the full
+ * height and thickens it. That is the whole state change at the structural level — no
+ * border appears, nothing shifts, and the four cards keep the same rhythm.
+ */
+.stat::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 14px;
+  bottom: 14px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--stat-accent, var(--ink-12));
+  transition:
+    top 140ms ease,
+    bottom 140ms ease,
+    width 140ms ease;
 }
 
 /*
- * The selected card carries its own accent rather than a generic highlight: the tint
- * behind it is the colour already on its rail and its icon, so "on" reads as more of
- * the same card instead of a different component.
+ * Selected: a wash at a tenth of the accent, and the number takes the colour.
+ *
+ * The first version tinted the whole card, turned the icon white and coloured both the
+ * label and the sub-label. Four things changed at once and the figure — the only part
+ * anybody reads — stayed grey. Now the number carries it and everything else holds
+ * still, which is what makes the state legible rather than loud.
  */
 .stat--on {
-  background: var(--stat-tint, var(--ink-05));
+  background: color-mix(in srgb, var(--stat-accent) 7%, var(--surface));
 }
 
 .stat--on::before {
@@ -1924,12 +1946,35 @@ textarea:focus {
   border-radius: 0;
 }
 
-.stat--on .stat__label,
-.stat--on .stat__sub {
-  color: var(--stat-accent, var(--text-secondary));
+.stat--on .stat__value {
+  /*
+   * The accent, taken down towards ink until it is readable.
+   *
+   * The raw accents are tints chosen to sit behind icons — --orange-warn is #f08a5d,
+   * about 2.3:1 on white, which would make the one element anybody actually reads the
+   * hardest thing on the card. Mixed 70/30 with ink they clear 4:1 while still being
+   * plainly the card's own colour.
+   */
+  color: color-mix(in srgb, var(--stat-accent) 70%, var(--ink));
 }
 
 .stat--on .stat__icon {
+  background: color-mix(in srgb, var(--stat-accent) 20%, var(--surface));
+}
+
+/*
+ * The keyboard ring follows the card's own accent.
+ *
+ * It was a blue outline, which drew a blue rectangle around an orange card and read as
+ * a rendering fault rather than focus. Inset, so it never overlaps the neighbouring
+ * cell across the 1px divider.
+ */
+.stat:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--stat-accent, var(--blue-primary));
+}
+
+.stat__icon {
   background: var(--surface);
 }
 
@@ -1963,6 +2008,7 @@ textarea:focus {
 .stat__label {
   font-size: 12px;
   color: var(--text-secondary);
+  letter-spacing: 0.01em;
 }
 
 .stat__value {
@@ -1971,6 +2017,9 @@ textarea:focus {
   letter-spacing: -0.02em;
   line-height: 1.1;
   margin: 2px 0;
+  /* Four figures in a row read as one instrument when the digits share a width. */
+  font-variant-numeric: tabular-nums;
+  transition: color 140ms ease;
 }
 
 .stat__sub {
