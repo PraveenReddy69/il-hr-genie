@@ -55,6 +55,7 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
   const [tickets, setTickets] = useState<Ticket[] | null>(null)
   const [people, setPeople] = useState<Employee[]>([])
   const [assignee, setAssignee] = useState<string>(ANY_ASSIGNEE)
+  const [view, setView] = useState<View>('ALL')
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState<Ticket | null>(null)
   const [hintShown, setHintShown] = useState(() => localStorage.getItem(HINT_KEY) !== 'dismissed')
@@ -150,13 +151,30 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
       )
     : mine
 
-  const filtered = byAssignee(matching, assignee, viewer.employeeId)
+  const byOwner = byAssignee(matching, assignee, viewer.employeeId)
+  const filtered = byOwner.filter((one) => inView(one, view, now))
 
-  const groups = TICKET_STATUSES.map((status) => ({
-    key: status,
-    label: STATUS_LABEL[status],
-    rows: filtered.filter((one) => one.status === status),
-  }))
+  /*
+   * Grouped only while looking at everything.
+   *
+   * Four status headings over one scrolling list is what made a queue of thirty
+   * unreadable: the thing you came for was somewhere below two headings you did not
+   * care about. Once a card is chosen the heading would only repeat the card, so the
+   * rows stand on their own.
+   */
+  const groups =
+    view === 'ALL'
+      ? TICKET_STATUSES.map((status) => ({
+          key: status,
+          label: STATUS_LABEL[status],
+          rows: filtered.filter((one) => one.status === status),
+        }))
+      : [{ key: view, label: '', rows: filtered }]
+
+  /** Pick a card, or press the one already on to go back to everything. */
+  function pick(next: View) {
+    setView((current) => (current === next ? 'ALL' : next))
+  }
 
   function applyUpdate(updated: Ticket) {
     setTickets((current) =>
@@ -174,7 +192,18 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
       <div className="page-head">
         <h1>Ticket queue</h1>
         <p>
-          {counts.all} in your queue · {counts.OPEN + counts.IN_PROGRESS} still open
+          {view === 'ALL' ? (
+            <>
+              {counts.all} in your queue · {counts.OPEN + counts.IN_PROGRESS} still open
+            </>
+          ) : (
+            <>
+              {VIEW_LABEL[view]} · {filtered.length} of {counts.all}{' '}
+              <button className="linkish" onClick={() => setView('ALL')}>
+                Show all
+              </button>
+            </>
+          )}
         </p>
       </div>
 
@@ -198,6 +227,8 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
           accent="var(--orange-warn)"
           tint="var(--orange-tint-14)"
           icon={<OpenIcon />}
+          on={view === 'OPEN'}
+          onPick={() => pick('OPEN')}
         />
         <Stat
           label="In progress"
@@ -206,6 +237,8 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
           accent="var(--blue-primary)"
           tint="var(--blue-tint-12)"
           icon={<ProgressIcon />}
+          on={view === 'IN_PROGRESS'}
+          onPick={() => pick('IN_PROGRESS')}
         />
         <Stat
           label="Unassigned"
@@ -216,6 +249,8 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
           accent={counts.unassigned > 0 ? 'var(--orange-warn)' : 'var(--ink-12)'}
           tint={counts.unassigned > 0 ? 'var(--orange-tint-14)' : 'var(--ink-05)'}
           icon={<UnownedIcon />}
+          on={view === 'UNASSIGNED'}
+          onPick={() => pick('UNASSIGNED')}
         />
         <Stat
           label={`Waiting ${AGEING_DAYS}d+`}
@@ -224,6 +259,8 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
           accent={counts.ageing > 0 ? 'var(--red-risk)' : 'var(--green-ok)'}
           tint={counts.ageing > 0 ? 'rgba(229, 72, 77, 0.12)' : 'var(--green-tint-14)'}
           icon={<WaitingIcon />}
+          on={view === 'AGEING'}
+          onPick={() => pick('AGEING')}
         />
       </div>
 
@@ -244,12 +281,6 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
               onClick={() => setAssignee(ANY_ASSIGNEE)}
             >
               {ANY_ASSIGNEE}
-            </button>
-            <button
-              className={`seg__item ${assignee === UNASSIGNED ? 'seg__item--on' : ''}`}
-              onClick={() => setAssignee(UNASSIGNED)}
-            >
-              Unassigned {counts.unassigned}
             </button>
             <button
               className={`seg__item ${assignee === MINE ? 'seg__item--on' : ''}`}
@@ -286,19 +317,26 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
             <Empty style={{ marginTop: 14 }}>
               {term
                 ? `Nothing matches “${query.trim()}”.`
-                : assignee === UNASSIGNED
+                : view === 'UNASSIGNED'
                   ? 'Everything open has somebody on it.'
-                  : 'Nothing here right now.'}
+                  : view === 'AGEING'
+                    ? `Nothing has been waiting ${AGEING_DAYS} days or more.`
+                    : view === 'ALL'
+                      ? 'Nothing here right now.'
+                      : `Nothing is ${VIEW_LABEL[view].toLowerCase()}.`}
             </Empty>
           )}
 
           {groups.map((group) =>
             group.rows.length === 0 ? null : (
               <div key={group.key}>
-                <div className={`qgroup qgroup--${group.key}`}>
-                  {group.label}
-                  <span className="qgroup__count">{group.rows.length}</span>
-                </div>
+                {/* Only when looking at everything — otherwise it repeats the card. */}
+                {group.label !== '' && (
+                  <div className={`qgroup qgroup--${group.key}`}>
+                    {group.label}
+                    <span className="qgroup__count">{group.rows.length}</span>
+                  </div>
+                )}
 
                 {group.rows.map((ticket) => {
                   const owner = ticket.assigneeId ? employeeById.get(ticket.assigneeId) : undefined
@@ -396,6 +434,16 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
   )
 }
 
+/**
+ * One figure, and the filter behind it.
+ *
+ * These were four numbers you could read and not act on, above a list showing every
+ * status at once. Seeing "In progress 10" and then hunting for those ten under three
+ * other headings is the work the card should have done.
+ *
+ * A button, not a div with a handler: it lands in the tab order and answers the space
+ * bar, which matters on a screen HR drives all day.
+ */
 function Stat({
   label,
   value,
@@ -403,6 +451,8 @@ function Stat({
   accent,
   tint,
   icon,
+  on,
+  onPick,
 }: {
   label: string
   value: number
@@ -410,11 +460,16 @@ function Stat({
   accent: string
   tint: string
   icon: ReactNode
+  on: boolean
+  onPick: () => void
 }) {
   return (
-    <div
-      className="stat"
+    <button
+      type="button"
+      className={`stat ${on ? 'stat--on' : ''}`}
       style={{ '--stat-accent': accent, '--stat-tint': tint } as CSSProperties}
+      aria-pressed={on}
+      onClick={onPick}
     >
       <span className="stat__icon">{icon}</span>
       <div>
@@ -422,7 +477,7 @@ function Stat({
         <div className="stat__value">{value}</div>
         <div className="stat__sub">{sub}</div>
       </div>
-    </div>
+    </button>
   )
 }
 
@@ -468,6 +523,42 @@ const REFRESH_MS = 30_000
  * appears on everything is a badge that says nothing.
  */
 const AGEING_DAYS = 3
+
+/**
+ * Which slice of the queue is on screen.
+ *
+ * Two of these are statuses and two cut across them — a ticket can be unassigned and
+ * open, or in progress and waiting a week. They share one selector because only one
+ * question is being asked: what am I looking at? Two filters that each half-apply is
+ * how the old screen ended up showing thirty rows under four headings.
+ */
+type View = 'ALL' | 'OPEN' | 'IN_PROGRESS' | 'UNASSIGNED' | 'AGEING'
+
+const VIEW_LABEL: Record<View, string> = {
+  ALL: 'All',
+  OPEN: 'Open',
+  IN_PROGRESS: 'In progress',
+  UNASSIGNED: 'Unassigned',
+  AGEING: `Waiting ${AGEING_DAYS}d+`,
+}
+
+function inView(ticket: Ticket, view: View, nowMillis: number): boolean {
+  switch (view) {
+    case 'ALL':
+      return true
+    case 'OPEN':
+      return ticket.status === 'OPEN'
+    case 'IN_PROGRESS':
+      return ticket.status === 'IN_PROGRESS'
+    // Resolved tickets are excluded from both of these, matching the counts on the
+    // cards. A closed ticket has no owner and does not need one, and it has stopped
+    // waiting for anybody.
+    case 'UNASSIGNED':
+      return !ticket.assigneeId && ticket.status !== 'RESOLVED'
+    case 'AGEING':
+      return daysWaiting(ticket, nowMillis) >= AGEING_DAYS
+  }
+}
 
 /** Dismissed for good, not for this visit — it is only news once. */
 const HINT_KEY = 'hr-genie-queue-hint'

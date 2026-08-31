@@ -1875,6 +1875,13 @@ textarea:focus {
   overflow: hidden;
 }
 
+/*
+ * A stat is a filter, so it has to look like one before it is clicked.
+ *
+ * `text-align: left` and the font reset are because this is a <button> now: without
+ * them the browser centres the label and drops to its own UI font, and four cards
+ * quietly stop matching the rest of the page.
+ */
 .stat {
   background: var(--surface);
   padding: 18px 20px;
@@ -1882,6 +1889,48 @@ textarea:focus {
   align-items: center;
   gap: 14px;
   position: relative;
+  width: 100%;
+  border: 0;
+  margin: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.stat:hover {
+  background: var(--ink-03, rgba(15, 23, 42, 0.03));
+}
+
+.stat:focus-visible {
+  outline: 2px solid var(--blue-primary);
+  outline-offset: -2px;
+}
+
+/*
+ * The selected card carries its own accent rather than a generic highlight: the tint
+ * behind it is the colour already on its rail and its icon, so "on" reads as more of
+ * the same card instead of a different component.
+ */
+.stat--on {
+  background: var(--stat-tint, var(--ink-05));
+}
+
+.stat--on::before {
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  border-radius: 0;
+}
+
+.stat--on .stat__label,
+.stat--on .stat__sub {
+  color: var(--stat-accent, var(--text-secondary));
+}
+
+.stat--on .stat__icon {
+  background: var(--surface);
 }
 
 .stat::before {
@@ -2092,4 +2141,30 @@ textarea:focus {
   .stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+/*
+ * A button that reads as a link, for the one inside the page-head sentence.
+ * Anchor-like affordance without an anchor, because it navigates nothing.
+ */
+.linkish {
+  border: 0;
+  background: none;
+  padding: 0;
+  margin-left: 4px;
+  font: inherit;
+  color: var(--blue-primary);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.linkish:hover {
+  text-decoration-thickness: 2px;
+}
+
+.linkish:focus-visible {
+  outline: 2px solid var(--blue-primary);
+  outline-offset: 2px;
+  border-radius: 3px;
 }
