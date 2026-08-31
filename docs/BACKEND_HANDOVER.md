@@ -46,6 +46,7 @@ Roles, in rank order: `EMPLOYEE` → `HR` (HRBP) → `HR_ADMIN` (Admin) → `HR_
 | `PATCH .../assignee` | **Confirmed 29 Aug.** Route reached, guard passes for an Admin. |
 | **`PATCH .../status` for an Admin** | **Blocked.** "Only HR can change ticket status", against a list that grants it. Section 4d. |
 | **`tickets.assign` for an HRBP** | **Wanted.** One string on the `HR` list. Section 4e. |
+| **No way to list HR accounts** | `/api/employees/hr` is 404, so an HRBP's picker is empty but for themselves. Section 4f. |
 
 ---
 
@@ -237,6 +238,32 @@ The guard is right in both cases — the lists are what need changing.
 
 ---
 
+### 4f. There is no way to list HR accounts
+
+`GET /api/employees/hr` is a 404, so the console builds its list of HR accounts by
+taking `/api/employees` and filtering on `role`.
+
+That works for an Admin, whose directory is the whole organisation. It does not work for
+an HRBP, whose directory is the people *they look after* — and an HRBP is not one of
+their own people, so the list comes back with none of their colleagues in it and, until
+we patched around it, without them either.
+
+**An endpoint returning the console accounts would fix it:**
+
+```jsonc
+GET /api/employees/hr
+[ { "employeeId": "HYD606840", "name": "Deepak Patil", "role": "HR",
+    "designation": "Manager", "officialEmail": "…" } ]
+```
+
+Every account with `role` of `HR`, `HR_ADMIN` or `HR_HEAD`. It is not sensitive — it is
+the list of people the console already names in its own picker — and it is the same list
+whoever asks, so it needs no scoping.
+
+Without it an HRBP can only ever assign a ticket to themselves, which is half a feature.
+
+---
+
 ### 4c. The visibility rule
 
 This is the part a client cannot enforce, and the part that makes assignment a handover
@@ -402,9 +429,10 @@ runs after routing, so the two are reliably different.
 
 ## 10. What is left
 
-1. **Sections 4d and 4e** — two permission lists to correct, in opposite directions.
-   An Admin cannot resolve a ticket their list says they can; an HRBP cannot assign one
-   and now should. Smallest fixes here, and 4d is the most visibly broken.
+1. **Sections 4d, 4e and 4f** — the assignment feature, in three small pieces. Two
+   permission lists to correct in opposite directions (an Admin cannot resolve a ticket
+   their list grants; an HRBP cannot assign one and now should), and one endpoint that
+   lists HR accounts, without which an HRBP can only assign to themselves.
 2. **Section 4a** — raise one new ticket and tell us whether it comes back assigned. If
    not, the rule; either way, a backfill for the existing 37.
 3. **Section 3b** — the 177 employees with no `hrbpId`. Tag them, or cover them by

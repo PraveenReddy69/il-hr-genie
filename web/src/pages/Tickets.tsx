@@ -111,10 +111,36 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
       .catch(() => setPeople([]))
   }, [])
 
-  const employeeById = useMemo(() => new Map(people.map((one) => [one.employeeId, one])), [people])
+  /**
+   * The directory, with the signed-in account folded in.
+   *
+   * `/api/employees` is scoped to the people this account looks after, and an HRBP is
+   * not one of their own people — Deepak's record is tagged to the Admin, so Deepak is
+   * absent from Deepak's directory. A ticket assigned to him then failed to resolve an
+   * owner and the row drew "Needs an owner" over a ticket that plainly had one.
+   */
+  const employeeById = useMemo(() => {
+    const byId = new Map(people.map((one) => [one.employeeId, one]))
+    if (!byId.has(viewer.employeeId)) byId.set(viewer.employeeId, viewer)
+    return byId
+  }, [people, viewer])
 
-  /** HR accounts a ticket can be handed to. Admins included: they cover holidays. */
-  const hrAccounts = useMemo(() => people.filter((one) => isConsoleRole(one.role)), [people])
+  /**
+   * HR accounts a ticket can be handed to. Admins included: they cover holidays.
+   *
+   * Derived from the directory, which is the wrong source and the best one available:
+   * there is no endpoint that lists HR accounts — `/api/employees/hr` is a 404 — so for
+   * an Admin this is the whole organisation filtered by role, and for an HRBP it is
+   * whichever of their own people happen to hold a console role, which is usually none.
+   *
+   * The viewer is always in it, so an HRBP can at least take a ticket themselves. The
+   * rest needs the endpoint; see §4f of docs/BACKEND_HANDOVER.md.
+   */
+  const hrAccounts = useMemo(() => {
+    const accounts = people.filter((one) => isConsoleRole(one.role))
+    if (!accounts.some((one) => one.employeeId === viewer.employeeId)) accounts.unshift(viewer)
+    return accounts
+  }, [people, viewer])
 
   /** Everything this account may see, before either filter. */
   const mine = useMemo(() => visibleTickets(tickets ?? [], viewer), [tickets, viewer])
