@@ -264,7 +264,7 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
         />
       </div>
 
-      <div style={{ marginTop: 16 }}>
+      <div className="queuecard" style={{ marginTop: 16 }}>
         <div className="toolbar">
           <label className="toolbar__search">
             <SearchIcon />
@@ -275,7 +275,7 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
             />
           </label>
 
-          <div className="seg seg--dark">
+          <div className="seg">
             <button
               className={`seg__item ${assignee === ANY_ASSIGNEE ? 'seg__item--on' : ''}`}
               onClick={() => setAssignee(ANY_ASSIGNEE)}
