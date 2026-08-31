@@ -452,8 +452,6 @@ runs after routing, so the two are reliably different.
 
 Sections 3a, 4b, 5 and 6a are done.
 
-Everything else on this list is done.
-
 ---
 
 ## Appendix: deeper specs
