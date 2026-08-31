@@ -2238,3 +2238,137 @@ textarea:focus {
   outline-offset: 2px;
   border-radius: 3px;
 }
+
+/*
+ * The owner chip, when it is a control.
+ *
+ * It carries the row's only secondary action, so it has to look pressable without
+ * competing with the row itself — which is why it borrows the chip's own shape rather
+ * than becoming a button in its own right.
+ */
+.ownerbtn {
+  font: inherit;
+  cursor: pointer;
+  background: none;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
+}
+
+.ownerbtn:hover {
+  background: var(--ink-05);
+  border-color: var(--ink-12);
+}
+
+.ownerbtn:focus-visible {
+  outline: 2px solid var(--blue-primary);
+  outline-offset: 2px;
+}
+
+/* "Assigned to Priya" rather than "Priya" — the row says what the state is. */
+.owner--set {
+  border: 1px solid var(--ink-08);
+  border-radius: 20px;
+  padding: 4px 12px 4px 5px;
+}
+
+.owner__named {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.owner__lead {
+  color: var(--text-muted);
+}
+
+/*
+ * The HR list in the assign drawer.
+ *
+ * One choice at a time, so these are radios wearing a row: a native select would hide
+ * every option but one behind a second click, including the suggestion that is the
+ * reason the screen exists.
+ */
+.picklist {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 6px 0 14px;
+}
+
+.pick {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-tile);
+  background: none;
+  font: inherit;
+  text-align: left;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
+}
+
+.pick:hover {
+  background: var(--ink-05);
+}
+
+.pick--on {
+  background: rgba(43, 140, 255, 0.07);
+  border-color: rgba(43, 140, 255, 0.35);
+}
+
+.pick:focus-visible {
+  outline: 2px solid var(--blue-primary);
+  outline-offset: 1px;
+}
+
+/* The round mark. Filled with a white centre dot when chosen, hollow when not. */
+.pick__mark {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ink-12);
+  flex-shrink: 0;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.pick--on .pick__mark {
+  background: var(--blue-primary);
+  border-color: var(--blue-primary);
+  /* The dot, drawn as a ring rather than a pseudo-element so it animates with the fill. */
+  box-shadow: inset 0 0 0 3.5px #fff;
+}
+
+.pick__who {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.pick__name {
+  font-size: 13.5px;
+}
+
+.pick__why {
+  font-size: 11.5px;
+  color: var(--blue-primary);
+}
+
+/* Unassigning has no avatar, so the mark needs the same left edge as the names above. */
+.pick--clear {
+  margin-top: 4px;
+}
+
+.pick--clear .pick__name {
+  color: var(--text-secondary);
+}

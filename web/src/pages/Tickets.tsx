@@ -18,6 +18,7 @@ import {
   UnownedIcon,
   WaitingIcon,
 } from '../components/Icons'
+import { AssignPicker } from '../components/AssignPicker'
 import { TicketDrawer } from '../components/TicketDrawer'
 import { employeeName, ensureDirectory, fetchEmployees, fetchTickets } from '../api/client'
 import { isConsoleRole } from '../api/access'
@@ -56,6 +57,8 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
   const [people, setPeople] = useState<Employee[]>([])
   const [assignee, setAssignee] = useState<string>(ANY_ASSIGNEE)
   const [view, setView] = useState<View>('ALL')
+  /** The ticket whose owner is being chosen, separate from the one being read. */
+  const [assigning, setAssigning] = useState<Ticket | null>(null)
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState<Ticket | null>(null)
   const [hintShown, setHintShown] = useState(() => localStorage.getItem(HINT_KEY) !== 'dismissed')
@@ -386,16 +389,58 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
                           <TickIcon />
                           Resolved
                         </span>
-                      ) : owner ? (
-                        <span className="owner" title={`Assigned to ${owner.name}`}>
-                          <Avatar name={owner.name} index={0} />
-                          {owner.employeeId === viewer.employeeId ? 'You' : owner.name}
-                        </span>
                       ) : (
-                        <span className="pill pill--outline">
-                          <UnownedIcon />
-                          Needs an owner
-                        </span>
+                        /*
+                          The owner chip is the way in to changing the owner, for
+                          whoever may change it. Pressing it used to open the whole
+                          ticket, so assigning meant opening a drawer built for
+                          resolving and finding a picker at the top of it — three steps
+                          for a decision the row had already asked you to make.
+
+                          stopPropagation because the row behind it opens the ticket,
+                          which is still what you want everywhere else on the row.
+                        */
+                        (() => {
+                          const label = owner ? (
+                            <span className="owner__named">
+                              <Avatar name={owner.name} index={0} />
+                              <span>
+                                <span className="owner__lead">Assigned to</span>{' '}
+                                {owner.employeeId === viewer.employeeId ? 'you' : owner.name}
+                              </span>
+                            </span>
+                          ) : (
+                            <>
+                              <UnownedIcon />
+                              Needs an owner
+                            </>
+                          )
+                          const shell = owner ? 'owner owner--set' : 'pill pill--outline'
+
+                          if (!canAssign(viewer)) {
+                            return (
+                              <span
+                                className={shell}
+                                title={owner ? `Assigned to ${owner.name}` : undefined}
+                              >
+                                {label}
+                              </span>
+                            )
+                          }
+                          return (
+                            <button
+                              type="button"
+                              className={`${shell} ownerbtn`}
+                              title={owner ? `Assigned to ${owner.name}` : 'Choose an owner'}
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                setAssigning(ticket)
+                              }}
+                            >
+                              {label}
+                            </button>
+                          )
+                        })()
                       )}
                     </div>
                   )
@@ -418,6 +463,20 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
           )}
         </div>
       </div>
+
+      {assigning && (
+        <AssignPicker
+          ticket={assigning}
+          viewer={viewer}
+          hrAccounts={hrAccounts}
+          raiser={employeeById.get(assigning.employeeId)}
+          onClose={() => setAssigning(null)}
+          onUpdated={(updated) => {
+            applyUpdate(updated)
+            setAssigning(null)
+          }}
+        />
+      )}
 
       {open && (
         <TicketDrawer
