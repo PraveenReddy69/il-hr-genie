@@ -345,3 +345,32 @@ describe('a permission list the server sent', () => {
     expect(can(noList, 'holidays.edit')).toBe(false)
   })
 })
+
+describe('resolving a ticket', () => {
+  /*
+   * Closing a ticket is not an HRBP-only job. An Admin has to be able to finish one
+   * whose owner has left or is on leave, which is most of what an escalation ends in —
+   * and a Head above them for the same reason.
+   *
+   * Worth pinning because `tickets.resolve` sat in the permission set unread for a long
+   * time: the drawer showed the controls to anybody, so nothing would have failed if a
+   * role had quietly lost it.
+   */
+  it.each(HR_ROLES)('is open to %s', (role) => {
+    expect(can(person('X', role), 'tickets.resolve')).toBe(true)
+  })
+
+  it('is not open to an employee', () => {
+    expect(can(person('EMP1', 'EMPLOYEE'), 'tickets.resolve')).toBe(false)
+  })
+
+  it('is withheld when the server withholds it', () => {
+    // The reason the check exists: a role that keeps `tickets.view` but loses
+    // `tickets.resolve` should read the queue and not be offered a button that 403s.
+    const readOnly = person('X', 'HR_ADMIN', {
+      permissions: ['dashboard.view', 'tickets.view'] as Permission[],
+    })
+    expect(can(readOnly, 'tickets.view')).toBe(true)
+    expect(can(readOnly, 'tickets.resolve')).toBe(false)
+  })
+})

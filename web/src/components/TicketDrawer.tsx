@@ -3,6 +3,7 @@ import { Drawer } from './Drawer'
 import { STATUS_COLOUR, relativeTime } from './Bits'
 import { assignTicket, employeeName, updateTicketStatus } from '../api/client'
 import { assignmentSuggestion, canAssign } from '../api/ticketQueue'
+import { can } from '../api/access'
 import {
   STATUS_LABEL,
   TICKET_STATUSES,
@@ -47,7 +48,21 @@ export function TicketDrawer({
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
-  const controlsVisible = !isResolved || reopening
+  /**
+   * Whether this account may move a ticket at all.
+   *
+   * `tickets.resolve` has existed since the permission set was written and nothing has
+   * ever read it — the drawer showed the status controls to anybody who could open a
+   * ticket. Both console roles carry it, so this changes nothing today; it means the
+   * permission is real rather than decorative, and an account the server withholds it
+   * from stops being offered a button that would come back 403.
+   *
+   * Admin and Head hold it as well as HR. Somebody has to be able to close a ticket
+   * whose owner has left, and that is most of what an escalation ends in.
+   */
+  const mayMove = can(viewer, 'tickets.resolve')
+
+  const controlsVisible = mayMove && (!isResolved || reopening)
   const closingNote = [...ticket.comments].reverse().find((c) => c.status === 'RESOLVED')
 
   /**
@@ -160,7 +175,7 @@ export function TicketDrawer({
         </div>
       )}
 
-      {isResolved && !reopening && (
+      {isResolved && !reopening && mayMove && (
         <button className="button button--ghost" onClick={() => {
           setReopening(true)
           setSelected('OPEN')
