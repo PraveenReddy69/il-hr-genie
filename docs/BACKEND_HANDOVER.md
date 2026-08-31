@@ -44,6 +44,7 @@ Roles, in rank order: `EMPLOYEE` → `HR` (HRBP) → `HR_ADMIN` (Admin) → `HR_
 | **177 employees have no HRBP tagged** | **New gap**, and it is not theoretical. Section 3b. |
 | `tickets.assign` on `HR_ADMIN` | **Confirmed 29 Aug.** All 16 Admin permissions present. |
 | `PATCH .../assignee` | **Confirmed 29 Aug.** Route reached, guard passes for an Admin. |
+| **`PATCH .../status` for an Admin** | **Blocked.** "Only HR can change ticket status", against a list that grants it. Section 4d. |
 
 ---
 
@@ -177,6 +178,40 @@ PATCH /api/tickets/{id}/assignee
 **Ship 4a and 4b together.** Auto-assignment without a way to correct it is worse than
 neither, because the one ticket the rule gets wrong is then stuck with nobody able to
 move it.
+
+### 4d. An Admin cannot change a ticket's status — the API contradicts itself
+
+Confirmed from the console on 31 August, signed in as `HYD604982` (`role: "HR_ADMIN"`):
+
+```
+PATCH /api/tickets/{id}/status
+→ "Only HR can change ticket status."
+```
+
+The same account's own permission list says otherwise. `GET /api/employees/me` for
+`HYD604982` returns `tickets.resolve` among its sixteen permissions — so the API tells
+the console this account may resolve tickets, and then refuses when it does.
+
+One of the two is wrong, and we think it is the guard:
+
+**An Admin has to be able to close a ticket whose owner has left or is on leave.** That
+is most of what an escalation ends in. An Admin who can assign a ticket to somebody but
+cannot finish one himself can only ever hand work sideways.
+
+**The guard reads a role where the rest of the API now reads permissions.** The message
+names `HR` specifically, which is the same shape as the holidays 403 from before roles
+landed. `tickets.resolve` is the permission that should gate this, and all three console
+roles carry it.
+
+**Please accept `HR_ADMIN` and `HR_HEAD` on the status route** — or, if the guard is
+right and Admins genuinely should not resolve, take `tickets.resolve` out of the Admin
+permission list so the console stops offering a button that cannot work. Either is
+consistent. The two together are not.
+
+The console does not hide this: it shows the server's own message under the note field.
+That is deliberate — a refusal an employee's HR never sees is worse than an awkward one.
+
+---
 
 ### 4c. The visibility rule
 
@@ -343,13 +378,15 @@ runs after routing, so the two are reliably different.
 
 ## 10. What is left
 
-1. **Section 4a** — raise one new ticket and tell us whether it comes back assigned. If
+1. **Section 4d** — an Admin cannot resolve a ticket, while their own permission list
+   says they can. Smallest fix on the list and the most visibly broken.
+2. **Section 4a** — raise one new ticket and tell us whether it comes back assigned. If
    not, the rule; either way, a backfill for the existing 37.
-2. **Section 3b** — the 177 employees with no `hrbpId`. Tag them, or cover them by
+3. **Section 3b** — the 177 employees with no `hrbpId`. Tag them, or cover them by
    department, but they are unsupported until one or the other.
-3. **Section 6b** — cache headers on authenticated routes. Small, and still open.
-4. **Section 6c** — pulse delivery reading selections.
-5. **Section 7** — the three questions, whenever suits.
+4. **Section 6b** — cache headers on authenticated routes. Small, and still open.
+5. **Section 6c** — pulse delivery reading selections.
+6. **Section 7** — the three questions, whenever suits.
 
 Sections 3a, 4b, 5 and 6a are done.
 
