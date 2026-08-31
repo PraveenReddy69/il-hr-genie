@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Avatar } from './Bits'
 import { Drawer } from './Drawer'
 import { assignTicket } from '../api/client'
-import { assignmentSuggestion, refusalFor } from '../api/ticketQueue'
+import { assignmentSuggestion } from '../api/ticketQueue'
+import { RANK } from '../api/access'
 import type { Employee, Ticket } from '../api/types'
 
 /**
@@ -39,12 +40,25 @@ export function AssignPicker({
   const [error, setError] = useState<string | null>(null)
 
   const picked = hrAccounts.find((one) => one.employeeId === chosen) ?? null
-  const refusal = refusalFor(viewer, picked)
   const unchanged = (ticket.assigneeId ?? '') === chosen
 
   async function assign() {
-    if (refusal) {
-      setError(refusal)
+    /*
+     * Only the assignee is checked here. Whether *this* account may assign is the
+     * server's call, and the console asks rather than deciding.
+     *
+     * `refusalFor` also answers "may this actor assign at all", and using that answer
+     * here would put the console's copy of the rule in front of the API's — the same
+     * mistake the ticket queue made with department scope, where a stale client rule
+     * quietly deleted rows the server had correctly returned.
+     *
+     * Handing a ticket to a non-HR account stays a client check: it is a property of
+     * the choice rather than of the person choosing, and there is no reason to spend a
+     * round trip finding out.
+     */
+    const wrongAssignee = picked && RANK[picked.role] < RANK.HR
+    if (wrongAssignee) {
+      setError(`${picked.name} is not an HR account.`)
       return
     }
     setSaving(true)

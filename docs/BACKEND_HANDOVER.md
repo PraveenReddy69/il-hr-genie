@@ -45,6 +45,7 @@ Roles, in rank order: `EMPLOYEE` → `HR` (HRBP) → `HR_ADMIN` (Admin) → `HR_
 | `tickets.assign` on `HR_ADMIN` | **Confirmed 29 Aug.** All 16 Admin permissions present. |
 | `PATCH .../assignee` | **Confirmed 29 Aug.** Route reached, guard passes for an Admin. |
 | **`PATCH .../status` for an Admin** | **Blocked.** "Only HR can change ticket status", against a list that grants it. Section 4d. |
+| **`tickets.assign` for an HRBP** | **Wanted.** One string on the `HR` list. Section 4e. |
 
 ---
 
@@ -213,6 +214,29 @@ That is deliberate — a refusal an employee's HR never sees is worse than an aw
 
 ---
 
+### 4e. HRBPs need `tickets.assign` too
+
+A product decision on our side, and it needs one string from you.
+
+An HRBP should be able to hand a ticket to a colleague — cover, escalation, or simply
+the wrong person picking it up. Today `tickets.assign` is `HR_ADMIN` and above, so an
+HRBP pressing "Needs an owner" gets a picker and then a refusal from
+`PATCH /api/tickets/{id}/assignee`.
+
+**Please add `tickets.assign` to the `HR` permission list.** The console reads what you
+send, so nothing ships on our side when you do.
+
+This reverses what `docs/ACCESS_CONTROL.md` says — that deciding who deals with a ticket
+is a workload call across the HR team, and therefore Admin's. That reasoning holds for a
+large team and did not survive contact with this one, where the HRBPs are the people
+actually moving work between themselves.
+
+Note this is the mirror image of section 4d: there an Admin is refused something their
+permission list grants; here an HRBP is correctly refused something we now want granted.
+The guard is right in both cases — the lists are what need changing.
+
+---
+
 ### 4c. The visibility rule
 
 This is the part a client cannot enforce, and the part that makes assignment a handover
@@ -378,8 +402,9 @@ runs after routing, so the two are reliably different.
 
 ## 10. What is left
 
-1. **Section 4d** — an Admin cannot resolve a ticket, while their own permission list
-   says they can. Smallest fix on the list and the most visibly broken.
+1. **Sections 4d and 4e** — two permission lists to correct, in opposite directions.
+   An Admin cannot resolve a ticket their list says they can; an HRBP cannot assign one
+   and now should. Smallest fixes here, and 4d is the most visibly broken.
 2. **Section 4a** — raise one new ticket and tell us whether it comes back assigned. If
    not, the rule; either way, a backfill for the existing 37.
 3. **Section 3b** — the 177 employees with no `hrbpId`. Tag them, or cover them by

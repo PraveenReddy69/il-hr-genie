@@ -417,16 +417,21 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
                           )
                           const shell = owner ? 'owner owner--set' : 'pill pill--outline'
 
-                          if (!canAssign(viewer)) {
-                            return (
-                              <span
-                                className={shell}
-                                title={owner ? `Assigned to ${owner.name}` : undefined}
-                              >
-                                {label}
-                              </span>
-                            )
-                          }
+                          /*
+                            Open to every console account, not only the ones holding
+                            `tickets.assign`.
+
+                            This was gated on that permission, so an HRBP pressing the
+                            chip fell through to the row and opened the ticket — the
+                            behaviour the chip exists to replace, and indistinguishable
+                            from a broken button.
+
+                            The permission still decides, but the server decides it.
+                            Choosing an owner reads nothing and changes nothing; only
+                            Assign writes, and if the API refuses it the picker shows
+                            what it said. A refusal an HRBP can read beats a chip that
+                            silently does the wrong thing.
+                          */
                           return (
                             <button
                               type="button"
