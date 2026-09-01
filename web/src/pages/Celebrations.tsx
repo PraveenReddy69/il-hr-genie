@@ -68,26 +68,41 @@ export function Celebrations({ viewer }: { viewer: Employee }) {
 
   return (
     <>
-      <div className="page-head">
-        <h1>Celebrations</h1>
-        <p>
-          {count === 0
-            ? 'Nothing today'
-            : `${count} ${count === 1 ? 'person' : 'people'} to congratulate today`}
-          {ahead.length > 0 && ` · ${ahead.length} in the next ${LOOKAHEAD_DAYS} days`}
-        </p>
-      </div>
+      <header className="celebhead">
+        <span className="celebhead__mark">
+          <PartyIcon />
+        </span>
+        <div>
+          <h1>Celebrations</h1>
+          <p>
+            {count === 0
+              ? 'Nothing today'
+              : `${count} ${count === 1 ? 'person' : 'people'} to congratulate today`}
+            {ahead.length > 0 && (
+              <>
+                {' · '}
+                <strong>
+                  {ahead.length} in the next {LOOKAHEAD_DAYS} days
+                </strong>
+              </>
+            )}
+          </p>
+        </div>
+        {/* Drawn, not an image: a handful of positioned shapes costs nothing and scales
+            with the header, where a PNG of confetti would not. */}
+        <Confetti />
+      </header>
 
       {/* ------------------------------------------------------------ today */}
 
       <section className="card">
-        <div className="card__head">
-          <span className="card__chip" style={{ background: 'var(--purple-tint-12)' }}>
-            🎉
+        <div className="todayband">
+          <span className="todayband__icon">
+            <CalendarIcon />
           </span>
           <div>
-            <div className="card__title">Today</div>
-            <div className="card__subtitle">
+            <div className="todayband__title">Today</div>
+            <div className="todayband__date">
               {new Date(`${today}T00:00:00`).toLocaleDateString(undefined, {
                 weekday: 'long',
                 day: 'numeric',
@@ -95,6 +110,7 @@ export function Celebrations({ viewer }: { viewer: Employee }) {
               })}
             </div>
           </div>
+          <GiftIcon />
         </div>
 
         {count === 0 ? (
@@ -162,9 +178,10 @@ function Group({
 
   return (
     <>
-      <div className="qgroup">
+      <div className="celebgroup">
+        <KindIcon kind={kind} />
         {KIND_LABEL[kind]}
-        <span className="qgroup__count">{people.length}</span>
+        <span className="celebgroup__count">{people.length}</span>
       </div>
       {people.map((person, index) => (
         <PersonRow key={`${kind}-${person.employeeId || person.name}`} person={person} index={index} kind={kind} viewer={viewer} />
@@ -211,15 +228,14 @@ function PersonRow({
         edge one. A button that opened an empty chat — or worse, one addressed to
         whoever happened to be nearest in the directory — is not better than nothing.
       */}
+      <span className="kindchip" aria-hidden="true">
+        <KindIcon kind={kind} />
+      </span>
+
       {href && !isSelf ? (
-        <a
-          href={href}
-          target="_blank"
-          rel="noreferrer"
-          className="chip"
-          style={{ textDecoration: 'none', flex: 'none' }}
-        >
+        <a href={href} target="_blank" rel="noreferrer" className="wish">
           Wish them
+          <ChevronIcon />
         </a>
       ) : (
         <span className="row__meta" style={{ flex: 'none' }}>
@@ -265,5 +281,124 @@ function AheadRow({ entry }: { entry: UpcomingEntry }) {
             : `in ${entry.inDays}d`}
       </span>
     </div>
+  )
+}
+
+/*
+ * The glyphs.
+ *
+ * Drawn here rather than pulled from the shared icon set: these three say *which kind
+ * of thing is being celebrated*, and that vocabulary exists nowhere else in the
+ * console. Stroked at 1.6 so they hold at the 14px they are mostly used at.
+ */
+const S = {
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 1.6,
+  strokeLinecap: 'round' as const,
+  strokeLinejoin: 'round' as const,
+}
+
+function KindIcon({ kind }: { kind: CelebrationKind }) {
+  if (kind === 'BIRTHDAY') return <CakeIcon />
+  if (kind === 'ANNIVERSARY') return <MedalIcon />
+  return <SproutIcon />
+}
+
+/** The page's own mark: a popper, which is the one shape that means all three kinds. */
+function PartyIcon() {
+  return (
+    <svg viewBox="0 0 24 24" {...S}>
+      <path d="M3.2 20.8l4.4-11.6 7.2 7.2z" />
+      <path d="M7.6 9.2a4 4 0 015.6 0 4 4 0 001.9 1l1.7.4" />
+      <path d="M17.5 4.2v1.6M20.6 7.4h-1.6M19.9 4.9l-1.1 1.1" />
+      <path d="M13.4 4.6l.5 1M20.3 12.2l-1 -.5" />
+    </svg>
+  )
+}
+
+function CakeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" {...S}>
+      <path d="M4 20.5h16v-5a2 2 0 00-2-2H6a2 2 0 00-2 2z" />
+      <path d="M4 16.5c1.6 1.2 3.2 1.2 4.8 0s3.2-1.2 4.8 0 3.2 1.2 4.8 0" />
+      <path d="M12 10.5V8M12 5.6a1 1 0 00-1.2 1.1c.1.7.6 1.3 1.2 1.3s1.1-.6 1.2-1.3A1 1 0 0012 5.6z" />
+    </svg>
+  )
+}
+
+function MedalIcon() {
+  return (
+    <svg viewBox="0 0 24 24" {...S}>
+      <circle cx="12" cy="14.5" r="5" />
+      <path d="M12 12.6l.9 1.8 2 .3-1.4 1.4.3 2-1.8-1-1.8 1 .3-2-1.4-1.4 2-.3z" />
+      <path d="M8.6 9.4L6.4 3.5M15.4 9.4l2.2-5.9" />
+    </svg>
+  )
+}
+
+function SproutIcon() {
+  return (
+    <svg viewBox="0 0 24 24" {...S}>
+      <path d="M12 20.5v-7" />
+      <path d="M12 13.5C12 10.7 9.8 8.5 7 8.5c0 2.8 2.2 5 5 5z" />
+      <path d="M12 13.5c0-3.3 2.7-6 6-6 0 3.3-2.7 6-6 6z" />
+    </svg>
+  )
+}
+
+function CalendarIcon() {
+  return (
+    <svg viewBox="0 0 24 24" {...S}>
+      <rect x="3.5" y="5.5" width="17" height="15" rx="2.4" />
+      <path d="M3.5 10h17M8.5 3.5v4M15.5 3.5v4" />
+    </svg>
+  )
+}
+
+function GiftIcon() {
+  return (
+    <svg className="todayband__gift" viewBox="0 0 24 24" {...S} aria-hidden="true">
+      <rect x="3.5" y="10.5" width="17" height="10" rx="1.8" />
+      <path d="M2.5 7.5h19v3h-19zM12 7.5v13" />
+      <path d="M12 7.5S10.8 3.5 8.6 3.5a2 2 0 100 4zM12 7.5s1.2-4 3.4-4a2 2 0 110 4z" />
+    </svg>
+  )
+}
+
+function ChevronIcon() {
+  return (
+    <svg viewBox="0 0 24 24" {...S} className="wish__chev" aria-hidden="true">
+      <path d="M9 5l7 7-7 7" />
+    </svg>
+  )
+}
+
+/** Eight shapes, fixed rather than random, so the header does not reshuffle on render. */
+function Confetti() {
+  const bits = [
+    { x: 4, y: 18, r: 18, c: '#f0a500' },
+    { x: 16, y: 62, r: -12, c: '#2b8cff' },
+    { x: 27, y: 12, r: 40, c: '#42c07a' },
+    { x: 39, y: 48, r: 8, c: '#f2683c' },
+    { x: 52, y: 22, r: -30, c: '#7a5af8' },
+    { x: 66, y: 66, r: 24, c: '#2b8cff' },
+    { x: 78, y: 30, r: -16, c: '#f0a500' },
+    { x: 92, y: 54, r: 34, c: '#42c07a' },
+  ]
+  return (
+    <span className="confetti" aria-hidden="true">
+      {bits.map((b, i) => (
+        <span
+          key={i}
+          style={{
+            left: `${b.x}%`,
+            top: `${b.y}%`,
+            background: b.c,
+            transform: `rotate(${b.r}deg)`,
+          }}
+        />
+      ))}
+    </span>
   )
 }

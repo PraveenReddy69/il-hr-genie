@@ -3687,3 +3687,205 @@ ul.legend {
   color: var(--text-muted);
   font-size: 12.5px;
 }
+
+/* -------------------------------------------------------------- celebrations */
+
+.celebhead {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+  overflow: hidden;
+}
+
+.celebhead h1 {
+  margin: 0;
+}
+
+.celebhead p {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+/* The look-ahead figure is the one somebody plans against, so it carries the weight. */
+.celebhead p strong {
+  color: var(--blue-primary);
+  font-weight: 600;
+}
+
+.celebhead__mark {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  color: var(--purple);
+}
+
+.celebhead__mark svg {
+  width: 25px;
+  height: 25px;
+}
+
+/* Confetti, in the space the header is not using. Hidden on narrow screens, where
+   there is no such space and it would land on the text. */
+.confetti {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 240px;
+  pointer-events: none;
+}
+
+.confetti span {
+  position: absolute;
+  width: 6px;
+  height: 9px;
+  border-radius: 1.5px;
+  opacity: 0.75;
+}
+
+@media (max-width: 720px) {
+  .confetti {
+    display: none;
+  }
+}
+
+/* ----------------------------------------------------------------- the band */
+
+.todayband {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  margin-bottom: 6px;
+  border-radius: 16px;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(100deg, var(--purple-tint-12), var(--blue-tint-07) 70%, var(--surface));
+}
+
+.todayband__icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+  color: var(--blue-primary);
+  box-shadow: 0 4px 12px -6px rgba(10, 20, 48, 0.4);
+}
+
+.todayband__icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.todayband__title {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.todayband__date {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  margin-top: 1px;
+}
+
+/* Sits in the band's own right-hand space, cropped by it rather than sized to it. */
+.todayband__gift {
+  position: absolute;
+  right: 22px;
+  bottom: -14px;
+  width: 88px;
+  height: 88px;
+  color: var(--purple);
+  opacity: 0.28;
+  stroke-width: 1.1;
+}
+
+@media (max-width: 720px) {
+  .todayband__gift {
+    display: none;
+  }
+}
+
+/* --------------------------------------------------------------- the groups */
+
+.celebgroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 18px 0 6px;
+}
+
+.celebgroup svg {
+  width: 15px;
+  height: 15px;
+  color: var(--purple);
+}
+
+.celebgroup__count {
+  font-weight: 700;
+  letter-spacing: 0;
+  font-size: 11px;
+  color: var(--blue-primary);
+  background: var(--blue-tint-07);
+  border-radius: 10px;
+  padding: 1px 8px;
+}
+
+/* The kind, repeated quietly on the row so a mixed list stays readable at a glance. */
+.kindchip {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  background: var(--ink-05);
+  color: var(--text-tertiary);
+}
+
+.kindchip svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* ------------------------------------------------------------------ the wish */
+
+.wish {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  padding: 7px 12px;
+  border: 1px solid var(--blue-tint-12);
+  border-radius: 20px;
+  background: var(--surface);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--blue-primary);
+  text-decoration: none;
+  transition: background 130ms ease, border-color 130ms ease;
+}
+
+.wish:hover {
+  background: var(--blue-tint-07);
+  border-color: var(--blue-primary);
+}
+
+.wish__chev {
+  width: 13px;
+  height: 13px;
+}
