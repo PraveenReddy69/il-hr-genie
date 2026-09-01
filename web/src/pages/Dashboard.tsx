@@ -223,28 +223,28 @@ export function Dashboard({ hrName }: { hrName: string }) {
         </Link>
       </header>
 
-      <section className="band">
+      <section className="scoreband">
         {/*
           `Live` and `Reconnecting…` sit here rather than in the old badge above: the
           band is the thing whose numbers go stale, so that is where it should say so.
         */}
-        <span className={`band__state ${loadFailed ? 'band__state--stale' : ''}`}>
-          <span className="band__dot" />
+        <span className={`scoreband__state ${loadFailed ? 'scoreband__state--stale' : ''}`}>
+          <span className="scoreband__dot" />
           {loadFailed ? 'Reconnecting…' : 'Live'}
         </span>
 
-        <button className="band__metric" onClick={openMood}>
-          <span className="band__icon">
+        <button className="scoreband__metric" onClick={openMood}>
+          <span className="scoreband__icon">
             <AnalyticsIcon />
           </span>
-          <span className="band__body">
-            <span className="band__value">
+          <span className="scoreband__body">
+            <span className="scoreband__value">
               {stats.engagementScore === null ? '—' : stats.engagementScore.toFixed(1)}
               <small>/10</small>
             </span>
-            <span className="band__label">Engagement score</span>
+            <span className="scoreband__label">Engagement score</span>
             <span
-              className={`band__foot ${stats.moodResponsesToday > 0 ? 'band__foot--up' : ''}`}
+              className={`scoreband__foot ${stats.moodResponsesToday > 0 ? 'scoreband__foot--up' : ''}`}
             >
               {stats.moodResponsesToday === 0
                 ? 'No check-ins yet today'
@@ -254,19 +254,19 @@ export function Dashboard({ hrName }: { hrName: string }) {
           <Spark values={moodTrend} colour="#6ec5ff" cap={10} suffix="" />
         </button>
 
-        <span className="band__split" aria-hidden="true" />
+        <span className="scoreband__split" aria-hidden="true" />
 
-        <button className="band__metric" onClick={openPulse}>
-          <span className="band__icon band__icon--violet">
+        <button className="scoreband__metric" onClick={openPulse}>
+          <span className="scoreband__icon scoreband__icon--violet">
             <PulseIcon />
           </span>
-          <span className="band__body">
-            <span className="band__value">
+          <span className="scoreband__body">
+            <span className="scoreband__value">
               {pulseRate}
               <small>%</small>
             </span>
-            <span className="band__label">Pulse completion</span>
-            <span className="band__foot">
+            <span className="scoreband__label">Pulse completion</span>
+            <span className="scoreband__foot">
               {stats.pulseCompleted} of {stats.headcount} employees answered
             </span>
           </span>
@@ -385,16 +385,16 @@ export function Dashboard({ hrName }: { hrName: string }) {
                 what was picked cannot be read as a shape — "Great 1" alone says nothing
                 about whether anybody was having a bad day.
               */}
-              <div className="moods">
+              <div className="feels">
                 {MOOD_KEYS.map((key) => {
                   const count = stats.moodBreakdown[key]
                   const share = Math.round((count / stats.moodResponsesToday) * 100)
                   return (
-                    <div className={`mood mood--${key.toLowerCase()}`} key={key}>
-                      <div className="mood__face">
+                    <div className={`feel feel--${key.toLowerCase()}`} key={key}>
+                      <div className="feel__face">
                         {MOODS[key].emoji} {MOODS[key].label}
                       </div>
-                      <div className="mood__count">
+                      <div className="feel__count">
                         {count} <small>({share}%)</small>
                       </div>
                     </div>

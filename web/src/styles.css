@@ -318,6 +318,15 @@ button {
 
 /* ---------------------------------------------------------------- dashboard */
 
+/*
+ * Prefixed away from `.band` and `.mood`, both of which Sales Insights already owns.
+ *
+ * They are defined further down this file, so their rules won on specificity ties and
+ * the dashboard's dark band rendered as a pale card with white text on it — invisible,
+ * and with the grid replaced by whatever the sales component wanted. Worth checking a
+ * class name is free before taking it; a stylesheet has no module scope to catch this.
+ */
+
 .dash__head {
   display: flex;
   align-items: flex-start;
@@ -386,7 +395,7 @@ button {
 
 /* ------------------------------------------------------------- the dark band */
 
-.band {
+.scoreband {
   position: relative;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -400,7 +409,7 @@ button {
   isolation: isolate;
 }
 
-.band::after {
+.scoreband::after {
   content: '';
   position: absolute;
   z-index: -1;
@@ -413,7 +422,7 @@ button {
 }
 
 /* Small, top-right, out of the way of the figures. It only matters when it changes. */
-.band__state {
+.scoreband__state {
   position: absolute;
   top: 14px;
   right: 18px;
@@ -427,18 +436,18 @@ button {
   color: rgba(255, 255, 255, 0.55);
 }
 
-.band__dot {
+.scoreband__dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: #5be08f;
 }
 
-.band__state--stale .band__dot {
+.scoreband__state--stale .scoreband__dot {
   background: var(--orange-warn);
 }
 
-.band__metric {
+.scoreband__metric {
   display: flex;
   align-items: center;
   gap: 16px;
@@ -452,23 +461,23 @@ button {
   transition: background 140ms ease;
 }
 
-.band__metric:hover {
+.scoreband__metric:hover {
   background: rgba(255, 255, 255, 0.06);
 }
 
-.band__metric:focus-visible {
+.scoreband__metric:focus-visible {
   outline: 2px solid rgba(255, 255, 255, 0.7);
   outline-offset: 2px;
 }
 
 /* A hairline between the two, rather than two boxes. One band, two readings. */
-.band__split {
+.scoreband__split {
   width: 1px;
   margin: 4px 22px;
   background: rgba(255, 255, 255, 0.14);
 }
 
-.band__icon {
+.scoreband__icon {
   width: 52px;
   height: 52px;
   border-radius: 50%;
@@ -480,25 +489,25 @@ button {
   border: 1px solid rgba(143, 196, 255, 0.28);
 }
 
-.band__icon--violet {
+.scoreband__icon--violet {
   color: #c4b2ff;
   background: rgba(146, 118, 255, 0.22);
   border-color: rgba(196, 178, 255, 0.28);
 }
 
-.band__icon svg {
+.scoreband__icon svg {
   width: 23px;
   height: 23px;
 }
 
-.band__body {
+.scoreband__body {
   display: flex;
   flex-direction: column;
   min-width: 0;
   flex: 1;
 }
 
-.band__value {
+.scoreband__value {
   font-size: 30px;
   font-weight: 800;
   letter-spacing: -0.03em;
@@ -506,26 +515,26 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
-.band__value small {
+.scoreband__value small {
   font-size: 14px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.5);
   margin-left: 1px;
 }
 
-.band__label {
+.scoreband__label {
   color: rgba(255, 255, 255, 0.62);
   font-size: 12.5px;
   margin-top: 3px;
 }
 
-.band__foot {
+.scoreband__foot {
   font-size: 11px;
   margin-top: 7px;
   color: rgba(255, 255, 255, 0.45);
 }
 
-.band__foot--up {
+.scoreband__foot--up {
   color: #5be08f;
 }
 
@@ -670,20 +679,20 @@ button.metric:hover {
  * auto-fit rather than a fixed five, so the row wraps rather than crushing the labels
  * when the card is narrow.
  */
-.moods {
+.feels {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
   gap: 8px;
   margin-top: 16px;
 }
 
-.mood {
+.feel {
   border-radius: var(--radius-tile);
   padding: 10px;
   text-align: center;
 }
 
-.mood__face {
+.feel__face {
   font-size: 11.5px;
   font-weight: 500;
   white-space: nowrap;
@@ -691,24 +700,24 @@ button.metric:hover {
   text-overflow: ellipsis;
 }
 
-.mood__count {
+.feel__count {
   font-size: 13px;
   font-weight: 700;
   margin-top: 4px;
   font-variant-numeric: tabular-nums;
 }
 
-.mood__count small {
+.feel__count small {
   font-weight: 500;
   color: var(--text-muted);
 }
 
 /* Keyed off MOOD_KEYS lowercased, so these are the real five. */
-.mood--great     { background: var(--green-tint-14); }
-.mood--good      { background: var(--blue-tint-07); }
-.mood--okay      { background: var(--blue-tint-07); }
-.mood--stressed  { background: var(--orange-tint-14); }
-.mood--burnt_out { background: rgba(229, 72, 77, 0.09); }
+.feel--great     { background: var(--green-tint-14); }
+.feel--good      { background: var(--blue-tint-07); }
+.feel--okay      { background: var(--blue-tint-07); }
+.feel--stressed  { background: var(--orange-tint-14); }
+.feel--burnt_out { background: rgba(229, 72, 77, 0.09); }
 
 /* ------------------------------------------------------------ department rows */
 
