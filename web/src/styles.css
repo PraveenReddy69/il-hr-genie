@@ -1272,24 +1272,18 @@ textarea:focus {
   color: var(--blue-primary);
 }
 
-.authcard__hex {
-  width: 76px;
-  height: 76px;
-  border-radius: 22px;
-  display: grid;
-  place-items: center;
+/*
+ * The lockup, not a tile.
+ *
+ * Smaller than the one on the pitch: there it is the publisher of a headline, here it
+ * sits above "Welcome back!" and should not outweigh the sentence somebody is reading.
+ */
+.authcard__logo {
+  display: block;
   align-self: center;
-  margin: 6px 0 18px;
-  background: linear-gradient(150deg, #3d86f5, #1a4fb5);
-  box-shadow:
-    0 0 0 9px rgba(47, 123, 240, 0.08),
-    0 14px 30px -12px rgba(26, 79, 181, 0.7);
-}
-
-.authcard__hex svg {
-  width: 42px;
-  height: 42px;
-  color: #fff;
+  width: 154px;
+  height: auto;
+  margin: 10px 0 20px;
 }
 
 .authcard__title {

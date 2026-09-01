@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import logo from '../infinity-learn.png'
+import logoNavy from '../infinity-learn-navy.png'
 import { isConsoleRole } from '../api/access'
 import { isLive, isUnauthorized, signIn } from '../api/client'
 import type { Employee } from '../api/types'
@@ -122,9 +123,14 @@ export function SignIn({ onSignedIn }: { onSignedIn: (employee: Employee) => voi
             Infinity Learn
           </span>
 
-          <span className="authcard__hex">
-            <MarkIcon />
-          </span>
+          {/*
+            The same lockup as the pitch, in navy.
+
+            The supplied file is white artwork on transparency and would have been
+            invisible here, so the navy copy is that same alpha mask filled with a
+            different colour — the shape is identical, not redrawn.
+          */}
+          <img className="authcard__logo" src={logoNavy} alt="Infinity Learn" />
 
           <h2 className="authcard__title">Welcome back!</h2>
           <p className="authcard__sub">Sign in to access your HR Dashboard</p>
@@ -300,25 +306,6 @@ const S = {
   strokeWidth: 1.6,
   strokeLinecap: 'round' as const,
   strokeLinejoin: 'round' as const,
-}
-
-/**
- * The mark on the two blue tiles.
- *
- * Not `hr-genie-mark.png`: that is the bot's own round mark, and on a blue tile it
- * reads as a dark disc inside a badge. This screen is the HR Dashboard Portal rather
- * than the bot, and the supplied design puts a people glyph here — filled, so it holds
- * at 32px where a stroked one would thin out.
- */
-function MarkIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor">
-      <circle cx="8.6" cy="8.4" r="3.1" />
-      <circle cx="16" cy="9.6" r="2.5" />
-      <path d="M2.9 18.6c.5-3.1 2.8-5 5.7-5s5.2 1.9 5.7 5a.6.6 0 01-.6.7H3.5a.6.6 0 01-.6-.7z" />
-      <path d="M15.5 14.1c2.2.1 3.9 1.6 4.4 4.2a.6.6 0 01-.6.7h-3.1c.1-1.9-.3-3.6-1.2-4.9z" />
-    </svg>
-  )
 }
 
 function ShieldIcon() {
