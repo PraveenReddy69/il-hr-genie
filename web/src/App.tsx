@@ -5,6 +5,7 @@ import { Attendance } from './pages/Attendance'
 import { Celebrations } from './pages/Celebrations'
 import { Dashboard } from './pages/Dashboard'
 import { Holidays } from './pages/Holidays'
+import logo from './infinity-learn.png'
 import { People } from './pages/People'
 import { SignIn } from './pages/SignIn'
 import { PulseQuestions } from './pages/PulseQuestions'
@@ -127,12 +128,17 @@ export default function App() {
   return (
     <div className="shell">
       <nav className="sidebar">
+        {/*
+          Stacked rather than set beside the name.
+
+          The lockup is 3:2, so inline against two lines of text it would come out about
+          86px wide and "by Sri Chaitanya" — which is set in an arc around the chevron —
+          would be roughly four pixels tall. Above the name it can be wide enough to
+          read, and the reading is the right one anyway: Infinity Learn publishes it,
+          HR Genie is what it is.
+        */}
         <div className="sidebar__brand">
-          <img
-            className="sidebar__mark"
-            src={`${import.meta.env.BASE_URL}hr-genie-mark.png`}
-            alt=""
-          />
+          <img className="sidebar__logo" src={logo} alt="Infinity Learn" />
           <div>
             <div className="sidebar__title">HR Genie</div>
             <div className="sidebar__subtitle">{ROLE_LABEL[hr.role]} console</div>
