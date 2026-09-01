@@ -43,8 +43,8 @@ Roles, in rank order: `EMPLOYEE` → `HR` (HRBP) → `HR_ADMIN` (Admin) → `HR_
 | **Auto-assign on ticket creation** | **Still not implemented.** Three tickets raised within the hour on 1 Sep, none assigned. Section 4a. |
 | **177 employees have no HRBP tagged** | **Unchanged.** Same 177 on 1 Sep as on 29 Aug. Section 3b. |
 | `tickets.assign` on `HR_ADMIN` | **Confirmed 29 Aug.** All 16 Admin permissions present. |
-| `PATCH .../assignee` | **Confirmed 29 Aug.** Route reached, guard passes for an Admin. |
-| `PATCH .../status` for an Admin | **Fixed 1 Sep.** Reaches the handler now. |
+| `PATCH .../assignee` | Route present. Guard **unverified** — see the correction in section 4d. |
+| **`PATCH .../status` for an Admin** | **Still blocked.** Confirmed from the console 1 Sep. Section 4d. |
 | **`tickets.assign` for an HRBP** | **Wanted.** One string on the `HR` list. Section 4e. |
 | **No way to list HR accounts** | `/api/employees/hr` is 404, so an HRBP's picker is empty but for themselves. Section 4f. |
 | **Email on ticket creation** | **New request.** To the HRBP and the raiser, from `POST /api/tickets`. Section 4g. |
@@ -198,39 +198,44 @@ PATCH /api/tickets/{id}/assignee
 neither, because the one ticket the rule gets wrong is then stuck with nobody able to
 move it.
 
-### 4d. An Admin cannot change a ticket's status — the API contradicts itself
+### 4d. An Admin cannot change a ticket's status
 
-Confirmed from the console on 31 August, signed in as `HYD604982` (`role: "HR_ADMIN"`):
+**Still blocked, confirmed from the console on 1 September.** Signed in as `HYD604982`
+(`role: "HR_ADMIN"`), moving a real ticket to In progress:
 
 ```
-PATCH /api/tickets/{id}/status
+PATCH /api/tickets/HRG-0044/status
 → "Only HR can change ticket status."
 ```
 
-The same account's own permission list says otherwise. `GET /api/employees/me` for
-`HYD604982` returns `tickets.resolve` among its sixteen permissions — so the API tells
-the console this account may resolve tickets, and then refuses when it does.
+The same account's own permission list contains `tickets.resolve`. The API tells the
+console this account may resolve tickets and then refuses when it does.
 
-One of the two is wrong, and we think it is the guard:
+### A correction to what this document said on 1 September
 
-**An Admin has to be able to close a ticket whose owner has left or is on leave.** That
-is most of what an escalation ends in. An Admin who can assign a ticket to somebody but
-cannot finish one himself can only ever hand work sideways.
+An earlier revision recorded this as fixed. It was not, and the test behind that claim
+was worthless:
 
-**The guard reads a role where the rest of the API now reads permissions.** The message
-names `HR` specifically, which is the same shape as the holidays 403 from before roles
-landed. `tickets.resolve` is the permission that should gate this, and all three console
-roles carry it.
+```
+PATCH /api/tickets/HRG-DOES-NOT-EXIST/status   → 404 "Ticket not found"
+```
 
-**Please accept `HR_ADMIN` and `HR_HEAD` on the status route** — or, if the guard is
-right and Admins genuinely should not resolve, take `tickets.resolve` out of the Admin
-permission list so the console stops offering a button that cannot work. Either is
-consistent. The two together are not.
+That was read as "the handler is running, so the guard let us through". It proves
+nothing. Body validation runs first, then the ticket lookup — both answer before the
+role check is reached, so an invalid id or an invalid status returns 400 or 404 whatever
+the guard would have said. **The only way to test this endpoint is a valid request on a
+real ticket**, which is what the console does and what we should have trusted.
 
-The console does not hide this: it shows the server's own message under the note field.
-That is deliberate — a refusal an employee's HR never sees is worse than an awkward one.
+The same flaw applies to what this document says about `PATCH .../assignee` in section
+4b: reaching the handler with a bad id says the route exists, and says nothing at all
+about whether an Admin passes the guard. Treat 4b as "route present, guard unverified".
 
----
+### What is needed
+
+**Accept `HR_ADMIN` and `HR_HEAD` on the status route** — or, if the guard is right and
+Admins genuinely should not resolve, take `tickets.resolve` out of the Admin permission
+list so the console stops offering a button that cannot work. Either is consistent. The
+two together are not.
 
 ### 4e. HRBPs need `tickets.assign` too
 
