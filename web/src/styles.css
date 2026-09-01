@@ -1054,17 +1054,21 @@ textarea:focus {
   background:
     linear-gradient(
       90deg,
-      rgba(4, 11, 28, 0.94) 0%,
-      rgba(4, 11, 28, 0.86) 26%,
-      rgba(5, 14, 34, 0.52) 54%,
-      rgba(5, 14, 34, 0.24) 78%,
-      rgba(5, 14, 34, 0.34) 100%
+      rgba(4, 11, 28, 0.80) 0%,
+      rgba(4, 11, 28, 0.66) 30%,
+      rgba(5, 14, 34, 0.36) 56%,
+      rgba(5, 14, 34, 0.12) 80%,
+      rgba(5, 14, 34, 0.20) 100%
     ),
     /* Lifts the top-left corner just enough that the brand lockup is not sitting on
        flat black, and pulls the eye across to the building. */
     radial-gradient(46% 42% at 8% 14%, rgba(47, 123, 240, 0.20) 0%, transparent 72%),
-    /* A floor, so the plaza lights along the bottom do not fight the legal line. */
-    linear-gradient(0deg, rgba(3, 8, 20, 0.62) 0%, transparent 26%);
+    /*
+     * A floor. The skyline and the plaza lights sit low in the frame, exactly where
+     * the feature rows and the legal line land — this holds them apart without
+     * darkening the sky the rest of the pitch is written on.
+     */
+    linear-gradient(0deg, rgba(3, 8, 20, 0.66) 0%, rgba(3, 8, 20, 0.20) 22%, transparent 40%);
 }
 
 /*

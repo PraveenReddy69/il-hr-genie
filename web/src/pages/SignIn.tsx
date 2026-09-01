@@ -41,7 +41,7 @@ export function SignIn({ onSignedIn }: { onSignedIn: (employee: Employee) => voi
       const employee = await signIn(employeeId, password)
       if (!isConsoleRole(employee.role)) {
         // The password was right. The account is simply not for this console.
-        setError('This console is for HR accounts. Employees use the mobile app.')
+        setError('This console is for HR accounts. Employees use HR Genie in Teams.')
         return
       }
       // Written only once the id is known to be real, so a typo is not remembered.
@@ -254,7 +254,7 @@ export function SignIn({ onSignedIn }: { onSignedIn: (employee: Employee) => voi
         </form>
 
         <p className="auth__legal">
-          Employees use the mobile app. This console is for the HR team.
+          Employees use HR Genie in Teams. This console is for the HR team.
         </p>
       </section>
     </div>
