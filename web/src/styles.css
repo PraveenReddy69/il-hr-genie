@@ -227,11 +227,21 @@ button {
 
 /* -------------------------------------------------------------------- cards */
 
+/*
+ * A column, so a card can give its last block the leftover height.
+ *
+ * Grid already made two cards in a row the same height; it did not make their contents
+ * the same height, so a card whose figures carried a sub-line ran taller inside than
+ * one whose figures did not, and the two rows of tiles sat at different depths.
+ */
 .card {
   background: var(--surface);
+  border: 1px solid var(--ink-05);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
   padding: 20px;
+  display: flex;
+  flex-direction: column;
 }
 
 .card__head {
@@ -574,15 +584,42 @@ button {
 
 /* ------------------------------------------------------------------- metrics */
 
+/*
+ * The figure row, taking whatever height the card has left.
+ *
+ * `flex: 1` is what levels the two cards: the shorter one's tiles grow to meet the
+ * taller one's rather than leaving a band of empty white beneath them.
+ */
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  flex: 1;
+  align-items: stretch;
+}
+
+@media (max-width: 980px) {
+  .metrics {
+    grid-template-columns: 1fr;
+  }
+}
+
 .metric {
-  border-radius: var(--radius-tile);
-  padding: 13px 14px;
+  border-radius: 14px;
+  padding: 15px 16px;
   text-align: left;
   width: 100%;
+  height: 100%;
   border: 1px solid transparent;
   display: flex;
   flex-direction: column;
-  transition: transform 0.12s;
+  transition:
+    transform 0.14s ease,
+    box-shadow 0.14s ease;
+}
+
+button.metric:hover {
+  box-shadow: 0 10px 20px -14px rgba(10, 20, 48, 0.55);
 }
 
 button.metric {
@@ -608,32 +645,39 @@ button.metric:hover {
   font-variant-numeric: tabular-nums;
 }
 
-/* The glyph is the quiet half: it says which figure this is, not how big it is. */
+/*
+ * The glyph is the quiet half: it says which figure this is, not how big it is.
+ *
+ * A disc in white rather than a tinted square — on a tile that is already tinted, a
+ * second tint of the same hue muddied both, and the white lifts the glyph off the tile
+ * the way the figure lifts off the label.
+ */
 .metric__icon {
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
   display: grid;
   place-items: center;
-  background: rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.78);
   flex-shrink: 0;
 }
 
 .metric__icon svg {
-  width: 14px;
-  height: 14px;
+  width: 15px;
+  height: 15px;
 }
 
 .metric__label {
-  font-size: 12.5px;
-  font-weight: 500;
-  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 8px;
+  letter-spacing: -0.005em;
 }
 
 .metric__sub {
   font-size: 11px;
   color: var(--text-muted);
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
 .metric--amber {

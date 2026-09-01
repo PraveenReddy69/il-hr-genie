@@ -286,21 +286,24 @@ export function Dashboard({ hrName }: { hrName: string }) {
             </Link>
           }
         >
-          <div className="grid grid--3">
+          <div className="metrics">
             <Metric
               label="Open"
+              sub="needs attention"
               value={stats.ticketsOpen}
               tone="amber"
               icon={<OpenIcon />}
             />
             <Metric
               label="In progress"
+              sub="being worked on"
               value={stats.ticketsInProgress}
               tone="blue"
               icon={<ProgressIcon />}
             />
             <Metric
               label="Resolved"
+              sub="no action needed"
               value={stats.ticketsResolved}
               tone="green"
               icon={<TickIcon />}
@@ -309,7 +312,7 @@ export function Dashboard({ hrName }: { hrName: string }) {
         </Card>
 
         <Card chip={<HolidaysIcon />} chipColour="var(--blue-tint-12)" title="Today at a glance">
-          <div className="grid grid--3">
+          <div className="metrics">
             <Metric
               label="Checked in"
               sub={`of ${stats.headcount} employees`}
