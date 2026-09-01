@@ -29,7 +29,9 @@ export function Card({
   action,
   children,
 }: {
-  chip: string
+  /* Was an emoji. Widened for drawn glyphs — an emoji is still a valid ReactNode, so
+     the pages that pass one are unaffected. */
+  chip: ReactNode
   chipColour: string
   title: string
   subtitle?: string

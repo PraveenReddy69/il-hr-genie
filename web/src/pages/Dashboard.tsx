@@ -2,7 +2,25 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Card, Empty, Loading } from '../components/Bits'
 import { PeopleDrawer } from '../components/Drawer'
-import { fetchAttendanceDetail, fetchMoodDetail, fetchPulseDetail, fetchStats } from '../api/client'
+import {
+  AnalyticsIcon,
+  CelebrationsIcon,
+  HolidaysIcon,
+  OpenIcon,
+  PeopleIcon,
+  ProgressIcon,
+  PulseIcon,
+  TickIcon,
+  TicketsIcon,
+  WaitingIcon,
+} from '../components/Icons'
+import {
+  fetchMoodDetail,
+  fetchMoodHistory,
+  fetchPulseDetail,
+  fetchPulseHistory,
+  fetchStats,
+} from '../api/client'
 import { isoDate, currentCycle } from '../api/mock'
 import {
   MIN_COHORT,
@@ -21,6 +39,16 @@ export function Dashboard({ hrName }: { hrName: string }) {
   const [stats, setStats] = useState<HrStats | null>(null)
   const [loadFailed, setLoadFailed] = useState(false)
   const [drill, setDrill] = useState<DrillDown | null>(null)
+
+  /**
+   * The two trend lines behind the headline figures.
+   *
+   * Loaded separately from the figures themselves and allowed to fail on their own: a
+   * sparkline is context, and losing it should not cost anybody the number it sits
+   * beside. Empty means the line is simply not drawn.
+   */
+  const [moodTrend, setMoodTrend] = useState<number[]>([])
+  const [pulseTrend, setPulseTrend] = useState<number[]>([])
 
   /**
    * Keeps the figures current.
@@ -64,6 +92,32 @@ export function Dashboard({ hrName }: { hrName: string }) {
     }
   }, [])
 
+  // The trends move by the day and the cycle, so they are read once rather than on the
+  // minute timer above.
+  useEffect(() => {
+    let cancelled = false
+
+    fetchMoodHistory(14)
+      .then((days) => {
+        if (cancelled) return
+        setMoodTrend(days.map((day) => day.score).filter((s): s is number => s !== null))
+      })
+      .catch(() => {})
+
+    fetchPulseHistory(6)
+      .then((cycles) => {
+        if (cancelled) return
+        setPulseTrend(
+          cycles.map((c) => (c.headcount === 0 ? 0 : (c.completed * 100) / c.headcount)),
+        )
+      })
+      .catch(() => {})
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   /**
    * Opens a drawer, or says why it could not.
    *
@@ -93,17 +147,6 @@ export function Dashboard({ hrName }: { hrName: string }) {
       const shared = entries.filter((entry) => entry.tone !== 'MUTED').length
       return {
         subtitle: `${shared} of ${stats?.headcount ?? entries.length} employees shared today`,
-        entries,
-      }
-    })
-  }
-
-  function openAttendance() {
-    return drillInto('Who checked in today', async () => {
-      const entries = await fetchAttendanceDetail(isoDate())
-      const onTheClock = entries.filter((entry) => entry.tone === 'POSITIVE').length
-      return {
-        subtitle: `${entries.length} checked in · ${onTheClock} still on the clock`,
         entries,
       }
     })
@@ -151,98 +194,151 @@ export function Dashboard({ hrName }: { hrName: string }) {
     day: 'numeric',
     month: 'long',
   })
-  const pulseRate = stats.headcount === 0 ? 0 : Math.round((stats.pulseCompleted * 100) / stats.headcount)
+  const pulseRate =
+    stats.headcount === 0 ? 0 : Math.round((stats.pulseCompleted * 100) / stats.headcount)
+  const live = stats.ticketsOpen + stats.ticketsInProgress
 
   return (
     <>
-      <section className="hero">
-        <span className="hero__badge">
-          <span className={`hero__dot ${loadFailed ? 'hero__dot--stale' : ''}`} />
+      <header className="dash__head">
+        <div>
+          <h1 className="dash__hello">
+            Welcome back, {hrName.split(' ')[0]} <span aria-hidden="true">👋</span>
+          </h1>
+          <p className="dash__date">{today}</p>
+        </div>
+
+        {/*
+          Badged with the live queue, not with a notion of "notifications" this console
+          does not have. It is a real number and it goes somewhere real; a bell that
+          counts nothing is furniture.
+        */}
+        <Link
+          className="bell"
+          to="/tickets"
+          title={`${live} ticket${live === 1 ? '' : 's'} still live — open the queue`}
+        >
+          <BellIcon />
+          {live > 0 && <span className="bell__badge">{live > 99 ? '99+' : live}</span>}
+        </Link>
+      </header>
+
+      <section className="band">
+        {/*
+          `Live` and `Reconnecting…` sit here rather than in the old badge above: the
+          band is the thing whose numbers go stale, so that is where it should say so.
+        */}
+        <span className={`band__state ${loadFailed ? 'band__state--stale' : ''}`}>
+          <span className="band__dot" />
           {loadFailed ? 'Reconnecting…' : 'Live'}
         </span>
-        <h2>Welcome back, {hrName.split(' ')[0]}</h2>
-        <div className="hero__sub">{today}</div>
 
-        <div className="kpis">
-          <button className="kpi" onClick={openMood}>
-            <div className="kpi__value">
-              {stats.engagementScore === null ? '0' : stats.engagementScore.toFixed(1)}
+        <button className="band__metric" onClick={openMood}>
+          <span className="band__icon">
+            <AnalyticsIcon />
+          </span>
+          <span className="band__body">
+            <span className="band__value">
+              {stats.engagementScore === null ? '—' : stats.engagementScore.toFixed(1)}
               <small>/10</small>
-            </div>
-            <div className="kpi__label">Engagement score</div>
-            <div
-              className="kpi__foot"
-              style={{
-                color: stats.engagementScore === null ? 'rgba(255,255,255,.45)' : '#5be08f',
-              }}
+            </span>
+            <span className="band__label">Engagement score</span>
+            <span
+              className={`band__foot ${stats.moodResponsesToday > 0 ? 'band__foot--up' : ''}`}
             >
               {stats.moodResponsesToday === 0
                 ? 'No check-ins yet today'
-                : `from ${stats.moodResponsesToday} check-in${stats.moodResponsesToday === 1 ? '' : 's'} today`}
-            </div>
-          </button>
+                : `↑ from ${stats.moodResponsesToday} check-in${stats.moodResponsesToday === 1 ? '' : 's'} today`}
+            </span>
+          </span>
+          <Spark values={moodTrend} colour="#6ec5ff" cap={10} suffix="" />
+        </button>
 
-          <button className="kpi" onClick={openPulse}>
-            <div className="kpi__value">
+        <span className="band__split" aria-hidden="true" />
+
+        <button className="band__metric" onClick={openPulse}>
+          <span className="band__icon band__icon--violet">
+            <PulseIcon />
+          </span>
+          <span className="band__body">
+            <span className="band__value">
               {pulseRate}
               <small>%</small>
-            </div>
-            <div className="kpi__label">Pulse completion</div>
-            <div className="kpi__foot" style={{ color: 'rgba(255,255,255,.62)' }}>
+            </span>
+            <span className="band__label">Pulse completion</span>
+            <span className="band__foot">
               {stats.pulseCompleted} of {stats.headcount} employees answered
-            </div>
-          </button>
-        </div>
+            </span>
+          </span>
+          <Spark values={pulseTrend} colour="#b39cff" cap={100} suffix="%" />
+        </button>
       </section>
 
       <div className="grid grid--2">
-        <Card chip="🎫" chipColour="var(--orange-tint-14)" title="Tickets"
-          subtitle={`${stats.ticketsOpen + stats.ticketsInProgress} still live`}
-          action={<Link className="card__action" to="/tickets">Open queue</Link>}>
+        <Card
+          chip={<TicketsIcon />}
+          chipColour="var(--orange-tint-14)"
+          title="Tickets"
+          subtitle={`${live} still live`}
+          action={
+            <Link className="card__action" to="/tickets">
+              Open queue →
+            </Link>
+          }
+        >
           <div className="grid grid--3">
-            {([
-              ['Open', stats.ticketsOpen, 'tile--amber', 'var(--orange-warn)'],
-              ['In progress', stats.ticketsInProgress, 'tile--blue', 'var(--blue-deep)'],
-              ['Resolved', stats.ticketsResolved, 'tile--green', 'var(--green-ok)'],
-            ] as const).map(([label, value, tile, colour]) => (
-              <div className={`tile ${tile}`} key={label}>
-                <div className="tile__value" style={{ color: colour }}>{value}</div>
-                <div className="tile__label">{label}</div>
-              </div>
-            ))}
+            <Metric
+              label="Open"
+              value={stats.ticketsOpen}
+              tone="amber"
+              icon={<OpenIcon />}
+            />
+            <Metric
+              label="In progress"
+              value={stats.ticketsInProgress}
+              tone="blue"
+              icon={<ProgressIcon />}
+            />
+            <Metric
+              label="Resolved"
+              value={stats.ticketsResolved}
+              tone="green"
+              icon={<TickIcon />}
+            />
           </div>
         </Card>
 
-        <Card chip="🗓️" chipColour="var(--blue-tint-12)" title="Today at a glance">
+        <Card chip={<HolidaysIcon />} chipColour="var(--blue-tint-12)" title="Today at a glance">
           <div className="grid grid--3">
-            <button className="tile tile--blue" onClick={openAttendance}>
-              <div className="tile__value" style={{ color: 'var(--blue-deep)' }}>
-                {stats.checkedInToday}
-              </div>
-              <div className="tile__label">Checked in</div>
-              <div className="tile__sub">of {stats.headcount} employees</div>
-            </button>
-            <button className="tile tile--green" onClick={openAttendance}>
-              <div className="tile__value" style={{ color: 'var(--green-ok)' }}>
-                {stats.onTheClock}
-              </div>
-              <div className="tile__label">On the clock</div>
-              <div className="tile__sub">still working</div>
-            </button>
-            <button className="tile tile--purple" onClick={openMood}>
-              <div className="tile__value" style={{ color: 'var(--purple)' }}>
-                {stats.moodResponsesToday}
-              </div>
-              <div className="tile__label">Mood shared</div>
-              <div className="tile__sub">of {stats.headcount} employees</div>
-            </button>
+            <Metric
+              label="Checked in"
+              sub={`of ${stats.headcount} employees`}
+              value={stats.checkedInToday}
+              tone="blue"
+              icon={<PeopleIcon />}
+            />
+            <Metric
+              label="On the clock"
+              sub="still working"
+              value={stats.onTheClock}
+              tone="green"
+              icon={<WaitingIcon />}
+            />
+            <Metric
+              label="Mood shared"
+              sub={`of ${stats.headcount} employees`}
+              value={stats.moodResponsesToday}
+              tone="purple"
+              icon={<CelebrationsIcon />}
+              onClick={openMood}
+            />
           </div>
         </Card>
       </div>
 
       <div className="grid grid--2" style={{ marginTop: 16 }}>
         <Card
-          chip="💜"
+          chip={<CelebrationsIcon />}
           chipColour="var(--purple-tint-12)"
           title="How the team feels today"
           subtitle={
@@ -250,45 +346,67 @@ export function Dashboard({ hrName }: { hrName: string }) {
               ? 'Nobody has checked in yet today'
               : `${stats.moodResponsesToday} of ${stats.headcount} employees shared how they feel`
           }
-          action={<button className="card__action" onClick={openMood}>Who</button>}
+          action={
+            <button className="card__action" onClick={openMood}>
+              Who →
+            </button>
+          }
         >
           {stats.moodResponsesToday === 0 ? (
             <Empty>Figures appear here as people check in.</Empty>
           ) : (
-            MOOD_KEYS.filter((key) => stats.moodBreakdown[key] > 0).map((key) => {
-              const count = stats.moodBreakdown[key]
-              const mood = MOODS[key]
-              const share = (count / stats.moodResponsesToday) * 100
-              return (
-                <div key={key} style={{ marginBottom: 13 }}>
-                  <div style={{ display: 'flex', marginBottom: 6 }}>
-                    <span style={{ flex: 1, fontWeight: 500 }}>
-                      {mood.emoji} {mood.label}
-                    </span>
-                    <strong>{count}</strong>
+            <>
+              {MOOD_KEYS.filter((key) => stats.moodBreakdown[key] > 0).map((key) => {
+                const count = stats.moodBreakdown[key]
+                const mood = MOODS[key]
+                const share = (count / stats.moodResponsesToday) * 100
+                return (
+                  <div key={key} style={{ marginBottom: 13 }}>
+                    <div style={{ display: 'flex', marginBottom: 6 }}>
+                      <span style={{ flex: 1, fontWeight: 500 }}>
+                        {mood.emoji} {mood.label}
+                      </span>
+                      <strong>
+                        {count} ({Math.round(share)}%)
+                      </strong>
+                    </div>
+                    <div className="track">
+                      <div
+                        className="track__fill"
+                        style={{ width: `${share}%`, background: moodColour(mood.value) }}
+                      />
+                    </div>
                   </div>
-                  <div className="track">
-                    <div
-                      className="track__fill"
-                      style={{
-                        width: `${share}%`,
-                        background:
-                          mood.value >= 8
-                            ? 'var(--green-ok)'
-                            : mood.value >= 6
-                              ? 'var(--blue-primary)'
-                              : 'var(--orange-warn)',
-                      }}
-                    />
-                  </div>
-                </div>
-              )
-            })
+                )
+              })}
+
+              {/*
+                Every mood, including the ones nobody chose. A breakdown that lists only
+                what was picked cannot be read as a shape — "Great 1" alone says nothing
+                about whether anybody was having a bad day.
+              */}
+              <div className="moods">
+                {MOOD_KEYS.map((key) => {
+                  const count = stats.moodBreakdown[key]
+                  const share = Math.round((count / stats.moodResponsesToday) * 100)
+                  return (
+                    <div className={`mood mood--${key.toLowerCase()}`} key={key}>
+                      <div className="mood__face">
+                        {MOODS[key].emoji} {MOODS[key].label}
+                      </div>
+                      <div className="mood__count">
+                        {count} <small>({share}%)</small>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
           )}
         </Card>
 
         <Card
-          chip="📊"
+          chip={<AnalyticsIcon />}
           chipColour="var(--blue-tint-12)"
           title="Mood by department"
           subtitle="Today's average mood, out of 10"
@@ -305,27 +423,27 @@ export function Dashboard({ hrName }: { hrName: string }) {
           )}
           {stats.departments.map((department) => (
             <div key={department.name} style={{ marginBottom: 13 }}>
-              <div style={{ display: 'flex', marginBottom: 6 }}>
+              <div style={{ display: 'flex', marginBottom: 6, gap: 12 }}>
                 <span style={{ flex: 1, fontWeight: 500 }}>{department.name}</span>
-                <strong style={{ color: department.score === null ? 'var(--text-muted)' : 'inherit' }}>
-                  {department.score !== null
-                    ? department.score.toFixed(1)
-                    : department.responses === 0
+                <span className="dept__need">
+                  {department.score === null &&
+                    (department.responses === 0
                       ? 'No check-in yet'
-                      : `${department.responses} of ${MIN_COHORT} needed`}
-                </strong>
+                      : `${department.responses} of ${MIN_COHORT} needed`)}
+                </span>
+                {department.score !== null && (
+                  <strong>
+                    {department.score.toFixed(1)}
+                    <small className="dept__outof">/10</small>
+                  </strong>
+                )}
               </div>
               <div className="track">
                 <div
                   className="track__fill"
                   style={{
                     width: `${((department.score ?? 0) / 10) * 100}%`,
-                    background:
-                      (department.score ?? 0) >= 7.5
-                        ? 'var(--green-ok)'
-                        : (department.score ?? 0) >= 6
-                          ? 'var(--blue-primary)'
-                          : 'var(--orange-warn)',
+                    background: moodColour(department.score ?? 0),
                   }}
                 />
               </div>
@@ -335,6 +453,7 @@ export function Dashboard({ hrName }: { hrName: string }) {
       </div>
 
       <p className="note">
+        <ShieldIcon />
         Individual records, under Infinity Learn&apos;s employee data policy. Written
         check-in notes are not exposed.
       </p>
@@ -348,5 +467,131 @@ export function Dashboard({ hrName }: { hrName: string }) {
         />
       )}
     </>
+  )
+}
+
+/** One figure in a card, with the glyph that says which figure it is. */
+function Metric({
+  label,
+  sub,
+  value,
+  tone,
+  icon,
+  onClick,
+}: {
+  label: string
+  sub?: string
+  value: number
+  tone: 'amber' | 'blue' | 'green' | 'purple'
+  icon: React.ReactNode
+  onClick?: () => void
+}) {
+  const inside = (
+    <>
+      <span className="metric__head">
+        <span className="metric__value">{value}</span>
+        <span className="metric__icon">{icon}</span>
+      </span>
+      <span className="metric__label">{label}</span>
+      {sub && <span className="metric__sub">{sub}</span>}
+    </>
+  )
+
+  // A button only where there is something behind it. A tile that looks pressable and
+  // is not is the same lie as a disabled control with no reason given.
+  return onClick ? (
+    <button className={`metric metric--${tone}`} onClick={onClick}>
+      {inside}
+    </button>
+  ) : (
+    <div className={`metric metric--${tone}`}>{inside}</div>
+  )
+}
+
+/**
+ * A trend line, drawn only when there is a trend.
+ *
+ * One point is a dot, not a line, and two are a straight segment that implies more than
+ * it knows — so below three readings nothing is drawn at all. The alternative is a
+ * shape that looks like history and is not.
+ */
+function Spark({
+  values,
+  colour,
+  cap,
+  suffix,
+}: {
+  values: number[]
+  colour: string
+  cap: number
+  suffix: string
+}) {
+  if (values.length < 3) return <span className="spark spark--none" />
+
+  const W = 132
+  const H = 46
+  const top = Math.max(...values, 0)
+  const bottom = Math.min(...values, top)
+  // A flat series would divide by zero; it draws down the middle instead.
+  const span = top - bottom || 1
+
+  const points = values.map((v, i) => {
+    const x = (i / (values.length - 1)) * W
+    const y = H - 6 - ((v - bottom) / span) * (H - 12)
+    return [x, y] as const
+  })
+
+  const last = points[points.length - 1]
+  const latest = values[values.length - 1]
+
+  return (
+    <span className="spark">
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
+        <polyline
+          points={points.map(([x, y]) => `${x},${y}`).join(' ')}
+          fill="none"
+          stroke={colour}
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+        />
+        {points.map(([x, y], i) => (
+          <circle key={i} cx={x} cy={y} r="1.6" fill={colour} />
+        ))}
+        <circle cx={last[0]} cy={last[1]} r="3" fill={colour} />
+      </svg>
+      <span className="spark__now">
+        {cap === 100 ? Math.round(latest) : latest.toFixed(1)}
+        {suffix}
+      </span>
+    </span>
+  )
+}
+
+/** Green, blue, amber — the same three the rest of the console uses for a score. */
+function moodColour(score: number): string {
+  if (score >= 7.5) return 'var(--green-ok)'
+  if (score >= 6) return 'var(--blue-primary)'
+  return 'var(--orange-warn)'
+}
+
+function BellIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"
+      strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 8.5a6 6 0 10-12 0c0 5-2 6.5-2 6.5h16s-2-1.5-2-6.5z" />
+      <path d="M13.7 19a2 2 0 01-3.4 0" />
+    </svg>
+  )
+}
+
+function ShieldIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"
+      strokeLinecap="round" strokeLinejoin="round" className="note__shield">
+      <path d="M12 3l7 3v5.5c0 4.2-2.9 7.9-7 9.5-4.1-1.6-7-5.3-7-9.5V6z" />
+      <path d="M9.2 12.2l2 2 3.6-3.9" />
+    </svg>
   )
 }
