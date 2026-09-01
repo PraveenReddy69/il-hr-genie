@@ -8,7 +8,6 @@ import {
   clickable,
   relativeTime,
 } from '../components/Bits'
-import { Drawer } from '../components/Drawer'
 import { fetchEmployeeSummary, fetchEmployeeTickets, fetchEmployees } from '../api/client'
 import { MOODS, type Employee, type EmployeeSummary, type Ticket } from '../api/types'
 
@@ -27,6 +26,18 @@ export function People({ viewer }: { viewer: Employee }) {
   const [department, setDepartment] = useState<string | null>(null)
   const [open, setOpen] = useState<Employee | null>(null)
   const [allDepartments, setAllDepartments] = useState(false)
+  const [page, setPage] = useState(0)
+
+  /*
+   * Any change to what is being listed puts you back on page one.
+   *
+   * Searching while on page 12 of the unfiltered directory otherwise leaves you looking
+   * at an empty page 12 of four results, which reads as "no matches" when there are
+   * plenty — the rows are simply behind you.
+   */
+  useEffect(() => {
+    setPage(0)
+  }, [query, department])
 
   useEffect(() => {
     fetchEmployees().then(setPeople)
@@ -70,24 +81,70 @@ export function People({ viewer }: { viewer: Employee }) {
       .includes(needle)
   })
 
-  // The real directory is nearly two thousand people. Rendering every row costs a
-  // visible pause and nobody scrolls that far — search is how HR finds someone, so
-  // the list shows the first page and says what it is holding back.
-  const filtered = matches.slice(0, PAGE_SIZE)
-  const hidden = matches.length - filtered.length
+  /*
+   * Paged rather than truncated.
+   *
+   * It used to render the first fifty and say how many were hidden, which is honest but
+   * leaves nine-tenths of the directory unreachable except by search — and search only
+   * helps somebody who already knows who they are looking for.
+   */
+  const pages = Math.max(1, Math.ceil(matches.length / PAGE_SIZE))
+  const safePage = Math.min(page, pages - 1)
+  const from = safePage * PAGE_SIZE
+  const filtered = matches.slice(from, from + PAGE_SIZE)
 
   // Fifty departments would push the first person off the screen, so only the
   // largest are offered up front.
   const shownDepartments = allDepartments ? departments : departments.slice(0, TOP_DEPARTMENTS)
 
+  /**
+   * The directory as a spreadsheet.
+   *
+   * Everything this account may see, not the filtered page: an export of somebody's
+   * scope is a document they can work from, where an export of whichever chip happened
+   * to be pressed is one nobody can interpret later.
+   *
+   * Contact details stop at the work address. Date of birth is on the record now, and
+   * it is deliberately not written out — see the note under the list.
+   */
+  function exportCsv() {
+    const rows = [
+      ['Employee ID', 'Name', 'Title', 'Department', 'Official email', 'Joined'],
+      ...(people ?? []).map((one) => [
+        one.employeeId,
+        one.name,
+        one.title,
+        one.department,
+        one.officialEmail,
+        one.dateOfJoining ?? '',
+      ]),
+    ]
+    const csv = rows
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\r\n')
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `hr-genie-people-${new Date().toISOString().slice(0, 10)}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <>
-      <div className="page-head">
-        <h1>People</h1>
-        <p>
-          {people.length} on the directory · {departments.length} departments
-        </p>
+      <div className="page-head page-head--row">
+        <div>
+          <h1>People</h1>
+          <p>
+            {people.length} on the directory · {departments.length} departments
+          </p>
+        </div>
+        <button className="ghostbtn" onClick={exportCsv} disabled={people.length === 0}>
+          Export CSV
+        </button>
       </div>
+
+      <div className="peoplelayout">
 
       <section className="card">
         <input
@@ -152,14 +209,18 @@ export function People({ viewer }: { viewer: Employee }) {
             ) : (
               <Empty>Nobody matches “{query}”. Try an ID, or clear the filter.</Empty>
             ))}
-          {hidden > 0 && (
+          {matches.length > PAGE_SIZE && (
             <div className="row__meta" style={{ padding: '4px 2px 10px' }}>
-              Showing {filtered.length} of {matches.length}. Search or pick a department
-              to narrow it down.
+              Showing {from + 1}–{from + filtered.length} of {matches.length}. Search or
+              pick a department to narrow it down.
             </div>
           )}
           {filtered.map((person, index) => (
-            <div className="row" key={person.employeeId} {...clickable(() => setOpen(person))}>
+            <div
+              className={`row ${open?.employeeId === person.employeeId ? 'row--on' : ''}`}
+              key={person.employeeId}
+              {...clickable(() => setOpen(person))}
+            >
               <Avatar name={person.name} index={index} />
               <div className="row__main">
                 <div className="row__title">
@@ -180,22 +241,100 @@ export function People({ viewer }: { viewer: Employee }) {
                 </div>
               </div>
               <span className="pill pill--muted">{person.department}</span>
+              <ChevronIcon />
             </div>
           ))}
+
+          {pages > 1 && (
+            <nav className="pager" aria-label="Directory pages">
+              <button
+                className="pager__step"
+                onClick={() => setPage(safePage - 1)}
+                disabled={safePage === 0}
+                aria-label="Previous page"
+              >
+                ‹
+              </button>
+              {pageNumbers(safePage, pages).map((n, i) =>
+                n === null ? (
+                  <span className="pager__gap" key={`gap-${i}`}>
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={n}
+                    className={`pager__n ${n === safePage ? 'pager__n--on' : ''}`}
+                    onClick={() => setPage(n)}
+                    aria-current={n === safePage ? 'page' : undefined}
+                  >
+                    {n + 1}
+                  </button>
+                ),
+              )}
+              <button
+                className="pager__step"
+                onClick={() => setPage(safePage + 1)}
+                disabled={safePage >= pages - 1}
+                aria-label="Next page"
+              >
+                ›
+              </button>
+            </nav>
+          )}
         </div>
       </section>
+
+      {open ? (
+        <PersonPanel employee={open} onClose={() => setOpen(null)} />
+      ) : (
+        <aside className="card person person--empty">
+          <p>Pick somebody to see their programme activity and the tickets they raised.</p>
+        </aside>
+      )}
+      </div>
 
       <p className="note">
         Directory and programme activity. Personal records — contact details, date of
         birth — live in the HRMS, not here.
       </p>
 
-      {open && <PersonDrawer employee={open} onClose={() => setOpen(null)} />}
     </>
   )
 }
 
-function PersonDrawer({ employee, onClose }: { employee: Employee; onClose: () => void }) {
+/**
+ * Which page numbers to draw.
+ *
+ * Always the first, the last, and a window around wherever you are, with gaps for the
+ * rest. Forty-five buttons is not navigation, and a bare pair of arrows makes the far
+ * end of a long directory a hundred clicks away.
+ */
+function pageNumbers(current: number, total: number): (number | null)[] {
+  const keep = new Set([0, total - 1, current - 1, current, current + 1])
+  const out: (number | null)[] = []
+  let gap = false
+  for (let n = 0; n < total; n += 1) {
+    if (keep.has(n)) {
+      out.push(n)
+      gap = false
+    } else if (!gap) {
+      out.push(null)
+      gap = true
+    }
+  }
+  return out
+}
+
+function ChevronIcon() {
+  return (
+    <svg className="row__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M9 5l7 7-7 7" />
+    </svg>
+  )
+}
+
+function PersonPanel({ employee, onClose }: { employee: Employee; onClose: () => void }) {
   const [summary, setSummary] = useState<EmployeeSummary | null>(null)
   const [tickets, setTickets] = useState<Ticket[]>([])
 
@@ -208,8 +347,21 @@ function PersonDrawer({ employee, onClose }: { employee: Employee; onClose: () =
   const mood = summary?.moodToday ? MOODS[summary.moodToday] : null
 
   return (
-    <Drawer title={employee.name} subtitle={`${employee.title} · ${employee.department}`} onClose={onClose}>
-      <div className="grid grid--2" style={{ marginTop: 18 }}>
+    <aside className="card person">
+      <header className="person__head">
+        <Avatar name={employee.name} index={0} />
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div className="person__name">{employee.name}</div>
+          <div className="person__role">
+            {employee.title} · {employee.department}
+          </div>
+        </div>
+        <button className="person__close" onClick={onClose} aria-label="Close">
+          <CloseIcon />
+        </button>
+      </header>
+
+      <div className="grid grid--2">
         <Field label="Employee ID" value={employee.employeeId} />
         <Field label="Role" value={isHr ? 'HR business partner' : 'Employee'} />
         <Field label="Official email" value={employee.officialEmail} />
@@ -304,10 +456,30 @@ function PersonDrawer({ employee, onClose }: { employee: Employee; onClose: () =
       )}
 
       <p className="note">
+        <ShieldIcon />
         Written check-in notes are never shown here — the app promises employees they
         stay private.
       </p>
-    </Drawer>
+    </aside>
+  )
+}
+
+function CloseIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+      strokeLinecap="round" aria-hidden="true">
+      <path d="M6 6l12 12M18 6L6 18" />
+    </svg>
+  )
+}
+
+function ShieldIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"
+      strokeLinecap="round" strokeLinejoin="round" className="note__shield" aria-hidden="true">
+      <path d="M12 3l7 3v5.5c0 4.2-2.9 7.9-7 9.5-4.1-1.6-7-5.3-7-9.5V6z" />
+      <path d="M9.2 12.2l2 2 3.6-3.9" />
+    </svg>
   )
 }
 
