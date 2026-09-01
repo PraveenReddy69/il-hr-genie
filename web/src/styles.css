@@ -1026,6 +1026,30 @@ textarea:focus {
   isolation: isolate;
 }
 
+/*
+ * Zoomed and anchored bottom-right, so the building lands where it can be seen.
+ *
+ * `cover` alone cannot do this. The photograph is 3:2 and a laptop is wider, so cover
+ * fits the width exactly and crops the height — which leaves no horizontal slack, and
+ * `background-position-x` does nothing at all. Measured at 1600px, that put the
+ * building's left edge at x≈912 with the card starting at 929: the entire facade sat
+ * behind the card and the 127px gap beside it showed empty sky.
+ *
+ * 132% gives the slack to pan. Right-aligned, the facade fills that gap; anchored at
+ * 92% vertically rather than centred, the plaza and its lights stay in the band below
+ * the card instead of being cropped off the bottom.
+ *
+ * The aspect guard is load-bearing. At 132% the rendered height is 0.88 × the width,
+ * so anything narrower than about 1.14:1 stops covering and the ground shows through.
+ * 6/5 keeps a margin; below it, plain `cover` takes over.
+ */
+@media (min-width: 900px) and (min-aspect-ratio: 6 / 5) {
+  .auth {
+    background-size: 132% auto;
+    background-position: 100% 92%;
+  }
+}
+
 @media (min-width: 900px) {
   .auth {
     grid-template-columns: 1fr minmax(430px, 46%);
