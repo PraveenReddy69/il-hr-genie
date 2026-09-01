@@ -1005,7 +1005,23 @@ textarea:focus {
   align-items: center;
   gap: 40px;
   padding: 40px 24px;
-  background: #071227;
+  /*
+   * The colour is not a fallback, it is what paints first.
+   *
+   * Sampled from the photograph's sky, so the screen arrives the right colour and the
+   * image resolves into it rather than replacing a black rectangle.
+   */
+  background-color: #0a1b45;
+  background-image: image-set(
+    url('./hr-background.webp') type('image/webp'),
+    url('./hr-background.jpg') type('image/jpeg')
+  );
+  background-size: cover;
+  /*
+   * Anchored right, so the building keeps its corner as the viewport narrows. Centred,
+   * a tall window crops the lit facade away first and leaves an empty sky.
+   */
+  background-position: center right;
   overflow: hidden;
   isolation: isolate;
 }
@@ -1019,36 +1035,48 @@ textarea:focus {
 }
 
 /*
- * The ground the mockup gets from a photograph of an office at dusk.
+ * The scrim over the photograph.
  *
- * Drawn rather than shot: there is no such asset in the repo, and a stock image
- * dropped in would be the one part of this screen nobody could re-render. Three
- * layers — a warm pool where the light would fall, the cool body of the room, and
- * a faint grid that reads as glazing.
+ * Heavy on the left and light on the right, which is the whole trick: the pitch has to
+ * be readable over a city skyline, and the building has to stay a building rather than
+ * becoming a texture. A flat overlay dark enough for the text would have flattened the
+ * photograph into a blue rectangle, and one light enough for the photograph would have
+ * left the feature rows sitting on lit windows.
  *
- * To use a real photograph instead, set a background-image on `.auth` and keep
- * this as the tint above it.
+ * The drawn gradients that used to stand in for this photograph are gone. The dot grid
+ * went with them — the image carries its own dot motifs in the corners, and a second
+ * set at a different pitch read as a printing fault.
  */
 .auth__wash {
   position: absolute;
   inset: 0;
   z-index: -1;
   background:
-    radial-gradient(52% 46% at 74% 18%, rgba(56, 122, 224, 0.30) 0%, transparent 70%),
-    radial-gradient(60% 50% at 12% 84%, rgba(28, 79, 168, 0.34) 0%, transparent 72%),
-    linear-gradient(160deg, #0a1a38 0%, #071227 52%, #050d1c 100%);
+    linear-gradient(
+      90deg,
+      rgba(4, 11, 28, 0.94) 0%,
+      rgba(4, 11, 28, 0.86) 26%,
+      rgba(5, 14, 34, 0.52) 54%,
+      rgba(5, 14, 34, 0.24) 78%,
+      rgba(5, 14, 34, 0.34) 100%
+    ),
+    /* Lifts the top-left corner just enough that the brand lockup is not sitting on
+       flat black, and pulls the eye across to the building. */
+    radial-gradient(46% 42% at 8% 14%, rgba(47, 123, 240, 0.20) 0%, transparent 72%),
+    /* A floor, so the plaza lights along the bottom do not fight the legal line. */
+    linear-gradient(0deg, rgba(3, 8, 20, 0.62) 0%, transparent 26%);
 }
 
-.auth__wash::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.16) 1px, transparent 1px);
-  background-size: 26px 26px;
-  /* Fading it out stops the grid reading as a texture applied to the whole page. */
-  -webkit-mask-image: radial-gradient(58% 48% at 30% 22%, #000 0%, transparent 76%);
-  mask-image: radial-gradient(58% 48% at 30% 22%, #000 0%, transparent 76%);
-  opacity: 0.5;
+/*
+ * Below 900px the pitch is hidden and the card fills the screen, so the photograph is
+ * only ever glimpsed at the edges — the scrim goes near-flat rather than leaving one
+ * side of a phone bright and the other dark.
+ */
+@media (max-width: 899px) {
+  .auth__wash {
+    background:
+      linear-gradient(180deg, rgba(4, 11, 28, 0.72) 0%, rgba(4, 11, 28, 0.86) 100%);
+  }
 }
 
 /* ------------------------------------------------------------------- pitch */
