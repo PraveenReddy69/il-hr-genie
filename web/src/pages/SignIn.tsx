@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import logo from '../infinity-learn.png'
 import { isConsoleRole } from '../api/access'
 import { isLive, isUnauthorized, signIn } from '../api/client'
@@ -34,12 +34,56 @@ export function SignIn({ onSignedIn }: { onSignedIn: (employee: Employee) => voi
   const [refused, setRefused] = useState(false)
   const [busy, setBusy] = useState(false)
 
+  const idRef = useRef<HTMLInputElement>(null)
+  const pwRef = useRef<HTMLInputElement>(null)
+
+  /**
+   * Copy anything the browser filled in back into React.
+   *
+   * A password manager writes straight to the DOM and React never hears about it, so
+   * the state stayed empty while the boxes plainly had text in them. Sign in was
+   * disabled on that state, which meant anybody with a saved password arrived at a
+   * filled form and a dead button — and nothing on screen said why.
+   *
+   * Run on mount and twice more, because the fill can land after the first paint: some
+   * managers wait for the page to settle, and one that arrives at 400ms would otherwise
+   * be missed by a single check.
+   */
+  useEffect(() => {
+    const sync = () => {
+      const id = idRef.current?.value ?? ''
+      const pw = pwRef.current?.value ?? ''
+      if (id) setEmployeeId((current) => (current === id ? current : id))
+      if (pw) setPassword((current) => (current === pw ? current : pw))
+    }
+    sync()
+    const timers = [window.setTimeout(sync, 120), window.setTimeout(sync, 600)]
+    return () => timers.forEach(window.clearTimeout)
+  }, [])
+
   async function submit(event: React.FormEvent) {
     event.preventDefault()
+
+    /*
+     * The fields are read here as well as from state.
+     *
+     * Belt and braces against the same autofill problem: if a fill lands later than the
+     * syncing effect above, the state can still be behind what the person is looking
+     * at, and submitting their own visible credentials as empty strings is the worst
+     * possible answer.
+     */
+    const id = (employeeId || idRef.current?.value || '').trim()
+    const secret = password || pwRef.current?.value || ''
+
+    if (!id || !secret) {
+      setError('Enter your employee ID and password.')
+      return
+    }
+
     setBusy(true)
     setError(null)
     try {
-      const employee = await signIn(employeeId, password)
+      const employee = await signIn(id, secret)
       if (!isConsoleRole(employee.role)) {
         // The password was right. The account is simply not for this console.
         setError('This console is for HR accounts. Employees use HR Genie in Teams.')
@@ -149,6 +193,7 @@ export function SignIn({ onSignedIn }: { onSignedIn: (employee: Employee) => voi
             <PersonIcon />
             <input
               id="employee-id"
+              ref={idRef}
               value={employeeId}
               onChange={(event) => {
                 setEmployeeId(event.target.value)
@@ -167,6 +212,7 @@ export function SignIn({ onSignedIn }: { onSignedIn: (employee: Employee) => voi
             <LockIcon />
             <input
               id="password"
+              ref={pwRef}
               type={reveal ? 'text' : 'password'}
               value={password}
               onChange={(event) => {
@@ -235,11 +281,15 @@ export function SignIn({ onSignedIn }: { onSignedIn: (employee: Employee) => voi
             </p>
           )}
 
-          <button
-            className="authbutton"
-            type="submit"
-            disabled={busy || !employeeId.trim() || !password}
-          >
+          {/*
+            Disabled only while a request is in flight.
+
+            It used to go grey on empty fields, which is how the autofill bug hid: the
+            form looked complete and the button looked broken, with nothing to press and
+            nothing to read. An empty field is now answered on submit, where there is
+            somewhere to put the reason.
+          */}
+          <button className="authbutton" type="submit" disabled={busy}>
             {busy ? 'Signing in…' : 'Sign in'}
             {!busy && <ArrowIcon />}
           </button>
