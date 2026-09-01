@@ -6,6 +6,7 @@ import { Celebrations } from './pages/Celebrations'
 import { Dashboard } from './pages/Dashboard'
 import { Holidays } from './pages/Holidays'
 import { People } from './pages/People'
+import { SignIn } from './pages/SignIn'
 import { PulseQuestions } from './pages/PulseQuestions'
 import { SalesInsights } from './pages/SalesInsights'
 import { Tickets } from './pages/Tickets'
@@ -22,8 +23,8 @@ import {
   SalesIcon,
   TicketsIcon,
 } from './components/Icons'
-import { clearToken, fetchMe, isLive, isUnauthorized, signIn } from './api/client'
-import { can, isConsoleRole, ROLE_LABEL, type Permission } from './api/access'
+import { clearToken, fetchMe, isUnauthorized } from './api/client'
+import { can, ROLE_LABEL, type Permission } from './api/access'
 import type { Employee } from './api/types'
 
 const SESSION_KEY = 'hr-genie-console'
@@ -195,105 +196,6 @@ export default function App() {
  * The console is HR-only, so the gate checks the role rather than just the id — an
  * employee signing in here should be turned away, not shown their colleagues.
  */
-function SignIn({ onSignedIn }: { onSignedIn: (employee: Employee) => void }) {
-  const [employeeId, setEmployeeId] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
-
-  async function submit(event: React.FormEvent) {
-    event.preventDefault()
-    setBusy(true)
-    setError(null)
-    try {
-      const employee = await signIn(employeeId, password)
-      if (!isConsoleRole(employee.role)) {
-        setError('This console is for HR accounts. Employees use the mobile app.')
-        return
-      }
-      onSignedIn(employee)
-    } catch (failure) {
-      setError(failure instanceof Error ? failure.message : 'Could not sign in.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <div className="signin">
-      <form className="signin__card" onSubmit={submit}>
-        <div className="signin__mark">
-          {/* Same mark as the employee app, so the two read as one product. */}
-          <img src={`${import.meta.env.BASE_URL}hr-genie-mark.png`} alt="" />
-        </div>
-
-        <h1 className="signin__title">HR Genie</h1>
-        <p className="signin__subtitle">
-          The HRBP console. Sign in with your HR employee ID.
-        </p>
-
-        <div className="signin__field">
-          <label className="signin__label" htmlFor="employee-id">
-            Employee ID
-          </label>
-          <input
-            id="employee-id"
-            value={employeeId}
-            onChange={(event) => setEmployeeId(event.target.value)}
-            placeholder="HYD609552"
-            autoFocus
-            autoComplete="off"
-          />
-        </div>
-
-        <div className="signin__field">
-          <label className="signin__label" htmlFor="password">
-            Password
-          </label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            placeholder="Enter your password"
-            autoComplete="current-password"
-          />
-        </div>
-
-        {error && <div className="error">{error}</div>}
-
-        <button
-          className="button"
-          type="submit"
-          disabled={busy || !employeeId.trim() || !password}
-        >
-          {busy ? 'Signing in…' : 'Sign in'}
-        </button>
-
-        {!isLive && (
-          <>
-            <p className="signin__hint">
-              Running on mock data — any password works. Use{' '}
-              <strong>HYD609552</strong> for an HRBP or <strong>HYD604982</strong> for
-              an Admin.
-            </p>
-            <span className="env-flag">Mock data</span>
-          </>
-        )}
-
-        <div className="signin__footer">
-          {/* Wordmark only — the round mark is far too detailed to read at this
-              size, and repeating it would compete with the one above. */}
-          <span className="signin__brand">Infinity Learn</span>
-        </div>
-        <p className="signin__legal">
-          Employees use the mobile app. This console is for the HR team.
-        </p>
-      </form>
-    </div>
-  )
-}
-
 function initials(name: string): string {
   return name
     .split(' ')
