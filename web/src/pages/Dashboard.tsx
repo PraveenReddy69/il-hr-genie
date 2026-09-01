@@ -251,7 +251,7 @@ export function Dashboard({ hrName }: { hrName: string }) {
                 : `↑ from ${stats.moodResponsesToday} check-in${stats.moodResponsesToday === 1 ? '' : 's'} today`}
             </span>
           </span>
-          <Spark values={moodTrend} colour="#6ec5ff" cap={10} suffix="" />
+          <Spark values={moodTrend} colour="#6ec5ff" id="mood" />
         </button>
 
         <span className="scoreband__split" aria-hidden="true" />
@@ -270,7 +270,7 @@ export function Dashboard({ hrName }: { hrName: string }) {
               {stats.pulseCompleted} of {stats.headcount} employees answered
             </span>
           </span>
-          <Spark values={pulseTrend} colour="#b39cff" cap={100} suffix="%" />
+          <Spark values={pulseTrend} colour="#b39cff" id="pulse" />
         </button>
       </section>
 
@@ -516,23 +516,18 @@ function Metric({
  *
  * One point is a dot, not a line, and two are a straight segment that implies more than
  * it knows — so below three readings nothing is drawn at all. The alternative is a
- * shape that looks like history and is not.
+ * shape that looks like history and is not. The space stays reserved either way, so the
+ * two halves of the band do not sit at different widths while one is waiting for data.
+ *
+ * There is no figure printed on it. It used to carry a badge of the latest value, which
+ * was the number already set in 30px type six centimetres to its left — and on the
+ * right-hand metric that badge landed on top of the Live chip.
  */
-function Spark({
-  values,
-  colour,
-  cap,
-  suffix,
-}: {
-  values: number[]
-  colour: string
-  cap: number
-  suffix: string
-}) {
+function Spark({ values, colour, id }: { values: number[]; colour: string; id: string }) {
   if (values.length < 3) return <span className="spark spark--none" />
 
-  const W = 132
-  const H = 46
+  const W = 150
+  const H = 54
   const top = Math.max(...values, 0)
   const bottom = Math.min(...values, top)
   // A flat series would divide by zero; it draws down the middle instead.
@@ -540,34 +535,41 @@ function Spark({
 
   const points = values.map((v, i) => {
     const x = (i / (values.length - 1)) * W
-    const y = H - 6 - ((v - bottom) / span) * (H - 12)
+    const y = H - 8 - ((v - bottom) / span) * (H - 18)
     return [x, y] as const
   })
 
-  const last = points[points.length - 1]
-  const latest = values[values.length - 1]
+  const line = points.map(([x, y]) => `${x},${y}`).join(' ')
+  const [lastX, lastY] = points[points.length - 1]
 
   return (
     <span className="spark">
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
+      <svg viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
+        <defs>
+          {/* Per-instance, because two gradients sharing an id is one gradient. */}
+          <linearGradient id={`spark-${id}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={colour} stopOpacity="0.35" />
+            <stop offset="100%" stopColor={colour} stopOpacity="0" />
+          </linearGradient>
+        </defs>
+
+        {/* The fill is what makes it read as a quantity rather than a squiggle. */}
+        <polygon points={`0,${H} ${line} ${W},${H}`} fill={`url(#spark-${id})`} />
+
         <polyline
-          points={points.map(([x, y]) => `${x},${y}`).join(' ')}
+          points={line}
           fill="none"
           stroke={colour}
-          strokeWidth="1.8"
+          strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          vectorEffect="non-scaling-stroke"
         />
-        {points.map(([x, y], i) => (
-          <circle key={i} cx={x} cy={y} r="1.6" fill={colour} />
-        ))}
-        <circle cx={last[0]} cy={last[1]} r="3" fill={colour} />
+
+        {/* Only the latest reading is marked. A dot on every point turned fourteen
+            days of scores into a dotted line and hid the shape. */}
+        <circle cx={lastX} cy={lastY} r="6" fill={colour} opacity="0.22" />
+        <circle cx={lastX} cy={lastY} r="2.8" fill={colour} />
       </svg>
-      <span className="spark__now">
-        {cap === 100 ? Math.round(latest) : latest.toFixed(1)}
-        {suffix}
-      </span>
     </span>
   )
 }
