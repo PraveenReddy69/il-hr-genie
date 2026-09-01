@@ -1006,6 +1006,19 @@ textarea:focus {
   gap: 40px;
   padding: 40px 24px;
   /*
+   * A floor, below which the page scrolls rather than compressing further.
+   *
+   * The card is at its tightest around here: the fields keep their leading icon, the
+   * eye toggle and enough room for a placeholder, and "Remember me" still sits on one
+   * line beside "Forgot password?". Squeeze past it and those wrap into each other.
+   *
+   * 360 rather than 375 so an iPhone SE — the narrowest phone worth designing for —
+   * still fits without a sideways scrollbar. Anything narrower gets the scroll, which
+   * is the honest outcome: better a page you can pan than a layout folding in on
+   * itself.
+   */
+  min-width: 360px;
+  /*
    * The colour is not a fallback, it is what paints first.
    *
    * Sampled from the photograph's sky, so the screen arrives the right colour and the
