@@ -1328,6 +1328,42 @@ textarea:focus {
   color: var(--blue-primary);
 }
 
+/*
+ * A refused sign-in, carried by the fields rather than by a line of text alone.
+ *
+ * Both boxes, because the server will not say which of the two was wrong — and it
+ * should not. Marking only the password would be a guess presented as a fact.
+ *
+ * The focus colour still wins while a field has focus: once somebody is typing into
+ * a box, blue saying "you are here" is more use than red repeating what they have
+ * already read.
+ */
+.authfield--bad {
+  border-color: var(--red-risk);
+}
+
+.authfield--bad .authfield__label {
+  color: var(--red-risk);
+}
+
+.authfield--bad:focus-within {
+  border-color: var(--blue-primary);
+}
+
+.authfield--bad:focus-within .authfield__label {
+  color: var(--blue-primary);
+}
+
+.authcard__error {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--red-risk);
+  margin: -12px 0 16px;
+}
+
 .authfield__icon {
   width: 19px;
   height: 19px;

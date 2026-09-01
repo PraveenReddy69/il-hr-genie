@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { isConsoleRole } from '../api/access'
-import { isLive, signIn } from '../api/client'
+import { isLive, isUnauthorized, signIn } from '../api/client'
 import type { Employee } from '../api/types'
 
 /**
@@ -22,6 +22,15 @@ export function SignIn({ onSignedIn }: { onSignedIn: (employee: Employee) => voi
   const [reveal, setReveal] = useState(false)
   const [helping, setHelping] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  /*
+   * Whether the *credentials* were refused, as opposed to anything else going wrong.
+   *
+   * Only this paints the fields red. A dropped connection, or an employee signing in
+   * to a console that is not for them, are both failures — but marking the two boxes
+   * red would tell somebody their password is wrong when it is not, and they would
+   * spend the next five minutes retyping a password that was always correct.
+   */
+  const [refused, setRefused] = useState(false)
   const [busy, setBusy] = useState(false)
 
   async function submit(event: React.FormEvent) {
@@ -31,6 +40,7 @@ export function SignIn({ onSignedIn }: { onSignedIn: (employee: Employee) => voi
     try {
       const employee = await signIn(employeeId, password)
       if (!isConsoleRole(employee.role)) {
+        // The password was right. The account is simply not for this console.
         setError('This console is for HR accounts. Employees use the mobile app.')
         return
       }
@@ -44,9 +54,16 @@ export function SignIn({ onSignedIn }: { onSignedIn: (employee: Employee) => voi
       onSignedIn(employee)
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'Could not sign in.')
+      setRefused(isUnauthorized(failure))
     } finally {
       setBusy(false)
     }
+  }
+
+  /** Typing is an answer to the refusal, so the red goes as soon as it starts. */
+  function clear() {
+    if (error) setError(null)
+    if (refused) setRefused(false)
   }
 
   return (
@@ -115,12 +132,15 @@ export function SignIn({ onSignedIn }: { onSignedIn: (employee: Employee) => voi
             The label's own order matters too — it follows the input so the sibling
             selector can reach it.
           */}
-          <div className="authfield">
+          <div className={`authfield ${refused ? 'authfield--bad' : ''}`}>
             <PersonIcon />
             <input
               id="employee-id"
               value={employeeId}
-              onChange={(event) => setEmployeeId(event.target.value)}
+              onChange={(event) => {
+                setEmployeeId(event.target.value)
+                clear()
+              }}
               placeholder=" "
               autoFocus={!remembered}
               autoComplete="username"
@@ -130,13 +150,16 @@ export function SignIn({ onSignedIn }: { onSignedIn: (employee: Employee) => voi
             </label>
           </div>
 
-          <div className="authfield">
+          <div className={`authfield ${refused ? 'authfield--bad' : ''}`}>
             <LockIcon />
             <input
               id="password"
               type={reveal ? 'text' : 'password'}
               value={password}
-              onChange={(event) => setPassword(event.target.value)}
+              onChange={(event) => {
+                setPassword(event.target.value)
+                clear()
+              }}
               placeholder=" "
               autoFocus={remembered !== null}
               autoComplete="current-password"
@@ -154,6 +177,17 @@ export function SignIn({ onSignedIn }: { onSignedIn: (employee: Employee) => voi
               {reveal ? <EyeOffIcon /> : <EyeIcon />}
             </button>
           </div>
+
+          {/*
+            Directly under the pair, because that is what it is about. It sat above the
+            button, two controls away from the boxes it was describing, which is far
+            enough that the eye has to hunt for the connection.
+          */}
+          {error && (
+            <p className="authcard__error" role="alert">
+              {error}
+            </p>
+          )}
 
           <div className="authcard__row">
             <label className="authcheck">
@@ -187,8 +221,6 @@ export function SignIn({ onSignedIn }: { onSignedIn: (employee: Employee) => voi
               the password.
             </p>
           )}
-
-          {error && <div className="error">{error}</div>}
 
           <button
             className="authbutton"
