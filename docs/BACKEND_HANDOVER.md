@@ -47,6 +47,7 @@ Roles, in rank order: `EMPLOYEE` → `HR` (HRBP) → `HR_ADMIN` (Admin) → `HR_
 | **`PATCH .../status` for an Admin** | **Blocked.** "Only HR can change ticket status", against a list that grants it. Section 4d. |
 | **`tickets.assign` for an HRBP** | **Wanted.** One string on the `HR` list. Section 4e. |
 | **No way to list HR accounts** | `/api/employees/hr` is 404, so an HRBP's picker is empty but for themselves. Section 4f. |
+| **Email on ticket creation** | **New request.** To the HRBP and the raiser, from `POST /api/tickets`. Section 4g. |
 
 ---
 
@@ -272,6 +273,32 @@ Without it an HRBP can only ever assign a ticket to themselves, which is half a 
 
 ---
 
+### 4g. Email when a ticket is raised
+
+New, and independent of the rest of section 4 — it does not wait on auto-assignment.
+
+When an employee raises a ticket, two people should hear by email: the HRBP who will
+deal with it, and the employee who raised it.
+
+**In `POST /api/tickets`, after the ticket is committed** — not in the bot. The Android
+app raises tickets too, so a send that lives in the bot means every ticket from the app
+silently gets none.
+
+**Addressed from `hrbpId`, not `assigneeId`.** Every ticket has a null assignee today, so
+keying off it would send nothing; and the tag is the better key anyway, being a standing
+relationship rather than where the ticket happens to sit this week.
+
+Sent with Microsoft Graph `sendMail` from a shared mailbox. IT grants `Mail.Send` as an
+application permission, scoped to that one mailbox with an application access policy.
+
+**A failed send must never fail the ticket.** Losing somebody's ticket because a
+notification threw inverts the importance of the two things entirely.
+
+Full spec, both templates, the IT ask and the privacy call on whether the ticket's own
+text belongs in an email: `docs/TICKET_EMAIL_BACKEND.md`.
+
+---
+
 ### 4c. The visibility rule
 
 This is the part a client cannot enforce, and the part that makes assignment a handover
@@ -462,6 +489,7 @@ Referenced above, kept separate because they are longer than most people need:
 |---|---|
 | `docs/ACCESS_CONTROL.md` | Roles, permission bundles, grants, escalation rules, audit |
 | `docs/TICKET_ASSIGNMENT_BACKEND.md` | Assignment in full, including the visibility rule |
+| `docs/TICKET_EMAIL_BACKEND.md` | Email on ticket creation: templates, Graph, the IT ask |
 | `docs/CELEBRATIONS_BACKEND.md` | The celebrations response |
 | `docs/HOLIDAYS_BACKEND.md` | Holiday CRUD, regions, immutability of past years |
 | `docs/PULSE_QUESTIONS_BACKEND.md` | Question bank, states, selections |
