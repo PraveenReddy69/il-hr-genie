@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Card, Empty, Loading, formatHours } from '../components/Bits'
+import { Card, Empty, Loading } from '../components/Bits'
 import { PeopleDrawer } from '../components/Drawer'
 import { fetchAttendanceDetail, fetchMoodDetail, fetchPulseDetail, fetchStats } from '../api/client'
 import { isoDate, currentCycle } from '../api/mock'
@@ -329,28 +329,6 @@ export function Dashboard({ hrName }: { hrName: string }) {
                   }}
                 />
               </div>
-            </div>
-          ))}
-        </Card>
-      </div>
-
-      <div className="grid" style={{ marginTop: 16 }}>
-        <Card
-          chip="⏱️"
-          chipColour="var(--green-tint-14)"
-          title="Attendance this week"
-          subtitle={`${formatHours(stats.weekHoursMillis)} logged across the team so far`}
-        >
-          {([
-            ['Full days', stats.weekPresent, 'var(--green-ok)'],
-            ['Half days', stats.weekHalfDays, 'var(--blue-primary)'],
-            ['Missed punches', stats.weekMisPunches, 'var(--orange-warn)'],
-            ['Absences', stats.weekAbsences, 'var(--orange-warn)'],
-          ] as const).map(([label, value, colour]) => (
-            <div className="row" key={label}>
-              <span className="option__dot" style={{ background: colour }} />
-              <span className="row__main" style={{ color: 'var(--text-secondary)' }}>{label}</span>
-              <strong>{value}</strong>
             </div>
           ))}
         </Card>
