@@ -34,6 +34,20 @@ type DrillDown = { title: string; subtitle: string; entries: PersonEntry[] }
 /** How often the dashboard re-reads the figures while it is open. */
 const REFRESH_MS = 60_000
 
+/**
+ * Midnight, in the reader's own timezone.
+ *
+ * "Today" is the day the person looking at the screen is having, not UTC's — an HRBP in
+ * Hyderabad opening this at 03:00 should not see yesterday's tickets counted as today's.
+ * Recomputed per call rather than captured at module load, so a tab left open overnight
+ * rolls over instead of counting into a day that has ended.
+ */
+function startOfToday(): number {
+  const midnight = new Date()
+  midnight.setHours(0, 0, 0, 0)
+  return midnight.getTime()
+}
+
 export function Dashboard({ hrName }: { hrName: string }) {
   const [stats, setStats] = useState<HrStats | null>(null)
   const [loadFailed, setLoadFailed] = useState(false)
@@ -88,6 +102,24 @@ export function Dashboard({ hrName }: { hrName: string }) {
           // sitting on the skeleton forever tells the reader nothing.
           if (!cancelled) setLoadFailed(true)
         })
+
+      /*
+       * Counted on the same cycle as the figures above, not once at mount.
+       *
+       * It was refreshed only on a page load, so "Open" ticked up on the timer while
+       * "Tickets raised today" sat at whatever it was when the tab was opened — two
+       * numbers about the same queue, on the same screen, disagreeing by however long
+       * somebody had left it open.
+       *
+       * A failed count keeps the last one rather than blanking it, for the same reason
+       * the figures do.
+       */
+      fetchTickets()
+        .then((tickets) => {
+          if (cancelled) return
+          setRaisedToday(tickets.filter((t) => t.createdAtMillis >= startOfToday()).length)
+        })
+        .catch(() => {})
     }
 
     load()
@@ -122,17 +154,6 @@ export function Dashboard({ hrName }: { hrName: string }) {
         setPulseTrend(
           cycles.map((c) => (c.headcount === 0 ? 0 : (c.completed * 100) / c.headcount)),
         )
-      })
-      .catch(() => {})
-
-    fetchTickets()
-      .then((tickets) => {
-        if (cancelled) return
-        // Midnight local, because "today" is the reader's day rather than UTC's.
-        const midnight = new Date()
-        midnight.setHours(0, 0, 0, 0)
-        const from = midnight.getTime()
-        setRaisedToday(tickets.filter((t) => t.createdAtMillis >= from).length)
       })
       .catch(() => {})
 
