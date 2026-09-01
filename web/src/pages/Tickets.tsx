@@ -306,6 +306,16 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
           onPick={() => pick('IN_PROGRESS')}
         />
         <Stat
+          label="Resolved"
+          value={counts.RESOLVED}
+          sub="Nothing more to do"
+          accent="var(--green-ok)"
+          tint="var(--green-tint-14)"
+          icon={<TickIcon />}
+          on={view === 'RESOLVED'}
+          onPick={() => pick('RESOLVED')}
+        />
+        <Stat
           label="Unassigned"
           value={counts.unassigned}
           sub="Awaiting assignment"
@@ -521,7 +531,7 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
                 {view === 'ALL' && group.rows.length > ROWS_PER_GROUP && (
                   <button
                     className="queue__more"
-                    onClick={() => setView(group.key as View)}
+                    onClick={() => setView(group.key)}
                   >
                     View all {group.rows.length} {group.label.toLowerCase()} tickets →
                   </button>
@@ -690,12 +700,13 @@ const ROWS_PER_GROUP = 4
  * question is being asked: what am I looking at? Two filters that each half-apply is
  * how the old screen ended up showing thirty rows under four headings.
  */
-type View = 'ALL' | 'OPEN' | 'IN_PROGRESS' | 'UNASSIGNED' | 'AGEING'
+type View = 'ALL' | 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'UNASSIGNED' | 'AGEING'
 
 const VIEW_LABEL: Record<View, string> = {
   ALL: 'All',
   OPEN: 'Open',
   IN_PROGRESS: 'In progress',
+  RESOLVED: 'Resolved',
   UNASSIGNED: 'Unassigned',
   AGEING: `Waiting ${AGEING_DAYS}d+`,
 }
@@ -708,6 +719,8 @@ function inView(ticket: Ticket, view: View, nowMillis: number): boolean {
       return ticket.status === 'OPEN'
     case 'IN_PROGRESS':
       return ticket.status === 'IN_PROGRESS'
+    case 'RESOLVED':
+      return ticket.status === 'RESOLVED'
     // Resolved tickets are excluded from both of these, matching the counts on the
     // cards. A closed ticket has no owner and does not need one, and it has stopped
     // waiting for anybody.

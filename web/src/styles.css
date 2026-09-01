@@ -2764,7 +2764,8 @@ textarea:focus {
  */
 .stats {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  /* Five now that Resolved has a card; auto-fit so they wrap rather than crush. */
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
   gap: 1px;
   background: var(--ink-06);
   border-radius: var(--radius-card);
@@ -2798,7 +2799,15 @@ textarea:focus {
     color 140ms ease;
 }
 
-.stat:hover {
+/*
+ * Not on the selected card.
+ *
+ * `.stat:hover` and `.stat--on` are both one class deep, but the pseudo-class makes
+ * hover the more specific of the two — so pointing at the card you had already chosen
+ * replaced its accent tint with a flat grey, and the selection appeared to switch off
+ * under the cursor.
+ */
+.stat:hover:not(.stat--on) {
   background: var(--ink-05);
 }
 
