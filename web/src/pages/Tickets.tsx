@@ -239,6 +239,25 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
   /** Pick a card, or press the one already on to go back to everything. */
   function pick(next: View) {
     setView((current) => (current === next ? 'ALL' : next))
+
+    /*
+     * Unassigned and an owner cannot both be true.
+     *
+     * The two filters ask different questions — what state is it in, and whose is it —
+     * and every pair of answers is satisfiable except this one: no ticket is both
+     * unassigned and assigned to somebody. Left to combine freely, the queue emptied
+     * while the segment still read "Mine 1", so the screen showed a count and none of
+     * what it counted.
+     */
+    if (next === 'UNASSIGNED') setAssignee(ANY_ASSIGNEE)
+  }
+
+  /** The same rule from the other side: naming an owner drops the Unassigned view. */
+  function own(next: string) {
+    setAssignee(next)
+    if (next !== ANY_ASSIGNEE) {
+      setView((current) => (current === 'UNASSIGNED' ? 'ALL' : current))
+    }
   }
 
   function applyUpdate(updated: Ticket) {
@@ -354,13 +373,13 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
           <div className="seg">
             <button
               className={`seg__item ${assignee === ANY_ASSIGNEE ? 'seg__item--on' : ''}`}
-              onClick={() => setAssignee(ANY_ASSIGNEE)}
+              onClick={() => own(ANY_ASSIGNEE)}
             >
               {ANY_ASSIGNEE}
             </button>
             <button
               className={`seg__item ${assignee === MINE ? 'seg__item--on' : ''}`}
-              onClick={() => setAssignee(MINE)}
+              onClick={() => own(MINE)}
             >
               Mine {counts.forMe}
             </button>
@@ -376,7 +395,7 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
                   ? ''
                   : assignee
               }
-              onChange={(event) => setAssignee(event.target.value || ANY_ASSIGNEE)}
+              onChange={(event) => own(event.target.value || ANY_ASSIGNEE)}
             >
               <option value="">Somebody else…</option>
               {hrAccounts.map((one) => (
@@ -391,15 +410,24 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
         <div className="queue">
           {filtered.length === 0 && (
             <Empty style={{ marginTop: 14 }}>
+{/*
+                Says which filter is responsible. "Nothing here right now" under three
+                active filters is true and useless — the reader cannot tell whether the
+                queue is empty or their own chips are hiding it.
+              */}
               {term
                 ? `Nothing matches “${query.trim()}”.`
-                : view === 'UNASSIGNED'
-                  ? 'Everything open has somebody on it.'
-                  : view === 'AGEING'
-                    ? `Nothing has been waiting ${AGEING_DAYS} days or more.`
-                    : view === 'ALL'
-                      ? 'Nothing here right now.'
-                      : `Nothing is ${VIEW_LABEL[view].toLowerCase()}.`}
+                : assignee === MINE && view !== 'ALL'
+                  ? `Nothing assigned to you is ${VIEW_LABEL[view].toLowerCase()}.`
+                  : assignee === MINE
+                    ? 'Nothing is assigned to you.'
+                    : view === 'UNASSIGNED'
+                      ? 'Everything open has somebody on it.'
+                      : view === 'AGEING'
+                        ? `Nothing has been waiting ${AGEING_DAYS} days or more.`
+                        : view === 'ALL'
+                          ? 'Nothing here right now.'
+                          : `Nothing is ${VIEW_LABEL[view].toLowerCase()}.`}
             </Empty>
           )}
 
