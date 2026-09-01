@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import logo from '../infinity-learn.png'
-import logoNavy from '../infinity-learn-navy.png'
 import { isConsoleRole } from '../api/access'
 import { isLive, isUnauthorized, signIn } from '../api/client'
 import type { Employee } from '../api/types'
@@ -124,13 +123,17 @@ export function SignIn({ onSignedIn }: { onSignedIn: (employee: Employee) => voi
           </span>
 
           {/*
-            The same lockup as the pitch, in navy.
-
-            The supplied file is white artwork on transparency and would have been
-            invisible here, so the navy copy is that same alpha mask filled with a
-            different colour — the shape is identical, not redrawn.
+            The lockup on its own blue plate.
+            
+            The white artwork goes back to being white: it sits on blue here, so the
+            navy copy is not needed on this card. The plate is a rounded rectangle
+            rather than the old square tile because the lockup is 3:2 — squared off, the
+            wordmark would have had to shrink to fit the narrow axis and stopped being
+            readable.
           */}
-          <img className="authcard__logo" src={logoNavy} alt="Infinity Learn" />
+          <span className="authcard__plate">
+            <img src={logo} alt="Infinity Learn" />
+          </span>
 
           <h2 className="authcard__title">Welcome back!</h2>
           <p className="authcard__sub">Sign in to access your HR Dashboard</p>

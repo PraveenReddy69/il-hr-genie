@@ -1273,17 +1273,33 @@ textarea:focus {
 }
 
 /*
- * The lockup, not a tile.
+ * The blue plate the lockup sits on.
  *
- * Smaller than the one on the pitch: there it is the publisher of a headline, here it
- * sits above "Welcome back!" and should not outweigh the sentence somebody is reading.
+ * Proportioned to the artwork rather than square. The lockup is 3:2, so a square tile
+ * would have had to shrink it to fit the narrow axis — the wordmark would have been
+ * legible only as a shape.
+ *
+ * The ring and the drop are the same treatment the old tile carried, kept so the plate
+ * still reads as the one lifted object on a flat card.
  */
-.authcard__logo {
-  display: block;
+.authcard__plate {
+  display: grid;
+  place-items: center;
   align-self: center;
-  width: 154px;
-  height: auto;
+  width: 186px;
+  padding: 20px 22px;
+  border-radius: 26px;
   margin: 10px 0 20px;
+  background: linear-gradient(150deg, #3d86f5, #1a4fb5);
+  box-shadow:
+    0 0 0 9px rgba(47, 123, 240, 0.08),
+    0 16px 34px -14px rgba(26, 79, 181, 0.75);
+}
+
+.authcard__plate img {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .authcard__title {
