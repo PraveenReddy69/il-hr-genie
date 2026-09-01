@@ -3526,6 +3526,17 @@ ul.legend {
   align-items: start;
 }
 
+/*
+ * One column until somebody is picked.
+ *
+ * The second track used to hold a card saying "pick somebody", which is an instruction
+ * the list already gives by being a list of clickable people — and it cost the
+ * directory a third of its width to say so.
+ */
+.peoplelayout--solo {
+  grid-template-columns: 1fr;
+}
+
 @media (max-width: 1180px) {
   .peoplelayout {
     grid-template-columns: 1fr;
@@ -3581,20 +3592,6 @@ ul.legend {
 .person {
   position: sticky;
   top: 24px;
-}
-
-.person--empty {
-  display: grid;
-  place-items: center;
-  min-height: 260px;
-  text-align: center;
-}
-
-.person--empty p {
-  max-width: 24ch;
-  color: var(--text-muted);
-  font-size: 13px;
-  margin: 0;
 }
 
 .person__head {

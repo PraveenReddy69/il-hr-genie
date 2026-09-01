@@ -144,7 +144,7 @@ export function People({ viewer }: { viewer: Employee }) {
         </button>
       </div>
 
-      <div className="peoplelayout">
+      <div className={`peoplelayout ${open ? '' : 'peoplelayout--solo'}`}>
 
       <section className="card">
         <input
@@ -284,13 +284,7 @@ export function People({ viewer }: { viewer: Employee }) {
         </div>
       </section>
 
-      {open ? (
-        <PersonPanel employee={open} onClose={() => setOpen(null)} />
-      ) : (
-        <aside className="card person person--empty">
-          <p>Pick somebody to see their programme activity and the tickets they raised.</p>
-        </aside>
-      )}
+      {open && <PersonPanel employee={open} onClose={() => setOpen(null)} />}
       </div>
 
       <p className="note">
