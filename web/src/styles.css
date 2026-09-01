@@ -1056,7 +1056,9 @@ textarea:focus {
 .auth__pitch {
   display: none;
   color: #fff;
-  max-width: 30rem;
+  /* Wide enough for "Elevating Workplaces." to hold one line; at 30rem it broke
+     into three and the headline lost its shape. */
+  max-width: 34rem;
   justify-self: end;
   width: 100%;
 }
@@ -1083,9 +1085,10 @@ textarea:focus {
   box-shadow: 0 8px 24px -8px rgba(47, 123, 240, 0.75);
 }
 
-.auth__hex img {
-  width: 32px;
-  height: 32px;
+.auth__hex svg {
+  width: 30px;
+  height: 30px;
+  color: #fff;
 }
 
 .auth__brandname {
@@ -1103,7 +1106,7 @@ textarea:focus {
 }
 
 .auth__headline {
-  font-size: clamp(2.1rem, 3.4vw, 3.1rem);
+  font-size: clamp(2rem, 3.1vw, 2.95rem);
   line-height: 1.14;
   font-weight: 800;
   letter-spacing: -0.03em;
@@ -1234,9 +1237,10 @@ textarea:focus {
     0 14px 30px -12px rgba(26, 79, 181, 0.7);
 }
 
-.authcard__hex img {
-  width: 46px;
-  height: 46px;
+.authcard__hex svg {
+  width: 42px;
+  height: 42px;
+  color: #fff;
 }
 
 .authcard__title {
