@@ -7,12 +7,10 @@ import {
   CelebrationsIcon,
   HolidaysIcon,
   OpenIcon,
-  PeopleIcon,
   ProgressIcon,
   PulseIcon,
   TickIcon,
   TicketsIcon,
-  WaitingIcon,
 } from '../components/Icons'
 import {
   fetchMoodDetail,
@@ -20,6 +18,7 @@ import {
   fetchPulseDetail,
   fetchPulseHistory,
   fetchStats,
+  fetchTickets,
 } from '../api/client'
 import { isoDate, currentCycle } from '../api/mock'
 import {
@@ -49,6 +48,19 @@ export function Dashboard({ hrName }: { hrName: string }) {
    */
   const [moodTrend, setMoodTrend] = useState<number[]>([])
   const [pulseTrend, setPulseTrend] = useState<number[]>([])
+
+  /**
+   * How many tickets were raised today, counted rather than fetched.
+   *
+   * `/api/stats` has no figure for it, and the ticket list already carries
+   * `createdAtMillis` — so this is counted from the rows this account can see, which
+   * also makes it the right number per viewer: an HRBP sees their own people's, an
+   * Admin sees the organisation's.
+   *
+   * null until it is known. Zero and not-yet-counted look identical on a tile and mean
+   * very different things on a quiet morning.
+   */
+  const [raisedToday, setRaisedToday] = useState<number | null>(null)
 
   /**
    * Keeps the figures current.
@@ -110,6 +122,17 @@ export function Dashboard({ hrName }: { hrName: string }) {
         setPulseTrend(
           cycles.map((c) => (c.headcount === 0 ? 0 : (c.completed * 100) / c.headcount)),
         )
+      })
+      .catch(() => {})
+
+    fetchTickets()
+      .then((tickets) => {
+        if (cancelled) return
+        // Midnight local, because "today" is the reader's day rather than UTC's.
+        const midnight = new Date()
+        midnight.setHours(0, 0, 0, 0)
+        const from = midnight.getTime()
+        setRaisedToday(tickets.filter((t) => t.createdAtMillis >= from).length)
       })
       .catch(() => {})
 
@@ -312,20 +335,18 @@ export function Dashboard({ hrName }: { hrName: string }) {
         </Card>
 
         <Card chip={<HolidaysIcon />} chipColour="var(--blue-tint-12)" title="Today at a glance">
+          {/*
+            Checked in and On the clock are gone with the Attendance tab — the data
+            behind them is not flowing, and two figures reading nought all day say
+            nothing except that something is broken.
+          */}
           <div className="metrics">
             <Metric
-              label="Checked in"
-              sub={`of ${stats.headcount} employees`}
-              value={stats.checkedInToday}
-              tone="blue"
-              icon={<PeopleIcon />}
-            />
-            <Metric
-              label="On the clock"
-              sub="still working"
-              value={stats.onTheClock}
-              tone="green"
-              icon={<WaitingIcon />}
+              label="Tickets raised"
+              sub="so far today"
+              value={raisedToday}
+              tone="amber"
+              icon={<TicketsIcon />}
             />
             <Metric
               label="Mood shared"
@@ -484,7 +505,8 @@ function Metric({
 }: {
   label: string
   sub?: string
-  value: number
+  /** null while the figure is still being counted — an em dash, never a nought. */
+  value: number | null
   tone: 'amber' | 'blue' | 'green' | 'purple'
   icon: React.ReactNode
   onClick?: () => void
@@ -492,7 +514,7 @@ function Metric({
   const inside = (
     <>
       <span className="metric__head">
-        <span className="metric__value">{value}</span>
+        <span className="metric__value">{value === null ? '—' : value}</span>
         <span className="metric__icon">{icon}</span>
       </span>
       <span className="metric__label">{label}</span>

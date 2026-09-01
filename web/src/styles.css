@@ -607,9 +607,14 @@ button {
  * `flex: 1` is what levels the two cards: the shorter one's tiles grow to meet the
  * taller one's rather than leaving a band of empty white beneath them.
  */
+/*
+ * Auto-fit rather than a fixed three, because the two cards no longer hold the same
+ * number of figures — tickets has three, today has two. Fixed columns would have left
+ * a third empty cell in one of them.
+ */
 .metrics {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
   gap: 12px;
   flex: 1;
   align-items: stretch;
