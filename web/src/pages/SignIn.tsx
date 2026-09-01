@@ -108,24 +108,28 @@ export function SignIn({ onSignedIn }: { onSignedIn: (employee: Employee) => voi
           <h2 className="authcard__title">Welcome back!</h2>
           <p className="authcard__sub">Sign in to access your HR Dashboard</p>
 
-          <label className="authcard__label" htmlFor="employee-id">
-            Employee ID
-          </label>
+          {/*
+            The label rides on the border rather than sitting above the field.
+            `placeholder=" "` is load-bearing: `:placeholder-shown` is what tells CSS
+            the field is empty, and an empty attribute does not count as a placeholder.
+            The label's own order matters too — it follows the input so the sibling
+            selector can reach it.
+          */}
           <div className="authfield">
             <PersonIcon />
             <input
               id="employee-id"
               value={employeeId}
               onChange={(event) => setEmployeeId(event.target.value)}
-              placeholder="Enter your employee ID"
+              placeholder=" "
               autoFocus={!remembered}
               autoComplete="username"
             />
+            <label className="authfield__label" htmlFor="employee-id">
+              Employee ID
+            </label>
           </div>
 
-          <label className="authcard__label" htmlFor="password">
-            Password
-          </label>
           <div className="authfield">
             <LockIcon />
             <input
@@ -133,10 +137,13 @@ export function SignIn({ onSignedIn }: { onSignedIn: (employee: Employee) => voi
               type={reveal ? 'text' : 'password'}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              placeholder="Enter your password"
+              placeholder=" "
               autoFocus={remembered !== null}
               autoComplete="current-password"
             />
+            <label className="authfield__label" htmlFor="password">
+              Password
+            </label>
             <button
               type="button"
               className="authfield__reveal"

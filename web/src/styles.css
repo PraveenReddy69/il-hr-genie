@@ -1193,7 +1193,10 @@ textarea:focus {
 
 .authcard {
   position: relative;
-  background: #fbfcfe;
+  /* Named, because the floating label paints this colour over the border to notch it.
+     A literal here and a different one there is how that notch stops lining up. */
+  --authcard-bg: #fbfcfe;
+  background: var(--authcard-bg);
   border-radius: 26px;
   padding: 30px clamp(24px, 4vw, 44px) 0;
   box-shadow:
@@ -1259,31 +1262,70 @@ textarea:focus {
   margin: 0 0 26px;
 }
 
-.authcard__label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-slate);
-  margin-bottom: 7px;
-}
-
-/* A leading icon inside the border, so the field reads as one object. */
+/*
+ * An outlined field with the label on the border.
+ *
+ * The label starts where the text will start and rises onto the outline once the
+ * field has focus or content, painting the card's own background behind itself to
+ * notch the border. That is why `--authcard-bg` is a variable: the notch is a
+ * rectangle of that exact colour, and a near-match reads as a smudge.
+ *
+ * No `overflow: hidden` on the field — it would clip the very label this depends on.
+ */
 .authfield {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 11px;
-  background: #fff;
-  border: 1px solid var(--ink-12);
+  background: transparent;
+  border: 1.5px solid var(--ink-12);
   border-radius: 13px;
   padding: 0 14px;
-  margin-bottom: 18px;
-  transition:
-    border-color 130ms ease,
-    box-shadow 130ms ease;
+  margin-bottom: 22px;
+  transition: border-color 130ms ease;
 }
 
 .authfield:focus-within {
   border-color: var(--blue-primary);
-  box-shadow: 0 0 0 4px rgba(43, 140, 255, 0.14);
+}
+
+.authfield__label {
+  position: absolute;
+  left: 44px;
+  top: 50%;
+  transform: translateY(-50%);
+  transform-origin: left center;
+  padding: 0 6px;
+  background: var(--authcard-bg);
+  font-size: 14.5px;
+  color: var(--text-tertiary);
+  pointer-events: none;
+  white-space: nowrap;
+  transition:
+    top 140ms ease,
+    left 140ms ease,
+    transform 140ms ease,
+    color 140ms ease;
+}
+
+/*
+ * Raised on focus, and while there is anything in the field.
+ *
+ * `:autofill` is listed alongside `:not(:placeholder-shown)` because Chrome fills a
+ * field before any interaction, and without it the label sits across text the browser
+ * has already written.
+ */
+.authfield:focus-within .authfield__label,
+.authfield input:not(:placeholder-shown) + .authfield__label,
+.authfield input:-webkit-autofill + .authfield__label {
+  top: 0;
+  left: 11px;
+  transform: translateY(-50%) scale(0.78);
+  color: var(--text-slate);
+}
+
+.authfield:focus-within .authfield__label {
+  color: var(--blue-primary);
 }
 
 .authfield__icon {
@@ -1302,11 +1344,26 @@ textarea:focus {
   font: inherit;
   font-size: 14.5px;
   color: var(--text-primary);
-  padding: 15px 0;
+  padding: 16px 0;
 }
 
+/*
+ * Chrome paints its own pale blue over an autofilled field and there is no property
+ * to turn that off — an inset shadow the full height of the box is the only way to
+ * cover it. The absurd transition delay stops the colour flashing back on blur.
+ */
+.authfield input:-webkit-autofill,
+.authfield input:-webkit-autofill:hover,
+.authfield input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text-primary);
+  -webkit-box-shadow: 0 0 0 40px var(--authcard-bg) inset;
+  caret-color: var(--text-primary);
+  transition: background-color 100000s ease-in-out 0s;
+}
+
+/* The placeholder is a single space that drives :placeholder-shown; never shown. */
 .authfield input::placeholder {
-  color: var(--text-tertiary);
+  color: transparent;
 }
 
 .authfield__reveal {
