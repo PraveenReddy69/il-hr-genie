@@ -157,16 +157,6 @@ export function SignIn({ onSignedIn }: { onSignedIn: (employee: Employee) => voi
       <section className="auth__panel">
         <form className="authcard" onSubmit={submit}>
           {/*
-            A badge, not a switcher. The mockup drew a dropdown, and there is one
-            tenant — a chevron that opens nothing is a control that lies about what it
-            can do.
-          */}
-          <span className="authcard__tenant">
-            <BuildingIcon />
-            Infinity Learn
-          </span>
-
-          {/*
             The lockup on its own blue plate.
             
             The white artwork goes back to being white: it sits on blue here, so the
@@ -422,16 +412,6 @@ function EyeOffIcon() {
       <path d="M4 4l16 16" />
       <path d="M9.9 6.2A9.6 9.6 0 0112 6c6 0 9.5 6 9.5 6a16 16 0 01-3.3 4" />
       <path d="M6.4 8.3A16 16 0 002.5 12S6 18 12 18c1.2 0 2.3-.2 3.3-.6" />
-    </svg>
-  )
-}
-
-function BuildingIcon() {
-  return (
-    <svg viewBox="0 0 24 24" {...S}>
-      <rect x="4.5" y="4" width="9.5" height="16" rx="1.4" />
-      <path d="M14 9.5h5.5V20H14" />
-      <path d="M7.4 8h3.6M7.4 11.5h3.6M7.4 15h3.6" />
     </svg>
   )
 }

@@ -1269,26 +1269,6 @@ textarea:focus {
   flex-direction: column;
 }
 
-.authcard__tenant {
-  align-self: flex-end;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--text-slate);
-  background: #fff;
-  border: 1px solid var(--ink-08);
-  border-radius: 20px;
-  padding: 7px 14px;
-}
-
-.authcard__tenant svg {
-  width: 15px;
-  height: 15px;
-  color: var(--blue-primary);
-}
-
 /*
  * The blue plate the lockup sits on.
  *
@@ -1306,7 +1286,9 @@ textarea:focus {
   width: 186px;
   padding: 20px 22px;
   border-radius: 26px;
-  margin: 10px 0 20px;
+  /* The tenant badge used to hold the top of the card open. It is gone, so the plate
+     carries its own space rather than sitting hard against the card's padding. */
+  margin: 14px 0 20px;
   background: linear-gradient(150deg, #3d86f5, #1a4fb5);
   box-shadow:
     0 0 0 9px rgba(47, 123, 240, 0.08),
