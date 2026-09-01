@@ -19,6 +19,7 @@ import {
   WaitingIcon,
 } from '../components/Icons'
 import { AssignPicker } from '../components/AssignPicker'
+import { QueueRail } from '../components/QueueRail'
 import { TicketDrawer } from '../components/TicketDrawer'
 import { employeeName, ensureDirectory, fetchEmployees, fetchTickets } from '../api/client'
 import { isConsoleRole } from '../api/access'
@@ -200,6 +201,41 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
         }))
       : [{ key: view, label: '', rows: filtered }]
 
+  /**
+   * The queue as a spreadsheet.
+   *
+   * Built from `mine` rather than the filtered view: an export of what somebody can
+   * see is a document they can hand on, where an export of whatever chips happened to
+   * be pressed is a document nobody can interpret a week later.
+   */
+  function exportCsv() {
+    const rows = [
+      ['Reference', 'Subject', 'Category', 'Status', 'Raised by', 'Raised', 'Assignee'],
+      ...mine.map((ticket) => [
+        ticket.id,
+        ticket.subject,
+        ticket.category,
+        STATUS_LABEL[ticket.status],
+        employeeName(ticket.employeeId),
+        new Date(ticket.createdAtMillis).toISOString().slice(0, 10),
+        ticket.assigneeId ? employeeName(ticket.assigneeId) : 'Unassigned',
+      ]),
+    ]
+
+    // Quotes doubled and every field wrapped: a ticket subject is free text and will
+    // eventually contain a comma, a quote or a newline.
+    const csv = rows
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\r\n')
+
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `hr-genie-queue-${new Date().toISOString().slice(0, 10)}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   /** Pick a card, or press the one already on to go back to everything. */
   function pick(next: View) {
     setView((current) => (current === next ? 'ALL' : next))
@@ -293,7 +329,8 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
         />
       </div>
 
-      <div className="queuecard" style={{ marginTop: 16 }}>
+      <div className="queuelayout">
+      <div className="queuecard">
         <div className="toolbar">
           <label className="toolbar__search">
             <SearchIcon />
@@ -367,7 +404,7 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
                   </div>
                 )}
 
-                {group.rows.map((ticket) => {
+                {group.rows.slice(0, view === 'ALL' ? ROWS_PER_GROUP : group.rows.length).map((ticket) => {
                   const owner = ticket.assigneeId ? employeeById.get(ticket.assigneeId) : undefined
                   const waiting = daysWaiting(ticket, now)
                   const resolved = ticket.status === 'RESOLVED'
@@ -476,6 +513,19 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
                     </div>
                   )
                 })}
+
+                {/*
+                  Only where rows are actually being held back. A link that says "view
+                  all four" of four is a control that changes nothing.
+                */}
+                {view === 'ALL' && group.rows.length > ROWS_PER_GROUP && (
+                  <button
+                    className="queue__more"
+                    onClick={() => setView(group.key as View)}
+                  >
+                    View all {group.rows.length} {group.label.toLowerCase()} tickets →
+                  </button>
+                )}
               </div>
             ),
           )}
@@ -493,6 +543,15 @@ export function Tickets({ actorId, viewer }: { actorId: string; viewer: Employee
             </div>
           )}
         </div>
+      </div>
+
+        <QueueRail
+          tickets={mine}
+          ageing={counts.ageing}
+          unassigned={counts.unassigned}
+          nameOf={employeeName}
+          onExport={exportCsv}
+        />
       </div>
 
       {assigning && (
@@ -613,6 +672,15 @@ const REFRESH_MS = 30_000
  * appears on everything is a badge that says nothing.
  */
 const AGEING_DAYS = 3
+
+/**
+ * Rows shown per status before the group offers its own view.
+ *
+ * A queue of forty rendered as one scroll buries whatever is at the bottom, and the
+ * bottom is where the oldest tickets are. Four is enough to see the shape of a group
+ * and short enough that all three fit on a screen together.
+ */
+const ROWS_PER_GROUP = 4
 
 /**
  * Which slice of the queue is on screen.
