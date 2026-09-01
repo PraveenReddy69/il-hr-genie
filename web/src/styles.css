@@ -1125,40 +1125,30 @@ textarea:focus {
 
 .auth__brand {
   display: flex;
-  align-items: center;
-  gap: 14px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
   margin-bottom: clamp(40px, 9vh, 88px);
 }
 
-.auth__hex {
-  width: 52px;
-  height: 52px;
-  border-radius: 15px;
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  background: linear-gradient(150deg, #2f7bf0, #1748b0);
-  box-shadow: 0 8px 24px -8px rgba(47, 123, 240, 0.75);
-}
-
-.auth__hex svg {
-  width: 30px;
-  height: 30px;
-  color: #fff;
-}
-
-.auth__brandname {
+/*
+ * Sized against the headline rather than in the abstract: the wordmark reads as the
+ * publisher of the sentence below it, which it cannot do at icon size and should not
+ * do by shouting over it.
+ */
+.auth__logo {
   display: block;
-  font-size: 21px;
-  font-weight: 700;
-  letter-spacing: -0.015em;
+  width: clamp(180px, 16vw, 232px);
+  height: auto;
 }
 
 .auth__brandsub {
   display: block;
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.62);
-  margin-top: 1px;
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.58);
 }
 
 .auth__headline {

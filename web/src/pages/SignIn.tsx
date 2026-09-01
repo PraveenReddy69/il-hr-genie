@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import logo from '../infinity-learn.png'
 import { isConsoleRole } from '../api/access'
 import { isLive, isUnauthorized, signIn } from '../api/client'
 import type { Employee } from '../api/types'
@@ -71,14 +72,17 @@ export function SignIn({ onSignedIn }: { onSignedIn: (employee: Employee) => voi
       <div className="auth__wash" aria-hidden="true" />
 
       <section className="auth__pitch">
+        {/*
+          The wordmark carries the company name, so there is no text beside it — set
+          together they would print "Infinity Learn" twice. What stays underneath is the
+          product, which the logo does not say.
+
+          It is white artwork on transparency, which is why it appears only here. On the
+          card it would be invisible; that keeps the blue tile.
+        */}
         <div className="auth__brand">
-          <span className="auth__hex">
-            <MarkIcon />
-          </span>
-          <span>
-            <span className="auth__brandname">Infinity Learn</span>
-            <span className="auth__brandsub">HR Dashboard Portal</span>
-          </span>
+          <img className="auth__logo" src={logo} alt="Infinity Learn, by Sri Chaitanya" />
+          <span className="auth__brandsub">HR Dashboard Portal</span>
         </div>
 
         <h1 className="auth__headline">
