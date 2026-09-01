@@ -1273,6 +1273,7 @@ textarea:focus {
  * No `overflow: hidden` on the field — it would clip the very label this depends on.
  */
 .authfield {
+  --lbl: var(--text-tertiary);
   position: relative;
   display: flex;
   align-items: center;
@@ -1298,7 +1299,20 @@ textarea:focus {
   padding: 0 6px;
   background: var(--authcard-bg);
   font-size: 14.5px;
-  color: var(--text-tertiary);
+  /*
+   * Colour arrives through a variable set on the field, never on this rule.
+   *
+   * The state selectors have wildly different specificities — raising the label needs
+   * `input:not(:placeholder-shown) + &`, which outweighs a plain `.authfield--bad &`
+   * — so colouring inside them meant whichever rule happened to be most specific won,
+   * regardless of which state was actually true. The raised label stayed slate through
+   * both focus and a refusal.
+   *
+   * Position is set by the state selectors; colour is set by the cascade of `--lbl`
+   * below, where the order reads as the priority: refused beats filled, focus beats
+   * refused.
+   */
+  color: var(--lbl);
   pointer-events: none;
   white-space: nowrap;
   transition:
@@ -1321,37 +1335,30 @@ textarea:focus {
   top: 0;
   left: 11px;
   transform: translateY(-50%) scale(0.78);
-  color: var(--text-slate);
-}
-
-.authfield:focus-within .authfield__label {
-  color: var(--blue-primary);
 }
 
 /*
- * A refused sign-in, carried by the fields rather than by a line of text alone.
+ * The four states of a field, in priority order. Later wins, which is why they read
+ * top to bottom as: resting, focused, refused, refused-but-being-corrected.
  *
- * Both boxes, because the server will not say which of the two was wrong — and it
- * should not. Marking only the password would be a guess presented as a fact.
+ * Both boxes go red, because the server will not say which of the two was wrong — and
+ * it should not. Marking only the password would be a guess presented as a fact.
  *
- * The focus colour still wins while a field has focus: once somebody is typing into
- * a box, blue saying "you are here" is more use than red repeating what they have
- * already read.
+ * Focus beats the refusal: once somebody is typing into a box, blue saying "you are
+ * here" is more use than red repeating what they have already read.
  */
+.authfield:focus-within {
+  --lbl: var(--blue-primary);
+}
+
 .authfield--bad {
+  --lbl: var(--red-risk);
   border-color: var(--red-risk);
 }
 
-.authfield--bad .authfield__label {
-  color: var(--red-risk);
-}
-
 .authfield--bad:focus-within {
+  --lbl: var(--blue-primary);
   border-color: var(--blue-primary);
-}
-
-.authfield--bad:focus-within .authfield__label {
-  color: var(--blue-primary);
 }
 
 .authcard__error {
