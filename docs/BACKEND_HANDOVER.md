@@ -1,7 +1,7 @@
 # HR Genie — backend handover
 
 Everything the backend needs, in one document. Written 26 August 2026, **re-checked
-29 August** against `hrgenie-api.devinfinitylearn.in` — every claim was made by calling
+1 September** against `hrgenie-api.devinfinitylearn.in` — every claim was made by calling
 the API, not by reading our own code. Where something is our bug rather than yours, it
 says so.
 
@@ -40,11 +40,11 @@ Roles, in rank order: `EMPLOYEE` → `HR` (HRBP) → `HR_ADMIN` (Admin) → `HR_
 | Ticket queue for HRBPs | **Fixed 29 Aug.** 36 tickets, none raised from outside that set. |
 | Holiday regions route | **Fixed 29 Aug.** Returns `["All India","Telangana"]`. |
 | `celebrations.view` | **Fixed 29 Aug.** Now in the `HR` permission list. |
-| **Auto-assign on ticket creation** | **Not implemented.** Tested 31 Aug with a fresh ticket — no assignee. Section 4a. |
-| **177 employees have no HRBP tagged** | **New gap**, and it is not theoretical. Section 3b. |
+| **Auto-assign on ticket creation** | **Still not implemented.** Three tickets raised within the hour on 1 Sep, none assigned. Section 4a. |
+| **177 employees have no HRBP tagged** | **Unchanged.** Same 177 on 1 Sep as on 29 Aug. Section 3b. |
 | `tickets.assign` on `HR_ADMIN` | **Confirmed 29 Aug.** All 16 Admin permissions present. |
 | `PATCH .../assignee` | **Confirmed 29 Aug.** Route reached, guard passes for an Admin. |
-| **`PATCH .../status` for an Admin** | **Blocked.** "Only HR can change ticket status", against a list that grants it. Section 4d. |
+| `PATCH .../status` for an Admin | **Fixed 1 Sep.** Reaches the handler now. |
 | **`tickets.assign` for an HRBP** | **Wanted.** One string on the `HR` list. Section 4e. |
 | **No way to list HR accounts** | `/api/employees/hr` is 404, so an HRBP's picker is empty but for themselves. Section 4f. |
 | **Email on ticket creation** | **New request.** To the HRBP and the raiser, from `POST /api/tickets`. Section 4g. |
@@ -135,14 +135,22 @@ Record it as the system's doing, so it does not read back as a person's decision
 Nothing re-runs the rule after creation. An Admin who moves a ticket meant to, and a
 rule that quietly puts it back is worse than no rule.
 
-### Tested 31 August: not implemented
+### Tested again 1 September: still not implemented
 
 On 29 August every ticket came back `assigneeId: null`, but all of them predated the
 change, so it proved nothing — the rule applies at creation. We said one new ticket would
 settle it.
 
-**`HRG-0040` was raised from the bot by `EMP3801` on 31 August. It came back with no
-assignee.**
+**Three tickets were raised within an hour on 1 September — `HRG-0043` at 17:10,
+`HRG-0044` at 17:11, `HRG-0045` at 17:15 — and all three came back with no assignee.**
+`HRG-0040` on 31 August was the same.
+
+Every one was raised by `EMP3801`, whose `hrbpId` is `HYD606840`, an active `HR`
+account. Three tickets minutes old is not a backfill question or a timing question: the
+rule is not running at creation.
+
+The only assigned tickets in the system are `HRG-0028`, `HRG-0038` and `HRG-0041` —
+three out of forty-five, each assigned by hand from the console.
 
 `EMP3801`'s `hrbpId` is `HYD606840` (Deepak Patil), an active `HR` account. There is
 nothing ambiguous left in the inputs: the tag is on the employee record, the field is on
@@ -360,10 +368,16 @@ It answered `400` because the literal route sat behind the parameterised one. It
 returns `["All India","Telangana"]`, so the console reads your list rather than falling
 back to a copy of its own.
 
-### 6b. No cache headers on authenticated endpoints
+### 6b. Cache headers — fixed 1 September
 
-`GET /api/employees` answers with an `ETag` and **no `Cache-Control` at all**. In the
-browser these were coming back `304`, so the page rendered a stored body rather than the
+`GET /api/employees` now answers `Cache-Control: no-store`. It used to send an `ETag`
+and nothing else, so the browser served stored bodies and the page rendered a cached
+answer rather than the current one. Nothing further needed here.
+
+The rest of this section is kept for the record.
+
+`GET /api/employees` answered with an `ETag` and **no `Cache-Control` at all**. In the
+browser these came back `304`, so the page rendered a stored body rather than the
 current answer.
 
 Two consequences:
