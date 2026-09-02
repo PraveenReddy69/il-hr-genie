@@ -5307,3 +5307,155 @@ ul.legend {
 .holpanel__cancel:hover {
   background: var(--ink-05);
 }
+
+
+/* --------------------------------------------------------- asked by month */
+
+.askedcard {
+  margin-top: 18px;
+}
+
+.asked__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.asked__title {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.asked__sub {
+  margin: 4px 0 0;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  max-width: 52ch;
+}
+
+.asked__head .tagpick {
+  margin-top: 0;
+}
+
+.asked__loading {
+  padding: 22px 2px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.asked__list {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.askmonth {
+  padding: 12px 14px;
+  border: 1px solid var(--ink-06);
+  border-radius: var(--radius-tile);
+  background: var(--bg-cell);
+}
+
+/* This month is a plan, not a record, and is coloured as the different claim it is. */
+.askmonth--planned {
+  background: var(--blue-tint-07);
+  border-color: rgba(43, 140, 255, 0.22);
+}
+
+.askmonth__head {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.askmonth__name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.askmonth__tag--planned {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--blue-deep);
+  background: var(--blue-tint-12);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.askmonth__count {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.askmonth__none {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 4px 0;
+}
+
+.askgroup {
+  margin-top: 8px;
+}
+
+.askgroup__who {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.askq {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 0;
+  font-size: 12.5px;
+  color: var(--text-slate);
+  border-top: 1px solid var(--ink-05);
+}
+
+.askq:first-of-type {
+  border-top: 0;
+}
+
+.askq__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.askq__id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--ink-05);
+  padding: 2px 6px;
+  border-radius: 5px;
+}
+
+.askq__missing {
+  flex: none;
+  font-size: 10.5px;
+  font-style: italic;
+  color: var(--orange-warn);
+}
+
+.askq__n {
+  flex: none;
+  min-width: 24px;
+  text-align: right;
+  font-size: 11.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}

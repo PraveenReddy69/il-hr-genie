@@ -462,8 +462,18 @@ function daysAgoIso(days: number): string {
   return `${date.getFullYear()}-${month}-${day}`
 }
 
-function currentCycle(): string {
-  return todayIso().slice(0, 7)
+/**
+ * The cycle a date falls in, `YYYY-MM`.
+ *
+ * `back` counts whole months backwards, and is done on the first of the month rather
+ * than today: stepping back one month from the 31st lands on the 3rd of the month after
+ * the one wanted, because February has no 31st.
+ */
+function currentCycle(back = 0): string {
+  const today = todayIso()
+  const at = new Date(`${today.slice(0, 7)}-01T00:00:00`)
+  at.setMonth(at.getMonth() - back)
+  return `${at.getFullYear()}-${`${at.getMonth() + 1}`.padStart(2, '0')}`
 }
 
 export function fetchEmployeeTickets(employeeId: string): Promise<Ticket[]> {
@@ -928,6 +938,86 @@ export async function fetchPulseHistory(cycles = 6): Promise<CycleSummary[]> {
  * answers themselves are just strings, and a bar chart whose categories reshuffle
  * between cycles is unreadable.
  */
+/** One month, and what was actually put in front of people that month. */
+export interface AskedCycle {
+  /** `YYYY-MM`. */
+  cycle: string
+  /** How many people answered anything at all. */
+  people: number
+  /** Question ids that appear in at least one answer, with how many answered each. */
+  questions: { id: string; answers: number }[]
+}
+
+/**
+ * What was asked each month, worked out from what came back.
+ *
+ * Nothing on the server records the programme month by month — a selection is a
+ * standing thing with departments and question ids and no cycle on it, so it says what
+ * is asked *now* and cannot say what was asked in August. The answers can: a reply
+ * carries the cycle and is keyed by question id, so the questions people answered in a
+ * month are the questions they were asked that month.
+ *
+ * It reads history off the only record that has one, with two consequences worth
+ * knowing:
+ *
+ *   • a month nobody answered looks like a month nothing was asked. It is left out
+ *     rather than shown as empty, because the two are indistinguishable from here.
+ *   • a question nobody answered does not appear, even if it was on the card.
+ *
+ * One request per cycle, because `/api/hr/pulse` takes a cycle and there is no route
+ * that returns them all. `/api/pulse/list` looks like it should — it is what
+ * fetchPulseHistory uses — but it answers `{items: [], total: 0}` on live data that
+ * `/api/hr/pulse?cycle=2026-08` returns four rows for, so it is not used here.
+ */
+export async function fetchAskedHistory(months = 12): Promise<AskedCycle[]> {
+  const cycles = Array.from({ length: months }, (_, index) => currentCycle(index))
+
+  if (!isLive) {
+    return mocked(
+      cycles
+        .map((cycle) => {
+          const rows = mockPulseBreakdown(cycle)
+          const questions = rows
+            .map((row) => ({
+              id: row.questionId,
+              answers: row.answers.reduce((total, one) => total + one.count, 0),
+            }))
+            .filter((one) => one.answers > 0)
+          const people = questions.reduce((most, one) => Math.max(most, one.answers), 0)
+          return { cycle, people, questions }
+        })
+        .filter((one) => one.questions.length > 0),
+    )
+  }
+
+  const answered = await Promise.all(
+    cycles.map((cycle) =>
+      get<RawPulse[]>(`/api/hr/pulse?cycle=${cycle}`)
+        .then((rows) => ({ cycle, rows }))
+        // One bad month should not empty the whole history.
+        .catch(() => ({ cycle, rows: [] as RawPulse[] })),
+    ),
+  )
+
+  return answered
+    .map(({ cycle, rows }) => {
+      const counts = new Map<string, number>()
+      rows.forEach((row) => {
+        Object.keys(row.answers ?? {}).forEach((id) =>
+          counts.set(id, (counts.get(id) ?? 0) + 1),
+        )
+      })
+      return {
+        cycle,
+        people: rows.length,
+        questions: [...counts.entries()]
+          .map(([id, answers]) => ({ id, answers }))
+          .sort((a, b) => b.answers - a.answers),
+      }
+    })
+    .filter((one) => one.people > 0)
+}
+
 export async function fetchPulseBreakdown(cycle: string): Promise<QuestionBreakdown[]> {
   if (!isLive) return mocked(mockPulseBreakdown(cycle))
 

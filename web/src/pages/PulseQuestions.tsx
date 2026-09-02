@@ -18,7 +18,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Empty, Loading, clickable } from '../components/Bits'
 import { Drawer } from '../components/Drawer'
-import { fetchEmployees, fetchPulseBreakdown, isLive } from '../api/client'
+import {
+  fetchAskedHistory,
+  fetchEmployees,
+  fetchPulseBreakdown,
+  isLive,
+  type AskedCycle,
+} from '../api/client'
 import { currentCycle } from '../api/mock'
 import {
   MAX_OPTIONS,
@@ -96,6 +102,8 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
   const [saveError, setSaveError] = useState<string | null>(null)
   /** Ids this browser has watched drop off the list. See the note in pulseQuestions.ts. */
   const [hidden, setHidden] = useState<HiddenNote[]>([])
+  /** What was actually asked each month, worked out from the answers. */
+  const [asked, setAsked] = useState<AskedCycle[] | null>(null)
 
   /**
    * Reloads both halves together.
@@ -135,6 +143,12 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
           .sort((a, b) => b.headcount - a.headcount),
       )
     })
+
+    // Its own request rather than part of `reload`: it is twelve calls, it does not
+    // change when a question is edited, and the bank should not wait for it.
+    fetchAskedHistory(12)
+      .then(setAsked)
+      .catch(() => setAsked([]))
 
     fetchPulseBreakdown(currentCycle())
       .then((rows) =>
@@ -459,6 +473,13 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
         )}
       </section>
 
+      <AskedByMonth
+        history={asked}
+        bank={questions}
+        selections={selections}
+        cycle={currentCycle()}
+      />
+
       {/* ------------------------------------------------------ the selections */}
 
       <div style={{ marginTop: 20 }}>
@@ -502,6 +523,169 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
       )}
     </>
   )
+}
+
+// ------------------------------------------------------------- asked by month
+
+/**
+ * Which questions went out in which month.
+ *
+ * The question HR asks about their own programme is "what did we ask in August" — and
+ * nothing on the server answers it directly. A selection has departments and question
+ * ids and no cycle, so it describes the present and forgets everything else. The
+ * answers remember: each one carries a cycle and is keyed by question id.
+ *
+ * So the past is read off the replies, and the present is read off the selections,
+ * and the two are labelled differently because they are not the same claim. "4 people
+ * answered" is a fact about August. "Planned" is a statement about what is set up
+ * right now, which anybody can change before the month is out.
+ */
+function AskedByMonth({
+  history,
+  bank,
+  selections,
+  cycle,
+}: {
+  history: AskedCycle[] | null
+  bank: PulseQuestion[]
+  selections: PulseSelection[]
+  cycle: string
+}) {
+  const [year, setYear] = useState<string>('')
+
+  const years = useMemo(() => {
+    const found = new Set((history ?? []).map((one) => one.cycle.slice(0, 4)))
+    found.add(cycle.slice(0, 4))
+    return [...found].sort().reverse()
+  }, [history, cycle])
+
+  const showing = year || years[0] || cycle.slice(0, 4)
+  const months = (history ?? []).filter((one) => one.cycle.slice(0, 4) === showing)
+  const answeredThisCycle = (history ?? []).some((one) => one.cycle === cycle)
+  const planned = showing === cycle.slice(0, 4) && !answeredThisCycle
+
+  function nameOf(id: string): string | null {
+    return bank.find((one) => one.id === id)?.question ?? null
+  }
+
+  return (
+    <section className="card askedcard">
+      <div className="asked__head">
+        <div>
+          <h2 className="asked__title">What we asked, by month</h2>
+          <p className="asked__sub">
+            Taken from the answers themselves — nothing on the server records the
+            programme month by month.
+          </p>
+        </div>
+        {years.length > 1 && (
+          <div className="tagpick">
+            <select
+              className="tagpick__select"
+              value={showing}
+              onChange={(event) => setYear(event.target.value)}
+              aria-label="Year"
+            >
+              {years.map((one) => (
+                <option key={one} value={one}>
+                  {one}
+                </option>
+              ))}
+            </select>
+            <ChevronDown />
+          </div>
+        )}
+      </div>
+
+      {history === null ? (
+        <div className="asked__loading">Reading the last twelve months\u2026</div>
+      ) : (
+        <div className="asked__list">
+          {planned && (
+            <div className="askmonth askmonth--planned">
+              <div className="askmonth__head">
+                <span className="askmonth__name">{monthName(cycle)}</span>
+                <span className="askmonth__tag askmonth__tag--planned">Planned</span>
+                <span className="askmonth__count">nobody has answered yet</span>
+              </div>
+
+              {selections.length === 0 ? (
+                <div className="askmonth__none">
+                  No selection, so nobody is being asked anything this month.
+                </div>
+              ) : (
+                selections.map((selection) => (
+                  <div className="askgroup" key={selection.id}>
+                    <div className="askgroup__who">{selectionLabel(selection)}</div>
+                    {selection.questionIds.length === 0 ? (
+                      <div className="askmonth__none">No questions picked.</div>
+                    ) : (
+                      selection.questionIds.map((id) => (
+                        <div className="askq" key={id}>
+                          <span className="askq__text">
+                            {nameOf(id) ?? <code className="askq__id">{id}</code>}
+                          </span>
+                          {!nameOf(id) && (
+                            <span className="askq__missing">not on the list</span>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {months.length === 0 && !planned ? (
+            <Empty>No answers recorded in {showing}.</Empty>
+          ) : (
+            months.map((month) => (
+              <div className="askmonth" key={month.cycle}>
+                <div className="askmonth__head">
+                  <span className="askmonth__name">{monthName(month.cycle)}</span>
+                  <span className="askmonth__count">
+                    {month.people} {month.people === 1 ? 'person' : 'people'} answered
+                  </span>
+                </div>
+                {month.questions.map((question) => (
+                  <div className="askq" key={question.id}>
+                    <span className="askq__text">
+                      {nameOf(question.id) ?? <code className="askq__id">{question.id}</code>}
+                    </span>
+                    {!nameOf(question.id) && (
+                      <span className="askq__missing">not on the list</span>
+                    )}
+                    <span className="askq__n">{question.answers}</span>
+                  </div>
+                ))}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/*
+        Said once, at the bottom, rather than beside every row it applies to.
+
+        A retired question is not returned by the list endpoint, so a month that asked
+        one shows its id and nothing else — August asked `experience` and this console
+        cannot name it. That is section 6d, not a gap in the record.
+      */}
+      <p className="note">
+        A question shown as an id was asked but is no longer on the list — retired or
+        still a draft. The answers are kept either way.
+      </p>
+    </section>
+  )
+}
+
+/** "August 2026" from "2026-08". */
+function monthName(cycle: string): string {
+  return new Date(`${cycle}-01T00:00:00`).toLocaleDateString(undefined, {
+    month: 'long',
+    year: 'numeric',
+  })
 }
 
 // ------------------------------------------------- questions the API will not list
