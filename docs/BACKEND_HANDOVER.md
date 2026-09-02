@@ -49,6 +49,7 @@ Roles, in rank order: `EMPLOYEE` → `HR` (HRBP) → `HR_ADMIN` (Admin) → `HR_
 | **No way to list HR accounts** | `/api/employees/hr` is 404, so an HRBP's picker is empty but for themselves. Section 4f. |
 | **Email on ticket creation** | **New request.** To the HRBP and the raiser, from `POST /api/tickets`. Section 4g. |
 | **No API documentation** | **New.** Everything in section 6d was found by probing. Section 7b. |
+| **Pulse delivery ignores selections** | **Unchanged.** The bot asks everyone the whole bank, so departments picked in the console change nothing. Section 6c. |
 | **A new pulse question vanishes** | **New.** It is created as a draft, and the list returns only published ones — stored, then unreachable. Section 6d. |
 
 ---
@@ -406,15 +407,6 @@ the app still read `/api/pulse/questions` and ask everyone the whole bank. Until
 delivery reads selections, the console will report that departments are not being asked
 anything while employees are in fact being asked, which will look like a console bug.
 
-### 6e. One of ours, listed so nobody chases it
-
-`GET /api/tickets/categories` answers `{"categories":[...]}`. The **bot** reads a bare
-array or `{items:[...]}`, so it silently falls back to a hard-coded list and has never
-shown your categories. Our fix, not yours — noted here only so it is not debugged from
-your side.
-
----
-
 ### 6d. A new pulse question is created, and then cannot be seen
 
 This section said the question had no `state` on the server. That was wrong, and the
@@ -501,6 +493,69 @@ does not. Fixed on our side — a slug is derived from the wording and sent on c
 so nothing is needed from you here.
 
 ---
+
+### 6e. One of ours, listed so nobody chases it
+
+`GET /api/tickets/categories` answers `{"categories":[...]}`. The **bot** reads a bare
+array or `{items:[...]}`, so it silently falls back to a hard-coded list and has never
+shown your categories. Our fix, not yours — noted here only so it is not debugged from
+your side.
+
+---
+
+### 6f. A question can only be deleted while it is a draft
+
+`DELETE /api/pulse/questions/{id}` refuses anything published:
+
+```
+409  Only DRAFT questions can be deleted. 'sfsfasdadasd-asdasld-asd' is PUBLISHED.
+```
+
+Found on 2 September while clearing three test questions out of the live bank by hand.
+The console had been getting the same 409 on every Remove and showing it as a failure,
+because Remove is only ever pressed on a question somebody can see, and every question
+somebody can see is published.
+
+Ours to work around and now done — the console drops a question to `DRAFT` and then
+deletes it. Recorded because of what it does *combined with* section 6d: to delete a
+question you must first make it a draft, and drafts are not returned by the list, so a
+failure between the two steps leaves the question invisible rather than deleted. Two
+requests, and the window between them loses things.
+
+**If `DELETE` accepted a published question, or the list returned drafts, that window
+would not exist.** Either one closes it.
+
+### 6g. `/api/pulse/list` is empty for an Admin
+
+| endpoint | as `HR_ADMIN` |
+|---|---|
+| `GET /api/hr/pulse?cycle=2026-08` | 4 rows |
+| `GET /api/pulse/list` | `{"items": [], "total": 0, "page": 1, "limit": ...}` |
+
+Same account, same cycle, same data underneath. We assume `/api/pulse/list` is scoped
+to the calling employee's own responses rather than the ones an Admin may read, which
+would make it correct and merely misleading — but it is not written down anywhere, and
+the console's dashboard was reading it for the pulse-completion trend and quietly
+drawing zeros.
+
+**Just tell us which it is.** If it is employee-scoped that is fine and we will use
+`/api/hr/pulse`; if it is meant to be the HR-wide list, it is a bug.
+
+### 6h. A selection cannot be named, and does not know its month
+
+Two small ones on `/api/pulse/selections`, whose record is `id`, `departments`,
+`questionIds` and nothing else.
+
+**A name.** HR wants to call a selection something — "New joiners", "Sales floor" —
+rather than have it titled by what it contains. The console currently names it after
+its departments, which works for two and stops working for eight.
+**Please add an optional `name` string.**
+
+**A cycle.** A selection is a standing object with no month on it, so changing it
+overwrites history: there is no way to ask what was asked in August. The console works
+around this by deriving the past from the answers themselves, which works only for
+months somebody answered in, and cannot tell "nobody was asked" from "nobody replied".
+Not urgent, and worth knowing before the programme has a year behind it.
 
 ## 7. Three questions, not requests
 
@@ -611,9 +666,11 @@ runs after routing, so the two are reliably different.
 4. **Section 4g** — email to the HRBP and the raiser when a ticket is created. New, and
    the only item here that does not wait on anything else.
 5. **Sections 6c and 6d** — pulse: delivery reading selections, and a newly created
-   question being reachable after it is created.
-6. **Section 7** — the three questions, whenever suits.
-7. **Section 7b** — API documentation, or a pointer to it if it already exists.
+   question being reachable after it is created. 6d is the one costing work today.
+6. **Sections 6f, 6g and 6h** — three small pulse ones: deleting a published question,
+   what `/api/pulse/list` is scoped to, and a `name` on a selection.
+7. **Section 7** — the three questions, whenever suits.
+8. **Section 7b** — API documentation, or a pointer to it if it already exists.
 
 Sections 3a, 5, 6a and 6b are done. Section 4b is route-present, guard unverified.
 
