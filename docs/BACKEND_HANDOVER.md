@@ -483,20 +483,21 @@ runs after routing, so the two are reliably different.
 
 ## 10. What is left
 
-1. **Section 4a** — auto-assignment on creation. Now tested and confirmed missing, and
-   it is the feature everything else in section 4 exists to support. Plus a backfill for
-   the 38 already sitting unowned.
+1. **Section 4a** — auto-assignment on creation. Tested twice and confirmed missing,
+   most recently with three tickets minutes old. It is the feature everything else in
+   section 4 exists to support. Plus a backfill for the 42 sitting unowned.
 2. **Sections 4d, 4e and 4f** — the rest of assignment, in three small pieces. Two
    permission lists to correct in opposite directions (an Admin cannot resolve a ticket
    their list grants; an HRBP cannot assign one and now should), and one endpoint that
    lists HR accounts, without which an HRBP can only assign to themselves.
 3. **Section 3b** — the 177 employees with no `hrbpId`. Tag them, or cover them by
    department, but they are unsupported until one or the other.
-4. **Section 6b** — cache headers on authenticated routes. Small, and still open.
+4. **Section 4g** — email to the HRBP and the raiser when a ticket is created. New, and
+   the only item here that does not wait on anything else.
 5. **Section 6c** — pulse delivery reading selections.
 6. **Section 7** — the three questions, whenever suits.
 
-Sections 3a, 4b, 5 and 6a are done.
+Sections 3a, 5, 6a and 6b are done. Section 4b is route-present, guard unverified.
 
 ---
 
