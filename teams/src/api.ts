@@ -314,10 +314,28 @@ export async function thisCyclesPulse(): Promise<Record<string, string> | null> 
   }
 }
 
+/**
+ * The questions to ask, from the server.
+ *
+ * The unwrapping matters more than it looks. `/api/pulse/questions` answers
+ * `{"questions": [...]}`, and this read only ever looked for a bare array or `items` —
+ * so `rows` was always empty, `usable` was always empty, and every pulse anybody has
+ * ever seen in Teams came from FALLBACK_PULSE below. The bot has never once shown a
+ * question written in the HR console, and it failed silently because falling back is
+ * exactly what it is meant to do when the server has nothing.
+ *
+ * All three shapes are accepted now rather than just the right one: the endpoint has
+ * already been seen to answer differently in different places, and a pulse that
+ * quietly reverts to four hard-coded questions is not a failure anyone will notice.
+ */
 export async function pulseQuestions(): Promise<PulseQuestion[]> {
   const session = await signIn()
   const raw = await request<unknown>('/api/pulse/questions', { token: session.token })
-  const rows = Array.isArray(raw) ? raw : ((raw as { items?: unknown[] }).items ?? [])
+  const rows = Array.isArray(raw)
+    ? raw
+    : ((raw as { questions?: unknown[] }).questions ??
+      (raw as { items?: unknown[] }).items ??
+      [])
   const mapped = rows.map((row) => {
     const q = row as Record<string, unknown>
     return {

@@ -13,7 +13,7 @@
 
 import { strict as assert } from 'node:assert'
 import { afterEach, describe, it } from 'node:test'
-import { asEmployee, holidays } from '../api.js'
+import { asEmployee, holidays, pulseQuestions } from '../api.js'
 
 const SESSION = { employeeId: 'HYD606840', name: 'Test Person', token: 'bearer-token' }
 
@@ -122,5 +122,90 @@ describe('reading the holiday calendar', () => {
     serve({ message: 'Forbidden' }, 403)
 
     await assert.rejects(() => asEmployee(SESSION, () => holidays(2026)))
+  })
+})
+
+
+/*
+ * The pulse bank, and the second bug of exactly the same kind.
+ *
+ * `/api/pulse/questions` answers `{"questions": [...]}`. The reader looked for a bare
+ * array or `{items: [...]}`, found neither, and fell through to four hard-coded
+ * questions — so every pulse ever shown in Teams was the fallback, and nothing written
+ * in the HR console had ever reached an employee. Silent, because falling back is the
+ * correct behaviour when the server genuinely has nothing.
+ */
+describe('pulseQuestions', () => {
+  /** Trimmed from the live response on 2 September 2026. */
+  const LIVE = {
+    questions: [
+      {
+        _id: '6a8d40ee67503adad4e126c3',
+        id: 'workload',
+        question: 'Is your workload manageable right now?',
+        hint: '',
+        options: ['Comfortable', 'Busy but okay', 'Stretched', 'Not sustainable'],
+        tags: [],
+        state: 'PUBLISHED',
+        order: 2,
+      },
+      {
+        _id: '6a8d40ee67503adad4e126c4',
+        id: 'manager',
+        question: 'Do you feel supported by your manager?',
+        hint: 'Answers roll up to a department average only.',
+        options: ['Always', 'Usually', 'Sometimes', 'Rarely'],
+        tags: [],
+        state: 'PUBLISHED',
+        order: 3,
+      },
+    ],
+  }
+
+  it('reads the {questions: [...]} the server actually sends', async () => {
+    serve(LIVE)
+    const asked = await asEmployee(SESSION, () => pulseQuestions())
+    assert.deepEqual(
+      asked.map((one) => one.id),
+      ['workload', 'manager'],
+      'fell back to the hard-coded four instead of reading the response',
+    )
+    assert.equal(asked[0].text, 'Is your workload manageable right now?')
+    assert.deepEqual(asked[0].options, [
+      'Comfortable',
+      'Busy but okay',
+      'Stretched',
+      'Not sustainable',
+    ])
+  })
+
+  it('still reads a bare array', async () => {
+    serve(LIVE.questions)
+    const asked = await asEmployee(SESSION, () => pulseQuestions())
+    assert.deepEqual(asked.map((one) => one.id), ['workload', 'manager'])
+  })
+
+  it('still reads {items: [...]}', async () => {
+    serve({ items: LIVE.questions })
+    const asked = await asEmployee(SESSION, () => pulseQuestions())
+    assert.deepEqual(asked.map((one) => one.id), ['workload', 'manager'])
+  })
+
+  it('falls back when the server really has nothing', async () => {
+    serve({ questions: [] })
+    const asked = await asEmployee(SESSION, () => pulseQuestions())
+    assert.equal(asked.length, 4, 'a pulse with no questions is worse than the fallback')
+    assert.equal(asked[0].id, 'experience')
+  })
+
+  it('drops rows that could not be drawn, keeping the rest', async () => {
+    serve({
+      questions: [
+        { id: 'workload', question: 'Is your workload manageable right now?', options: ['a', 'b'] },
+        { id: 'broken', question: '', options: [] },
+      ],
+    })
+    const asked = await asEmployee(SESSION, () => pulseQuestions())
+    assert.deepEqual(asked.map((one) => one.id), ['workload'])
   })
 })
