@@ -15,8 +15,8 @@
  * answers do not, and the comparison stops meaning anything).
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Card, Empty, Loading, clickable } from '../components/Bits'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Empty, Loading, clickable } from '../components/Bits'
 import { Drawer } from '../components/Drawer'
 import { fetchEmployees, fetchPulseBreakdown, isLive } from '../api/client'
 import { currentCycle } from '../api/mock'
@@ -68,6 +68,15 @@ interface Department {
   name: string
   headcount: number
 }
+
+/*
+ * How many departments a selection lists before it needs asking.
+ *
+ * Six covers the ones with real headcount here — the tail is single-digit teams — so
+ * the common edit is done without expanding anything, and the full list is one click
+ * away rather than a permanent forty-row column beside the questions.
+ */
+const DEPTS_SHOWN = 6
 
 export function PulseQuestions({ editable = true }: { editable?: boolean }) {
   const [questions, setQuestions] = useState<PulseQuestion[] | null>(null)
@@ -292,50 +301,61 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
 
       {/* ------------------------------------------------------------ the bank */}
 
-      <section className="card" style={{ marginTop: 16 }}>
-        <div className="chips" style={{ marginBottom: 8 }}>
-          <button
-            className={`chip ${state === ANY_STATE ? 'chip--on' : ''}`}
-            onClick={() => setState(ANY_STATE)}
-          >
-            {ANY_STATE}
-          </button>
-          {QUESTION_STATES.map((one) => (
+      <section className="card bankcard">
+        <div className="bankbar">
+          <div className="chips">
             <button
-              key={one}
-              className={`chip ${state === one ? 'chip--on' : ''}`}
-              onClick={() => setState(one)}
+              className={`chip ${state === ANY_STATE ? 'chip--on' : ''}`}
+              onClick={() => setState(ANY_STATE)}
             >
-              {STATE_LABEL[one]} · {counts[one]}
+              {ANY_STATE}
             </button>
-          ))}
-        </div>
+            {QUESTION_STATES.map((one) => (
+              <button
+                key={one}
+                className={`chip ${state === one ? 'chip--on' : ''}`}
+                onClick={() => setState(one)}
+              >
+                {STATE_LABEL[one]} · {counts[one]}
+              </button>
+            ))}
+          </div>
 
-        <div className="chips">
-          <button
-            className={`chip ${tag === ANY_TAG ? 'chip--on' : ''}`}
-            onClick={() => setTag(ANY_TAG)}
-          >
-            {ANY_TAG}
-          </button>
-          {tags.map((one) => (
-            <button
-              key={one}
-              className={`chip ${tag === one ? 'chip--on' : ''}`}
-              onClick={() => setTag(one)}
-            >
-              {one}
-            </button>
-          ))}
           {editable && (
             <button
-              className="chip"
-              style={{ marginLeft: 'auto' }}
+              className="button bankbar__add"
               onClick={() => setEditing({ question: blankQuestion(), index: -1 })}
             >
-              + Add question
+              <PlusIcon />
+              Add question
             </button>
           )}
+        </div>
+
+        {/*
+          A select rather than a row of chips.
+
+          Tags are open-ended — anybody writing a question can coin one — so the chip row
+          grew with the bank and pushed the questions themselves off the first screen.
+          A select is one control at a fixed size however many tags exist, and it hands
+          the long-list behaviour to the platform, which does it better than a scroller
+          built here would.
+        */}
+        <div className="tagpick">
+          <select
+            className="tagpick__select"
+            value={tag}
+            onChange={(event) => setTag(event.target.value)}
+            aria-label="Filter by tag"
+          >
+            <option value={ANY_TAG}>{ANY_TAG}</option>
+            {tags.map((one) => (
+              <option key={one} value={one}>
+                {one}
+              </option>
+            ))}
+          </select>
+          <ChevronDown />
         </div>
 
         {shown.length === 0 ? (
@@ -345,93 +365,25 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
               : 'Nothing here matches those filters.'}
           </Empty>
         ) : (
-          <div style={{ marginTop: 8 }}>
+          <div className="qlist">
             {shown.map((question) => {
               const index = questions.indexOf(question)
               const uses = selections.filter((one) =>
                 one.questionIds.includes(question.id),
               ).length
               return (
-                <div className="qrow" key={question.id}>
-                  <div className="qrow__main">
-                    <div className="row__title">
-                      {question.question}
-                      <span
-                        className={`pill ${
-                          question.state === 'PUBLISHED'
-                            ? 'pill--resolved'
-                            : question.state === 'DRAFT'
-                              ? 'pill--optional'
-                              : 'pill--neutral'
-                        }`}
-                        style={{ marginLeft: 8 }}
-                      >
-                        {STATE_LABEL[question.state]}
-                      </span>
-                    </div>
-                    <div className="row__meta">
-                      {question.tags.length > 0
-                        ? question.tags.map((one) => (
-                            <span className="tag tag--dept" key={one} style={{ marginRight: 6 }}>
-                              {one}
-                            </span>
-                          ))
-                        : <span className="tag tag--all">untagged</span>}
-                      {uses > 0 && (
-                        <span style={{ marginLeft: 8 }}>
-                          in {uses} {uses === 1 ? 'selection' : 'selections'}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {editable && (
-                    <div className="qrow__acts">
-                      {question.state !== 'PUBLISHED' && (
-                        <button
-                          className="qrow__act"
-                          onClick={() => setQuestionState(index, 'PUBLISHED')}
-                        >
-                          Publish
-                        </button>
-                      )}
-                      {question.state === 'PUBLISHED' && (
-                        <button
-                          className="qrow__act"
-                          onClick={() => setQuestionState(index, 'RETIRED')}
-                        >
-                          Retire
-                        </button>
-                      )}
-                      <button
-                        className="qrow__act"
-                        onClick={() => setEditing({ question: { ...question }, index })}
-                      >
-                        Edit
-                      </button>
-                      {confirmRemove === question.id ? (
-                        <span className="qrow__confirm">
-                          <button
-                            className="qrow__act qrow__act--danger"
-                            onClick={() => removeQuestion(index)}
-                          >
-                            Remove
-                          </button>
-                          <button className="qrow__act" onClick={() => setConfirmRemove(null)}>
-                            Keep
-                          </button>
-                        </span>
-                      ) : (
-                        <button
-                          className="qrow__act"
-                          onClick={() => setConfirmRemove(question.id)}
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
+                <QuestionRow
+                  key={question.id}
+                  question={question}
+                  uses={uses}
+                  editable={editable}
+                  confirming={confirmRemove === question.id}
+                  onConfirm={() => setConfirmRemove(question.id)}
+                  onKeep={() => setConfirmRemove(null)}
+                  onRemove={() => void removeQuestion(index)}
+                  onEdit={() => setEditing({ question: { ...question }, index })}
+                  onState={(next) => void setQuestionState(index, next)}
+                />
               )
             })}
           </div>
@@ -457,13 +409,9 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
       </div>
 
       {editable && (
-        <button
-          className="button button--ghost"
-          style={{ marginTop: 12 }}
-          disabled={busy}
-          onClick={() => void addSelection()}
-        >
-          + Add a selection
+        <button className="addsel" disabled={busy} onClick={() => void addSelection()}>
+          <PlusIcon />
+          Add a selection
         </button>
       )}
 
@@ -484,6 +432,287 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
         </p>
       )}
     </>
+  )
+}
+
+// -------------------------------------------------------------- one bank row
+
+/**
+ * A question in the bank.
+ *
+ * Two actions are on the row and the rest are behind the overflow: Edit and the state
+ * change are what HR does weekly, and Remove is the one that destroys answers. Putting
+ * all four in a line of equal buttons made deleting a question exactly as easy as
+ * editing one, which is the wrong shape for a list you scan quickly.
+ */
+function QuestionRow({
+  question,
+  uses,
+  editable,
+  confirming,
+  onConfirm,
+  onKeep,
+  onRemove,
+  onEdit,
+  onState,
+}: {
+  question: PulseQuestion
+  uses: number
+  editable: boolean
+  confirming: boolean
+  onConfirm: () => void
+  onKeep: () => void
+  onRemove: () => void
+  onEdit: () => void
+  onState: (next: QuestionState) => void
+}) {
+  const [menu, setMenu] = useState(false)
+  const box = useRef<HTMLDivElement>(null)
+
+  /*
+   * Close on a click anywhere else, and on Escape.
+   *
+   * Both, not either: a menu that only closes on Escape strands anyone using a mouse,
+   * and one that only closes on an outside click strands anyone who opened it by
+   * keyboard and does not want to move the pointer to get out.
+   */
+  useEffect(() => {
+    if (!menu) return
+    function away(event: MouseEvent) {
+      if (!box.current?.contains(event.target as Node)) setMenu(false)
+    }
+    function escape(event: KeyboardEvent) {
+      if (event.key === 'Escape') setMenu(false)
+    }
+    document.addEventListener('mousedown', away)
+    document.addEventListener('keydown', escape)
+    return () => {
+      document.removeEventListener('mousedown', away)
+      document.removeEventListener('keydown', escape)
+    }
+  }, [menu])
+
+  // Closing the menu has to take the confirmation with it, or reopening it later shows
+  // a "Remove / Keep" pair for a decision nobody is currently making.
+  useEffect(() => {
+    if (!menu && confirming) onKeep()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [menu])
+
+  const published = question.state === 'PUBLISHED'
+
+  return (
+    <div className={`qcard ${confirming ? 'qcard--confirming' : ''}`}>
+      <span className={`qcard__mark qcard__mark--${question.state.toLowerCase()}`}>
+        <ClipboardIcon />
+      </span>
+
+      <div className="qcard__main">
+        <div className="qcard__title">
+          {question.question}
+          <span
+            className={`statepill statepill--${question.state.toLowerCase()}`}
+          >
+            {STATE_LABEL[question.state]}
+          </span>
+        </div>
+        <div className="qcard__meta">
+          {question.tags.length > 0 ? (
+            question.tags.map((one) => (
+              <span className="tag tag--dept" key={one}>
+                {one}
+              </span>
+            ))
+          ) : (
+            <span className="qcard__untagged">untagged</span>
+          )}
+          {uses > 0 && (
+            <span className="qcard__uses">
+              in {uses} {uses === 1 ? 'selection' : 'selections'}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {editable && (
+        <div className="qcard__acts">
+          <button
+            className="ghostbtn ghostbtn--sm"
+            onClick={() => onState(published ? 'RETIRED' : 'PUBLISHED')}
+          >
+            {published ? <RetireIcon /> : <PublishIcon />}
+            {published ? 'Retire' : 'Publish'}
+          </button>
+          <button className="ghostbtn ghostbtn--sm" onClick={onEdit}>
+            <PencilIcon />
+            Edit
+          </button>
+
+          <div className="qmenu" ref={box}>
+            <button
+              className={`qmenu__open ${menu ? 'qmenu__open--on' : ''}`}
+              onClick={() => setMenu((on) => !on)}
+              aria-haspopup="menu"
+              aria-expanded={menu}
+              aria-label={`More actions for ${question.question}`}
+            >
+              <DotsIcon />
+            </button>
+
+            {menu && (
+              <div className="qmenu__pop" role="menu">
+                {confirming ? (
+                  <>
+                    <div className="qmenu__ask">
+                      {uses > 0
+                        ? `In ${uses} ${uses === 1 ? 'selection' : 'selections'}. Answers already given go too.`
+                        : 'Answers already given go with it.'}
+                    </div>
+                    <button
+                      className="qmenu__item qmenu__item--danger"
+                      role="menuitem"
+                      onClick={() => {
+                        setMenu(false)
+                        onRemove()
+                      }}
+                    >
+                      <TrashIcon />
+                      Yes, remove it
+                    </button>
+                    <button className="qmenu__item" role="menuitem" onClick={onKeep}>
+                      Keep it
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    className="qmenu__item qmenu__item--danger"
+                    role="menuitem"
+                    onClick={onConfirm}
+                  >
+                    <TrashIcon />
+                    Remove
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ------------------------------------------------------------------ the glyphs
+
+const S = {
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 1.7,
+  strokeLinecap: 'round' as const,
+  strokeLinejoin: 'round' as const,
+}
+
+function ClipboardIcon() {
+  return (
+    <svg viewBox="0 0 24 24" {...S}>
+      <path d="M9 4.5h6a1 1 0 011 1v1H8v-1a1 1 0 011-1z" />
+      <path d="M8 6.5H6.6a1.6 1.6 0 00-1.6 1.6v10.4a1.6 1.6 0 001.6 1.6h10.8a1.6 1.6 0 001.6-1.6V8.1a1.6 1.6 0 00-1.6-1.6H16" />
+      <path d="M8.8 11.5h6.4M8.8 15h4.2" />
+    </svg>
+  )
+}
+
+function PencilIcon() {
+  return (
+    <svg viewBox="0 0 24 24" {...S}>
+      <path d="M4.5 19.5l.9-3.6L15.3 6a1.8 1.8 0 012.5 0l.6.6a1.8 1.8 0 010 2.5L8.5 18.9z" />
+    </svg>
+  )
+}
+
+function RetireIcon() {
+  return (
+    <svg viewBox="0 0 24 24" {...S}>
+      <circle cx="12" cy="12" r="7.5" />
+      <path d="M7.5 12h9" />
+    </svg>
+  )
+}
+
+function PublishIcon() {
+  return (
+    <svg viewBox="0 0 24 24" {...S}>
+      <circle cx="12" cy="12" r="7.5" />
+      <path d="M8.6 12.2l2.3 2.3 4.5-4.8" />
+    </svg>
+  )
+}
+
+function DotsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <circle cx="12" cy="5.6" r="1.55" />
+      <circle cx="12" cy="12" r="1.55" />
+      <circle cx="12" cy="18.4" r="1.55" />
+    </svg>
+  )
+}
+
+function TrashIcon() {
+  return (
+    <svg viewBox="0 0 24 24" {...S}>
+      <path d="M5.5 7h13M10 7V5.6a1 1 0 011-1h2a1 1 0 011 1V7" />
+      <path d="M7 7l.8 11.4a1.6 1.6 0 001.6 1.5h5.2a1.6 1.6 0 001.6-1.5L17 7" />
+    </svg>
+  )
+}
+
+function PlusIcon() {
+  return (
+    <svg viewBox="0 0 24 24" {...S}>
+      <path d="M12 5.8v12.4M5.8 12h12.4" />
+    </svg>
+  )
+}
+
+function ChevronDown() {
+  return (
+    <svg className="tagpick__chev" viewBox="0 0 24 24" {...S} aria-hidden="true">
+      <path d="M6.5 9.5l5.5 5.5 5.5-5.5" />
+    </svg>
+  )
+}
+
+function TargetIcon() {
+  return (
+    <svg viewBox="0 0 24 24" {...S}>
+      <circle cx="12" cy="12" r="7.6" />
+      <circle cx="12" cy="12" r="3.4" />
+      <path d="M12 2.6v2.6M12 18.8v2.6M2.6 12h2.6M18.8 12h2.6" />
+    </svg>
+  )
+}
+
+function PeopleIcon() {
+  return (
+    <svg className="deptrow__glyph" viewBox="0 0 24 24" {...S} aria-hidden="true">
+      <circle cx="12" cy="9" r="3.2" />
+      <path d="M5.8 19.4a6.2 6.2 0 0112.4 0" />
+    </svg>
+  )
+}
+
+function GripIcon() {
+  return (
+    <svg className="pickrow__grip" viewBox="0 0 24 24" fill="currentColor" stroke="none"
+      aria-hidden="true">
+      <circle cx="9.5" cy="7" r="1.35" />
+      <circle cx="14.5" cy="7" r="1.35" />
+      <circle cx="9.5" cy="12" r="1.35" />
+      <circle cx="14.5" cy="12" r="1.35" />
+      <circle cx="9.5" cy="17" r="1.35" />
+      <circle cx="14.5" cy="17" r="1.35" />
+    </svg>
   )
 }
 
@@ -516,6 +745,9 @@ function SelectionCard({
   onRemove: () => void
 }) {
   const [tag, setTag] = useState<string>(ANY_TAG)
+  const [allDepartments, setAllDepartments] = useState(false)
+  /** The question being dragged, while it is being dragged. */
+  const [dragging, setDragging] = useState<string | null>(null)
   const tags = useMemo(() => tagsInUse(bank), [bank])
   // Only published questions are offered. Drafts and retired ones are deliberately not
   // shown here rather than shown-and-refused: this list is a menu, and a menu listing
@@ -543,6 +775,23 @@ function SelectionCard({
     })
   }
 
+  /**
+   * Move a chosen question to where another one sits.
+   *
+   * The order is the order they are asked, and it is not cosmetic: the first question
+   * gets the most considered answer and the last gets the most abandoned ones, so
+   * whichever question matters most this month belongs at the top. It was previously
+   * fixed as whatever order they happened to be ticked in, which nobody chose.
+   */
+  function moveQuestion(id: string, before: string) {
+    if (id === before) return
+    const order = selection.questionIds.filter((one) => one !== id)
+    const at = order.indexOf(before)
+    if (at < 0) return
+    order.splice(at, 0, id)
+    onChange({ ...selection, questionIds: order })
+  }
+
   function toggleDepartment(name: string) {
     onChange({
       ...selection,
@@ -552,131 +801,180 @@ function SelectionCard({
     })
   }
 
+  const everyone = isEveryone(selection)
+  const total = departments.reduce((sum, one) => sum + one.headcount, 0)
+  const listed = allDepartments ? departments : departments.slice(0, DEPTS_SHOWN)
+  const rest = departments.length - listed.length
+
   return (
-    <Card
-      chip="🎯"
-      chipColour="var(--purple-tint-12)"
-      title={selectionLabel(selection)}
-      subtitle={`${picked} of ${MAX_SELECTED} questions · ${reach} ${reach === 1 ? 'person' : 'people'}`}
-      action={
-        editable ? (
-          <button className="card__action" disabled={saving} onClick={onRemove}>
+    <section className="card selection">
+      <header className="selection__head">
+        <span className="selection__mark">
+          <TargetIcon />
+        </span>
+        <div className="selection__id">
+          <div className="selection__name">{selectionLabel(selection)}</div>
+          <div className="selection__sub">
+            {picked} of {MAX_SELECTED} questions · {reach} {reach === 1 ? 'person' : 'people'}
+          </div>
+        </div>
+        {editable && (
+          <button className="selection__remove" disabled={saving} onClick={onRemove}>
             Remove
           </button>
-        ) : undefined
-      }
-    >
+        )}
+      </header>
+
       {problem && <div className="error">{problem}</div>}
 
-      <div className="drawer__label">Departments</div>
-      <div
-        {...clickable(() => editable && onChange({ ...selection, departments: [] }))}
-        className={`option ${isEveryone(selection) ? 'option--on' : ''}`}
-      >
-        <span
-          className="option__dot"
-          style={{ background: isEveryone(selection) ? 'var(--blue-primary)' : 'var(--ink-12)' }}
-        />
-        Every department
-        <span className="option__tag">
-          {departments.reduce((total, one) => total + one.headcount, 0)} people
-        </span>
-      </div>
+      {/*
+        Departments beside questions, not above them.
 
-      {departments.map((department) => {
-        const on = selection.departments.includes(department.name)
-        // Named in another selection: showing it as available would offer a choice that
-        // is then refused, which is worse than showing it as spoken for.
-        const elsewhere = others.some((one) => one.departments.includes(department.name))
-        return (
-          <div
-            key={department.name}
-            {...clickable(() => editable && !elsewhere && toggleDepartment(department.name))}
-            className={`option ${on ? 'option--on' : ''}`}
-            style={elsewhere ? { opacity: 0.4 } : undefined}
-          >
-            <span
-              className="option__dot"
-              style={{ background: on ? 'var(--blue-primary)' : 'var(--ink-12)' }}
-            />
-            {department.name}
-            <span className="option__tag">
-              {elsewhere ? 'in another selection' : department.headcount}
-            </span>
-          </div>
-        )
-      })}
+        Choosing who is asked and choosing what they are asked are one decision, and
+        stacked they were a scroll apart — you picked the questions with the department
+        list off-screen, which is how a selection ends up asking Consumer Sales about
+        something that only makes sense to Academic Delivery.
+      */}
+      <div className="selection__grid">
+        <div className="selection__col">
+          <div className="selection__label">Departments</div>
 
-      <div className="drawer__label" style={{ marginTop: 16 }}>
-        Questions — {picked} of {MAX_SELECTED}
-        {full && <span style={{ color: 'var(--text-muted)' }}> · at the cap</span>}
-      </div>
-
-      {tags.length > 0 && (
-        <div className="chips" style={{ marginBottom: 8 }}>
-          <button
-            className={`chip ${tag === ANY_TAG ? 'chip--on' : ''}`}
-            onClick={() => setTag(ANY_TAG)}
-          >
-            {ANY_TAG}
-          </button>
-          {tags.map((one) => (
-            <button
-              key={one}
-              className={`chip ${tag === one ? 'chip--on' : ''}`}
-              onClick={() => setTag(one)}
-            >
-              {one}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {shown.length === 0 ? (
-        <Empty>
-          {tag === ANY_TAG
-            ? 'No published questions yet. Publish one from the bank above.'
-            : `Nothing published under ${tag}.`}
-        </Empty>
-      ) : (
-        shown.map((question) => {
-          const on = selection.questionIds.includes(question.id)
-          const order = selection.questionIds.indexOf(question.id) + 1
-          return (
+          <div className="deptlist">
             <div
-              key={question.id}
-              {...clickable(() => editable && toggleQuestion(question.id))}
-              className={`option ${on ? 'option--on' : ''}`}
-              // Dimmed rather than hidden at the cap: the row still says what it is,
-              // and the counter above says why it will not take.
-              style={!on && full ? { opacity: 0.4 } : undefined}
+              {...clickable(() => editable && onChange({ ...selection, departments: [] }))}
+              className={`deptrow ${everyone ? 'deptrow--on' : ''}`}
             >
-              <span
-                className="option__dot"
-                style={{ background: on ? 'var(--blue-primary)' : 'var(--ink-12)' }}
-              />
-              {question.question}
-              <span className="option__tag">{on ? `#${order}` : question.tags[0] ?? ''}</span>
+              <PeopleIcon />
+              <span className="deptrow__name">Every department</span>
+              <span className="deptrow__count">{total}</span>
             </div>
-          )
-        })
-      )}
 
-      {picked > 0 && (
-        <>
-          <div className="drawer__label" style={{ marginTop: 16 }}>
-            In this order
+            {listed.map((department) => {
+              const on = selection.departments.includes(department.name)
+              // Named in another selection: showing it as available offers a choice that
+              // is then refused, which is worse than showing it as spoken for.
+              const elsewhere = others.some((one) =>
+                one.departments.includes(department.name),
+              )
+              return (
+                <div
+                  key={department.name}
+                  {...clickable(() => editable && !elsewhere && toggleDepartment(department.name))}
+                  className={`deptrow ${on ? 'deptrow--on' : ''} ${elsewhere ? 'deptrow--taken' : ''}`}
+                  title={elsewhere ? 'Already in another selection' : undefined}
+                >
+                  <PeopleIcon />
+                  <span className="deptrow__name">{department.name}</span>
+                  <span className="deptrow__count">
+                    {elsewhere ? 'taken' : department.headcount}
+                  </span>
+                </div>
+              )
+            })}
           </div>
-          <div className="qpreview">
-            {questionsIn(bank, selection).map((question, at) => (
-              <div className="qpreview__option" key={question.id}>
-                {at + 1}. {question.question}
+
+          {(rest > 0 || allDepartments) && (
+            <button className="showmore" onClick={() => setAllDepartments((on) => !on)}>
+              {allDepartments ? 'Show fewer' : `Show ${rest} more`}
+              <ChevronDown />
+            </button>
+          )}
+        </div>
+
+        <div className="selection__col">
+          <div className="selection__label selection__label--split">
+            <span>
+              Questions — {picked} of {MAX_SELECTED}
+              {full && <span className="selection__cap"> · at the cap</span>}
+            </span>
+            {picked > 1 && <span className="selection__hint">Drag to reorder</span>}
+          </div>
+
+          {tags.length > 0 && (
+            <div className="chips" style={{ marginBottom: 8 }}>
+              <button
+                className={`chip ${tag === ANY_TAG ? 'chip--on' : ''}`}
+                onClick={() => setTag(ANY_TAG)}
+              >
+                {ANY_TAG}
+              </button>
+              {tags.map((one) => (
+                <button
+                  key={one}
+                  className={`chip ${tag === one ? 'chip--on' : ''}`}
+                  onClick={() => setTag(one)}
+                >
+                  {one}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {shown.length === 0 ? (
+            <Empty>
+              {tag === ANY_TAG
+                ? 'No published questions yet. Publish one from the bank above.'
+                : `Nothing published under ${tag}.`}
+            </Empty>
+          ) : (
+            <div className="qpicks">
+              {shown.map((question) => {
+                const on = selection.questionIds.includes(question.id)
+                const order = selection.questionIds.indexOf(question.id) + 1
+                return (
+                  <div
+                    key={question.id}
+                    className={`pickrow ${on ? 'pickrow--on' : ''} ${
+                      !on && full ? 'pickrow--capped' : ''
+                    } ${dragging === question.id ? 'pickrow--lifting' : ''}`}
+                    // Draggable only once chosen. There is no position to drag an
+                    // unchosen question to — it is not in the order yet.
+                    draggable={editable && on && picked > 1}
+                    onDragStart={() => setDragging(question.id)}
+                    onDragEnd={() => setDragging(null)}
+                    onDragOver={(event) => {
+                      if (on && dragging) event.preventDefault()
+                    }}
+                    onDrop={(event) => {
+                      event.preventDefault()
+                      if (dragging) moveQuestion(dragging, question.id)
+                      setDragging(null)
+                    }}
+                  >
+                    <button
+                      className="pickrow__box"
+                      onClick={() => editable && toggleQuestion(question.id)}
+                      aria-pressed={on}
+                      aria-label={on ? `Remove: ${question.question}` : `Add: ${question.question}`}
+                    >
+                      {on ? String(order).padStart(2, '0') : ''}
+                    </button>
+                    <span className="pickrow__text">{question.question}</span>
+                    {on && picked > 1 && <GripIcon />}
+                    <span className="pickrow__tail">
+                      {on ? `#${order}` : question.tags[0] ?? ''}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {picked > 0 && (
+            <>
+              <div className="selection__label" style={{ marginTop: 16 }}>
+                In this order
               </div>
-            ))}
-          </div>
-        </>
-      )}
-    </Card>
+              <ol className="orderlist">
+                {questionsIn(bank, selection).map((question) => (
+                  <li key={question.id}>{question.question}</li>
+                ))}
+              </ol>
+            </>
+          )}
+        </div>
+      </div>
+    </section>
   )
 }
 

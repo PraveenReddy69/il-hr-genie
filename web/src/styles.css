@@ -3907,3 +3907,699 @@ ul.legend {
   width: 13px;
   height: 13px;
 }
+
+
+/* =====================================================================
+   Pulse
+   =====================================================================
+
+   Two things on one page: the bank, which is a library of questions, and
+   the selections, which pair departments with ten of them. They are
+   different shapes of problem and the styling keeps them apart -- a flat
+   list to scan, and a two-column editor to decide in.
+   ===================================================================== */
+
+.bankcard {
+  margin-top: 16px;
+  padding-bottom: 8px;
+}
+
+.bankbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.bankbar .chips {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+/* The one blue thing on the screen. Adding a question is the action people
+   come to this page to do; everything else here acts on what already exists. */
+.bankbar__add {
+  flex: none;
+  width: auto;
+  margin-top: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px 9px 13px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.bankbar__add svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* ------------------------------------------------------------- tag filter */
+
+.tagpick {
+  position: relative;
+  display: inline-block;
+  align-self: flex-start;
+  margin-top: 10px;
+}
+
+.tagpick__select {
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-slate);
+  background: var(--surface);
+  border: 1px solid var(--ink-08);
+  border-radius: 999px;
+  padding: 8px 34px 8px 15px;
+  cursor: pointer;
+  min-width: 132px;
+}
+
+.tagpick__select:hover {
+  border-color: var(--ink-12);
+}
+
+.tagpick__select:focus-visible {
+  outline: 2px solid var(--blue-primary);
+  outline-offset: 1px;
+}
+
+.tagpick__chev {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin-top: -7px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------ the bank rows */
+
+.qlist {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.qcard {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 12px 14px;
+  border: 1px solid var(--ink-06);
+  border-radius: var(--radius-tile);
+  background: var(--surface);
+  transition: border-color 0.14s ease, box-shadow 0.14s ease;
+}
+
+.qcard:hover {
+  border-color: var(--ink-12);
+  box-shadow: 0 1px 2px rgba(10, 20, 48, 0.04), 0 6px 16px rgba(10, 20, 48, 0.05);
+}
+
+/* Red while a removal is being confirmed, so the row you are about to destroy
+   is obvious even though the confirmation itself is in a small popover. */
+.qcard--confirming {
+  border-color: rgba(229, 72, 77, 0.45);
+  background: rgba(229, 72, 77, 0.03);
+}
+
+.qcard__mark {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: var(--blue-tint-07);
+  color: var(--blue-primary);
+}
+
+.qcard__mark svg {
+  width: 19px;
+  height: 19px;
+}
+
+/* The state is on the icon as well as the pill. Scanning forty questions for the
+   two that are still drafts should not mean reading forty pills. */
+.qcard__mark--draft {
+  background: var(--orange-tint-14);
+  color: #c26a33;
+}
+
+.qcard__mark--retired {
+  background: var(--ink-05);
+  color: var(--text-muted);
+}
+
+.qcard__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.qcard__title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.35;
+}
+
+.qcard__meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-top: 5px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.qcard__untagged {
+  font-style: italic;
+}
+
+.qcard__uses::before {
+  content: '·';
+  margin-right: 7px;
+  color: var(--ink-12);
+}
+
+.statepill {
+  flex: none;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+
+.statepill--published {
+  background: var(--green-tint-14);
+  color: #2f8f57;
+}
+
+.statepill--draft {
+  background: var(--orange-tint-14);
+  color: #b7622e;
+}
+
+.statepill--retired {
+  background: var(--ink-05);
+  color: var(--text-muted);
+}
+
+.qcard__acts {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.ghostbtn--sm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  font-size: 12px;
+}
+
+.ghostbtn--sm svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ------------------------------------------------------------- the overflow */
+
+.qmenu {
+  position: relative;
+}
+
+.qmenu__open {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.qmenu__open:hover,
+.qmenu__open--on {
+  background: var(--ink-05);
+  border-color: var(--ink-08);
+  color: var(--text-slate);
+}
+
+.qmenu__open svg {
+  width: 16px;
+  height: 16px;
+}
+
+.qmenu__pop {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 20;
+  min-width: 210px;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--ink-08);
+  border-radius: 12px;
+  box-shadow: 0 6px 14px rgba(10, 20, 48, 0.08), 0 18px 40px rgba(10, 20, 48, 0.12);
+}
+
+/* What the removal actually costs, said before it happens rather than after. */
+.qmenu__ask {
+  padding: 8px 10px 9px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--text-slate);
+  border-bottom: 1px solid var(--ink-06);
+  margin-bottom: 4px;
+}
+
+.qmenu__item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 9px 10px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  text-align: left;
+  color: var(--text-slate);
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.qmenu__item:hover {
+  background: var(--ink-05);
+}
+
+.qmenu__item svg {
+  width: 15px;
+  height: 15px;
+}
+
+.qmenu__item--danger {
+  color: var(--red-risk);
+}
+
+.qmenu__item--danger:hover {
+  background: rgba(229, 72, 77, 0.08);
+}
+
+/* ------------------------------------------------------------- a selection */
+
+.selection {
+  margin-top: 18px;
+}
+
+.selection__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--ink-06);
+}
+
+.selection__mark {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--purple-tint-12);
+  color: var(--purple);
+}
+
+.selection__mark svg {
+  width: 20px;
+  height: 20px;
+}
+
+.selection__id {
+  flex: 1;
+  min-width: 0;
+}
+
+.selection__name {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.selection__sub {
+  margin-top: 3px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.selection__remove {
+  flex: none;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: none;
+  border: 0;
+  padding: 6px 4px;
+  cursor: pointer;
+}
+
+.selection__remove:hover:not(:disabled) {
+  color: var(--red-risk);
+}
+
+.selection__remove:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.selection__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 26px;
+  margin-top: 16px;
+}
+
+/* One column under about 1100px. Two columns of four-word rows is not a layout,
+   and the questions are the half that needs the width. */
+@media (max-width: 1100px) {
+  .selection__grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+}
+
+.selection__col {
+  min-width: 0;
+}
+
+.selection__label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 9px;
+}
+
+.selection__label--split {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.selection__cap {
+  color: var(--orange-warn);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.selection__hint {
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: none;
+  color: var(--text-muted);
+}
+
+/* --------------------------------------------------------------- departments */
+
+.deptlist {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.deptrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-size: 12.5px;
+  color: var(--text-slate);
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.deptrow:hover:not(.deptrow--taken) {
+  background: var(--bg-cell);
+}
+
+.deptrow--on {
+  background: var(--blue-tint-07);
+  border-color: rgba(43, 140, 255, 0.28);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* Spoken for by another selection. Dimmed and not clickable rather than absent:
+   knowing where a department went is why anybody looks at this list twice. */
+.deptrow--taken {
+  opacity: 0.42;
+  cursor: default;
+}
+
+.deptrow__glyph {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  color: var(--text-muted);
+}
+
+.deptrow--on .deptrow__glyph {
+  color: var(--blue-primary);
+}
+
+.deptrow__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deptrow__count {
+  flex: none;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.deptrow--on .deptrow__count {
+  color: var(--blue-deep);
+  font-weight: 600;
+}
+
+.showmore {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 9px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--blue-primary);
+  background: var(--bg-cell);
+  border: 1px solid var(--ink-06);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.showmore:hover {
+  background: var(--blue-tint-07);
+  border-color: rgba(43, 140, 255, 0.2);
+}
+
+.showmore svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ---------------------------------------------------------- question picker */
+
+.qpicks {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.pickrow {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 12px 9px 9px;
+  border: 1px solid var(--ink-06);
+  border-radius: 10px;
+  background: var(--surface);
+  font-size: 12.5px;
+  color: var(--text-slate);
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.pickrow--on {
+  background: var(--blue-tint-07);
+  border-color: rgba(43, 140, 255, 0.28);
+  color: var(--ink);
+  font-weight: 500;
+  cursor: grab;
+}
+
+.pickrow--on:active {
+  cursor: grabbing;
+}
+
+/* At the cap: still legible, still says what it is, just visibly not takeable. */
+.pickrow--capped {
+  opacity: 0.42;
+}
+
+.pickrow--lifting {
+  opacity: 0.5;
+  border-style: dashed;
+}
+
+.pickrow__box {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1.5px solid var(--ink-12);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.pickrow--on .pickrow__box {
+  background: var(--blue-primary);
+  border-color: var(--blue-primary);
+  color: #fff;
+}
+
+.pickrow__box:focus-visible {
+  outline: 2px solid var(--blue-primary);
+  outline-offset: 2px;
+}
+
+.pickrow__text {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.pickrow__grip {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  color: var(--ink-12);
+}
+
+.pickrow--on .pickrow__grip {
+  color: rgba(43, 140, 255, 0.5);
+}
+
+.pickrow__tail {
+  flex: none;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.pickrow--on .pickrow__tail {
+  color: var(--blue-deep);
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------ order preview */
+
+.orderlist {
+  margin: 0;
+  padding: 12px 14px 12px 30px;
+  background: var(--bg-cell);
+  border: 1px solid var(--ink-06);
+  border-radius: 12px;
+  font-size: 12px;
+  color: var(--text-slate);
+}
+
+.orderlist li {
+  padding: 3px 0;
+  line-height: 1.45;
+}
+
+.orderlist li::marker {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------ add selection */
+
+.addsel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 14px;
+  padding: 14px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--blue-primary);
+  background: var(--surface);
+  border: 1.5px dashed rgba(43, 140, 255, 0.35);
+  border-radius: var(--radius-tile);
+  cursor: pointer;
+  transition: background 0.14s ease, border-color 0.14s ease;
+}
+
+.addsel:hover:not(:disabled) {
+  background: var(--blue-tint-07);
+  border-color: var(--blue-primary);
+}
+
+.addsel:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.addsel svg {
+  width: 16px;
+  height: 16px;
+}
