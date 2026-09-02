@@ -509,6 +509,22 @@ function AskedByMonth({
   const [picked, setPicked] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [department, setDepartment] = useState<string>(ANY_DEPARTMENT)
+  /*
+   * Which questions are open, keyed by group and id.
+   *
+   * A Set rather than one open at a time: comparing how two questions were answered
+   * means having both on screen, and closing one to read the other is the thing that
+   * makes a page like this tiring to use.
+   */
+  const [open2, setOpen2] = useState<Set<string>>(new Set())
+
+  function toggleOpen(key: string) {
+    setOpen2((current) => {
+      const next = new Set(current)
+      if (!next.delete(key)) next.add(key)
+      return next
+    })
+  }
 
   const years = useMemo(() => {
     const found = new Set((history ?? []).map((one) => one.cycle.slice(0, 4)))
@@ -572,6 +588,29 @@ function AskedByMonth({
           .reduce((total, one) => total + one.headcount, 0)
   }
 
+  /**
+   * Every option for a question, with how many picked it.
+   *
+   * The question's own list is the spine, so an option nobody chose still appears at
+   * zero — nobody picking "Not sustainable" is a finding, and dropping it because the
+   * count was zero would hide exactly that. Anything answered but no longer on the
+   * question is appended: the wording can be edited after people have replied, and
+   * those answers still happened.
+   */
+  function optionsFor(id: string, chosen: { option: string; count: number }[]) {
+    const counted = new Map(chosen.map((one) => [one.option, one.count]))
+    const listed = bank.find((one) => one.id === id)?.options ?? []
+    const rows = listed.map((option) => ({
+      option,
+      count: counted.get(option) ?? 0,
+      gone: false,
+    }))
+    chosen
+      .filter((one) => !listed.includes(one.option))
+      .forEach((one) => rows.push({ option: one.option, count: one.count, gone: true }))
+    return rows
+  }
+
   /** Matches the search box against the question's text and its id. */
   function matches(id: string): boolean {
     const needle = query.trim().toLowerCase()
@@ -602,7 +641,9 @@ function AskedByMonth({
               key: selection.id,
               name: selectionLabel(selection),
               meta: `${reach.toLocaleString()} ${reach === 1 ? 'person' : 'people'}`,
-              questions: selection.questionIds.map((id) => ({ id, answers: 0 })),
+              // No answers yet, so nothing has been chosen — the options still come from
+              // the question itself, which is what a planned month is showing.
+              questions: selection.questionIds.map((id) => ({ id, answers: 0, chosen: [] })),
             }
           })
         : []
@@ -773,10 +814,19 @@ function AskedByMonth({
                               100,
                           )
                         : 0
+                    const key = `${group.key}:${question.id}`
+                    const isOpen = open2.has(key)
+                    const options = optionsFor(question.id, question.chosen ?? [])
+                    const most = options.reduce((top, one) => Math.max(top, one.count), 0)
                     return (
-                      <div
-                        className={`askq ${planned ? 'askq--planned' : ''}`}
-                        key={question.id}
+                      <div className="askitem" key={question.id}>
+                      <button
+                        className={`askq ${planned ? 'askq--planned' : ''} ${
+                          isOpen ? 'askq--open' : ''
+                        }`}
+                        onClick={() => toggleOpen(key)}
+                        aria-expanded={isOpen}
+                        disabled={options.length === 0}
                       >
                         {planned && (
                           <span className="askq__order">
@@ -809,6 +859,52 @@ function AskedByMonth({
                             <span className="askq__n">{question.answers}</span>
                           </>
                         )}
+                        {options.length > 0 && <Caret open={isOpen} />}
+                      </button>
+
+                      {isOpen && (
+                        <div className="askopts">
+                          {options.map((row) => (
+                            <div
+                              className={`askopt ${row.gone ? 'askopt--gone' : ''}`}
+                              key={row.option}
+                            >
+                              <span className="askopt__label">
+                                {row.option}
+                                {row.gone && (
+                                  <span className="askq__missing">no longer offered</span>
+                                )}
+                              </span>
+                              {openAnswered ? (
+                                <>
+                                  {/* Scaled to the commonest answer, not to the total.
+                                      Four options splitting evenly is 25% each, and
+                                      four bars a quarter full says nothing; against
+                                      the leader the shape of the split is visible. */}
+                                  <span className="askopt__bar" aria-hidden="true">
+                                    <span
+                                      style={{
+                                        width: `${most ? Math.round((row.count / most) * 100) : 0}%`,
+                                      }}
+                                    />
+                                  </span>
+                                  <span
+                                    className={`askopt__n ${row.count === 0 ? 'askopt__n--none' : ''}`}
+                                  >
+                                    {row.count}
+                                  </span>
+                                </>
+                              ) : null}
+                            </div>
+                          ))}
+                          {openAnswered && (
+                            <p className="askopts__foot">
+                              {question.answers} of {group.meta}. Written notes are never
+                              shown here.
+                            </p>
+                          )}
+                        </div>
+                      )}
                       </div>
                     )
                   })}
@@ -831,6 +927,19 @@ function AskedByMonth({
         which is why the month still counts it.
       </p>
     </section>
+  )
+}
+
+function Caret({ open }: { open: boolean }) {
+  return (
+    <svg
+      className={`askq__caret ${open ? 'askq__caret--open' : ''}`}
+      viewBox="0 0 24 24"
+      {...S}
+      aria-hidden="true"
+    >
+      <path d="M6.5 9.5l5.5 5.5 5.5-5.5" />
+    </svg>
   )
 }
 

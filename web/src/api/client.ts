@@ -943,6 +943,18 @@ export async function fetchPulseHistory(cycles = 6): Promise<CycleSummary[]> {
 export interface AskedQuestion {
   id: string
   answers: number
+  /**
+   * What people actually chose, commonest first.
+   *
+   * Tallied from the same rows the count comes from, so it costs no extra request —
+   * a pulse row is `{questionId: "the option they picked"}`, which is the distribution
+   * already, one respondent at a time.
+   *
+   * Only options somebody chose appear here. The page fills in the rest from the
+   * question's own option list, so an option nobody picked still shows as zero rather
+   * than going missing — which is a finding, not an absence.
+   */
+  chosen: { option: string; count: number }[]
 }
 
 /** One department's slice of a month. */
@@ -975,11 +987,23 @@ export interface AskedCycle {
 /** Turns `{questionId: answer}` rows into counts, busiest question first. */
 function tally(rows: RawPulse[]): AskedQuestion[] {
   const counts = new Map<string, number>()
+  const picks = new Map<string, Map<string, number>>()
   rows.forEach((row) => {
-    Object.keys(row.answers ?? {}).forEach((id) => counts.set(id, (counts.get(id) ?? 0) + 1))
+    Object.entries(row.answers ?? {}).forEach(([id, option]) => {
+      counts.set(id, (counts.get(id) ?? 0) + 1)
+      const byOption = picks.get(id) ?? new Map<string, number>()
+      byOption.set(option, (byOption.get(option) ?? 0) + 1)
+      picks.set(id, byOption)
+    })
   })
   return [...counts.entries()]
-    .map(([id, answers]) => ({ id, answers }))
+    .map(([id, answers]) => ({
+      id,
+      answers,
+      chosen: [...(picks.get(id) ?? new Map<string, number>()).entries()]
+        .map(([option, count]) => ({ option, count }))
+        .sort((a, b) => b.count - a.count),
+    }))
     .sort((a, b) => b.answers - a.answers)
 }
 
