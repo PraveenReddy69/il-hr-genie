@@ -48,6 +48,7 @@ Roles, in rank order: `EMPLOYEE` → `HR` (HRBP) → `HR_ADMIN` (Admin) → `HR_
 | **`tickets.assign` for an HRBP** | **Wanted.** One string on the `HR` list. Section 4e. |
 | **No way to list HR accounts** | `/api/employees/hr` is 404, so an HRBP's picker is empty but for themselves. Section 4f. |
 | **Email on ticket creation** | **New request.** To the HRBP and the raiser, from `POST /api/tickets`. Section 4g. |
+| **No API documentation** | **New.** Everything in section 6d was found by probing. Section 7b. |
 | **A new pulse question vanishes** | **New.** It is created as a draft, and the list returns only published ones — stored, then unreachable. Section 6d. |
 
 ---
@@ -431,34 +432,60 @@ property state should not exist
 **2. POST always creates the question as a `DRAFT`,** regardless — there is no way to
 create a published question in one request.
 
-**3. `GET /api/pulse/questions` returns only `PUBLISHED` questions,** and no parameter
-widens it. `?state=DRAFT`, `?state=ALL` and `?includeDrafts=true` all return the same
-four published rows.
+**3. `GET /api/pulse/questions` returns only `PUBLISHED` questions,** and nothing
+widens it. Ten parameter spellings were tried on 2 September — every one returned the
+identical published rows, with `200`, no error and no hint that anything was withheld:
+
+| tried | result |
+|---|---|
+| *(no parameter)* | published only |
+| `?state=DRAFT`, `?state=RETIRED`, `?state=ALL` | published only |
+| `?status=DRAFT`, `?states=DRAFT,PUBLISHED,RETIRED` | published only |
+| `?filter=all`, `?scope=all`, `?includeAll=true` | published only |
+| `?includeDrafts=true`, `?withDrafts=1`, `?published=false` | published only |
+| `?limit=100` | published only |
+
+And there is no single-question route to fall back on: **`GET /api/pulse/questions/{id}`
+answers `404`.** Nothing else exposes them either — `/api/hr/pulse` returns `[]`, and
+`/api/pulse/selections` had already dropped the retired id.
 
 Together those three make a question disappear. HR writes one, the console posts it,
 the server stores it as a draft, and the list never shows it again. It is genuinely
 there — a second POST answers `409 A question with id '…' already exists` — but nothing
 in the product can reach it. This is what HR saw: *"Create but it's not visible."*
 
-Measured 2 September against `19c8-103-161-31-154.ngrok-free.app`. Question
-`csdk-smcdsd-ksdmv` is on your database now, `state: "DRAFT"`, `order: 6`, invisible.
-There is at least one more before it — the list runs 1, 2, 3, 4 and this one is 6, so
-order 5 is another stranded draft.
+**It is no longer only about new questions.** Retiring one does the same thing, and it
+has already happened to a real question. `experience` — *"How has your work experience
+been this month?"*, the first question in the bank — was retired and is now unreachable
+from the UI. The list ran 1, 2, 3, 4 that morning and runs 2, 3, 4 now.
 
-**What we have done meanwhile.** The console now creates in two requests: `POST`
-without the field, then `PATCH` to set the state HR chose. A published question
-therefore works today. A draft still vanishes, and the editor now warns before saving
-one rather than letting it go quietly.
+Measured against `19c8-103-161-31-154.ngrok-free.app`. Three questions are currently on
+your database and invisible to the product:
 
-**What we would like:**
+| id | state | order |
+|---|---|---|
+| `experience` | RETIRED | 1 |
+| *(unknown — order 5 is missing from the list)* | ? | 5 |
+| `csdk-smcdsd-ksdmv` | DRAFT | 6 |
 
-- **`POST` should accept `state`** — same values, same validation as `PATCH`. One
-  request, not two.
-- **`GET /api/pulse/questions` should return every state**, or take `?state=` /
-  `?includeDrafts=true` so the console can ask. Without this a draft is unreachable no
-  matter how it was written, and the Draft state may as well not exist.
+**What we have done meanwhile, and why it is not enough.** The console creates in two
+requests — `POST` without the field, then `PATCH` to set the state — so a *published*
+question works today. For the hidden ones it keeps a note in the browser of any id it
+watches disappear, and offers to `PATCH` it back to `PUBLISHED`. That note is
+per-browser and only covers questions hidden from now on; anything hidden earlier, such
+as `experience`, can only be recovered by someone typing its id from memory. It is a
+splint, and we would like to delete it.
 
-Second one first, if they are separable — it is the one that loses work.
+**What we are asking for:**
+
+1. **`GET /api/pulse/questions` should return every state** — or accept `?state=` so the
+   console can ask. This is the one that loses work: without it Draft and Retired are
+   states a person can enter and never leave.
+2. **`POST /api/pulse/questions` should accept `state`**, with the same values and
+   validation as `PATCH`. One request instead of two.
+3. **`GET /api/pulse/questions/{id}`**, if it is cheap. Not needed if (1) lands.
+
+First one first, if they are separable.
 
 ### The same endpoint requires an id the console was not sending
 
@@ -493,6 +520,33 @@ the feature needs.
 **Keep `"Attendance"` in the ticket categories?** It is already in the list you serve.
 The product decision on our side was to park it for this phase. Harmless either way —
 say which you would prefer and we will match it.
+
+---
+
+## 7b. One request that is not a bug: documentation
+
+Every finding in section 6d was discovered by calling the API and reading what came
+back — that `POST` refuses a field `PATCH` accepts, that a question is always created as
+a draft, that the list silently withholds most of what it holds, that `?state=` is
+accepted and ignored rather than rejected, that `GET /api/pulse/questions/{id}` does not
+exist. None of it is written down anywhere we can read.
+
+That is expensive on both sides. It cost a day here, and it reached HR as a bug in the
+console — they wrote a question, it vanished, and the console was what they blamed.
+
+**Could we have API documentation?** Whatever is easiest for you — a Swagger/OpenAPI
+endpoint is ideal because it cannot drift from the code, but a page per endpoint would
+do. What we need per endpoint:
+
+- the request body it accepts, and which fields are **rejected** rather than ignored
+- defaults applied on create, where the client does not send a value
+- **what a list endpoint filters out by default**, and the parameter to widen it
+- the query parameters it honours — and ideally a `400` for ones it does not, rather
+  than accepting and ignoring them, which is what made section 6d take as long as it did
+- the error shapes, so we can show your message rather than guess at ours
+
+If a Swagger endpoint already exists and we simply have not been pointed at it, that
+alone would close this.
 
 ---
 
@@ -559,6 +613,7 @@ runs after routing, so the two are reliably different.
 5. **Sections 6c and 6d** — pulse: delivery reading selections, and a newly created
    question being reachable after it is created.
 6. **Section 7** — the three questions, whenever suits.
+7. **Section 7b** — API documentation, or a pointer to it if it already exists.
 
 Sections 3a, 5, 6a and 6b are done. Section 4b is route-present, guard unverified.
 
