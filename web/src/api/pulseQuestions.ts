@@ -300,9 +300,28 @@ export function validateBank(questions: PulseQuestion[]): string | null {
 // --------------------------------------------------------------------- helpers
 
 export function blankQuestion(): PulseQuestion {
-  // Draft, not published. A question is written, read back, and then let out — making
-  // a half-typed one publishable the moment it is saved is how a typo reaches everyone.
-  return { id: '', question: '', hint: '', options: [...SCALES[0].options], tags: [], state: 'DRAFT' }
+  /*
+   * Published, reluctantly, and only until the list endpoint learns about drafts.
+   *
+   * Draft is the better default and used to be this one: a question is written, read
+   * back, and then let out. But the API lists published questions only, so a draft is
+   * saved and then unreachable — defaulting to it means the ordinary act of writing a
+   * question loses it, which is a worse failure than the one the draft guarded against.
+   *
+   * Published is not as loud as it sounds. It makes a question *eligible* for a
+   * selection; a selection is what actually asks anybody anything. A typo sitting in
+   * the bank reaches nobody until somebody picks it.
+   *
+   * Put this back to DRAFT when §6d of docs/BACKEND_HANDOVER.md ships.
+   */
+  return {
+    id: '',
+    question: '',
+    hint: '',
+    options: [...SCALES[0].options],
+    tags: [],
+    state: 'PUBLISHED',
+  }
 }
 
 /**
