@@ -262,8 +262,22 @@ export function pruneHidden(bank: PulseQuestion[]): HiddenNote[] {
   return next
 }
 
-export function deleteQuestion(id: string): Promise<void> {
-  if (!isLive) return Promise.resolve(mockDeleteQuestion(id))
+/**
+ * Remove a question for good. Two requests, because the endpoint insists.
+ *
+ * `DELETE` refuses anything that is not a draft — "Only DRAFT questions can be deleted.
+ * 'x' is PUBLISHED." — so Remove failed on every published question, which is to say on
+ * every question anybody could see. Measured on 2 September while clearing three test
+ * questions out of the live bank by hand.
+ *
+ * Dropping it to DRAFT first is the whole fix. If that write fails the delete is not
+ * attempted, because a question left as a draft nobody meant to draft is worse than a
+ * question that is still there — the list endpoint does not return drafts, so it would
+ * vanish rather than fail.
+ */
+export async function deleteQuestion(id: string): Promise<void> {
+  if (!isLive) return mockDeleteQuestion(id)
+  await updateQuestion(id, { state: 'DRAFT' })
   return remove(`/api/pulse/questions/${encodeURIComponent(id)}`)
 }
 
