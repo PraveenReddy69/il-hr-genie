@@ -116,12 +116,25 @@ export async function fetchQuestionBank(): Promise<Bank> {
   return { questions: await fetchLiveBank(), unsaved: false }
 }
 
-/** One question, created server-side. The id comes back from the server. */
-export function createQuestion(question: PulseQuestion): Promise<PulseQuestion> {
+/**
+ * One question, created on the server.
+ *
+ * The id is sent, and `taken` is the ids already in the bank so a slug is not reused.
+ *
+ * This used to send none, on the assumption the server would mint one. It will not:
+ * the endpoint validates `id` as a lowercase kebab-case slug of at most 64 characters,
+ * and an absent one fails that check — which is why every attempt to add a question
+ * came back with a validation error and nothing was ever created.
+ */
+export function createQuestion(
+  question: PulseQuestion,
+  taken: string[] = [],
+): Promise<PulseQuestion> {
   if (!isLive) return Promise.resolve(mockCreateQuestion(question))
+  const body = { ...toWire(question), id: question.id || newQuestionId(question.question, taken) }
   return request<RawQuestion>('/api/pulse/questions', {
     method: 'POST',
-    body: JSON.stringify(toWire(question)),
+    body: JSON.stringify(body),
   }).then(fromWire)
 }
 
@@ -144,13 +157,24 @@ export function deleteQuestion(id: string): Promise<void> {
   return remove(`/api/pulse/questions/${encodeURIComponent(id)}`)
 }
 
+/**
+ * What the endpoint will accept.
+ *
+ * `state` is deliberately absent. The API rejects it outright — "property state should
+ * not exist" — so sending it failed every write, including writes that had nothing to
+ * do with state.
+ *
+ * The cost is real and is not worked around here: Draft, Published and Retired cannot
+ * survive a reload, because there is nowhere to put them. Anything read back with no
+ * state is treated as Published, so a question written as a draft comes back publishable
+ * — see migrateQuestion, and §6d of docs/BACKEND_HANDOVER.md, which asks for the field.
+ */
 function toWire(question: Partial<PulseQuestion>): Record<string, unknown> {
   const wire: Record<string, unknown> = {}
   if (question.question !== undefined) wire.question = question.question
   if (question.hint !== undefined) wire.hint = question.hint
   if (question.options !== undefined) wire.options = question.options
   if (question.tags !== undefined) wire.tags = normaliseTags(question.tags)
-  if (question.state !== undefined) wire.state = question.state
   return wire
 }
 

@@ -171,11 +171,13 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
   }
 
   async function saveQuestion(question: PulseQuestion, index: number) {
-    // The id is the server's on create. It used to be generated here because there was
-    // nowhere to send it; sending a client-made one now would either be ignored or
-    // become an id nobody else can reproduce.
+    // The id is made here after all — the endpoint requires a kebab-case slug and
+    // rejects a payload without one. The ids already in the bank go with it so a second
+    // question about workload does not collide with the first.
     const ok = await attempt(() =>
-      index < 0 || !question.id ? createQuestion(question) : updateQuestion(question.id, question),
+      index < 0 || !question.id
+        ? createQuestion(question, (questions ?? []).map((one) => one.id))
+        : updateQuestion(question.id, question),
     )
     if (ok) setEditing(null)
   }
