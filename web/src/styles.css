@@ -4779,3 +4779,531 @@ ul.legend {
   min-width: 0;
   margin: 0;
 }
+
+
+/* =====================================================================
+   Holiday calendar
+   ===================================================================== */
+
+.holstats {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr 1fr;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+@media (max-width: 900px) {
+  .holstats {
+    grid-template-columns: 1fr;
+  }
+}
+
+.holstat {
+  position: relative;
+  overflow: hidden;
+  padding: 16px 18px 18px;
+  background: var(--surface);
+  border: 1px solid var(--ink-05);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+.holstat__mark {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  margin-bottom: 11px;
+}
+
+.holstat__mark svg {
+  width: 18px;
+  height: 18px;
+}
+
+.holstat--next .holstat__mark {
+  background: var(--green-tint-14);
+  color: #2f8f57;
+}
+
+.holstat--fixed .holstat__mark {
+  background: var(--blue-tint-12);
+  color: var(--blue-deep);
+}
+
+.holstat--optional .holstat__mark {
+  background: var(--purple-tint-12);
+  color: var(--purple);
+}
+
+/* Everything written sits above the drawing, and stops short of it. Without the
+   reserved gutter the sub-line ran straight through the artwork. */
+.holstat__mark,
+.holstat__label,
+.holstat__name,
+.holstat__when,
+.holstat__none,
+.holstat__value,
+.holstat__sub {
+  position: relative;
+  z-index: 1;
+}
+
+.holstat__name,
+.holstat__when,
+.holstat__sub,
+.holstat__none {
+  padding-right: 62px;
+}
+
+.holstat__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.holstat__name {
+  margin-top: 7px;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  line-height: 1.2;
+}
+
+.holstat__when {
+  margin-top: 5px;
+  font-size: 12px;
+  color: #2f8f57;
+  font-weight: 500;
+}
+
+.holstat__none {
+  margin-top: 8px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.holstat__value {
+  margin-top: 5px;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+.holstat--fixed .holstat__value {
+  color: var(--blue-deep);
+}
+
+.holstat--optional .holstat__value {
+  color: var(--purple);
+}
+
+.holstat__sub {
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+/* Texture, not content. Behind the number and well out of its way. */
+.holstat__art {
+  position: absolute;
+  right: -10px;
+  bottom: -12px;
+  width: 78px;
+  height: 78px;
+  color: var(--ink);
+  opacity: 0.04;
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------- the layout */
+
+.hollayout {
+  margin-top: 16px;
+}
+
+/* The form beside the calendar. It collapses below the list on a narrow window
+   rather than squeezing both, because a date field at 140px is unusable. */
+.hollayout--split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 1000px) {
+  .hollayout--split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.holbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.holbar .chips {
+  margin: 0;
+}
+
+.holbar__add {
+  flex: none;
+  width: auto;
+  margin-top: 0;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px 9px 13px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+.holbar__add svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* ------------------------------------------------------------ region filter */
+
+.regionpick {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.regionpick__select {
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-slate);
+  background: var(--surface);
+  border: 1px solid var(--ink-08);
+  border-radius: 999px;
+  padding: 8px 32px 8px 34px;
+  cursor: pointer;
+  min-width: 148px;
+}
+
+.regionpick__select:hover {
+  border-color: var(--ink-12);
+}
+
+.regionpick__glyph {
+  position: absolute;
+  left: 12px;
+  width: 15px;
+  height: 15px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.regionpick__chev {
+  position: absolute;
+  right: 11px;
+  width: 14px;
+  height: 14px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+/* ----------------------------------------------------------------- the list */
+
+.holyear {
+  margin-top: 6px;
+}
+
+.monthhead {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 18px 0 6px;
+}
+
+.holrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 10px 9px 4px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.holrow:hover {
+  background: var(--bg-cell);
+}
+
+.holrow--editing {
+  background: var(--blue-tint-07);
+  border-color: rgba(43, 140, 255, 0.28);
+}
+
+.holrow--confirming {
+  background: rgba(229, 72, 77, 0.04);
+  border-color: rgba(229, 72, 77, 0.35);
+}
+
+/* A day already gone. Still listed — the calendar is a record of the year, not
+   only what is left of it — but out of the way of the days that still matter. */
+.holrow--settled {
+  opacity: 0.45;
+}
+
+.holrow__dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.holrow__dot--fixed {
+  background: var(--blue-primary);
+}
+
+.holrow__dot--optional {
+  background: var(--purple);
+}
+
+.holrow__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.holrow__name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.holrow__meta {
+  margin-top: 3px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.kindpill {
+  flex: none;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.kindpill--fixed {
+  background: var(--blue-tint-07);
+  color: var(--blue-deep);
+}
+
+.kindpill--optional {
+  background: var(--purple-tint-12);
+  color: var(--purple);
+}
+
+/* ------------------------------------------------------------ row controls */
+
+.holrow__acts {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  /* Held open only while the pointer is on the row, or while something inside has
+     focus — otherwise a keyboard user tabs into a button that is not there. */
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.holrow:hover .holrow__acts,
+.holrow:focus-within .holrow__acts,
+.holrow--confirming .holrow__acts {
+  opacity: 1;
+}
+
+.iconbtn {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--ink-08);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-slate);
+  cursor: pointer;
+}
+
+.iconbtn:hover {
+  border-color: var(--ink-12);
+  background: var(--bg-cell);
+}
+
+.iconbtn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.iconbtn--danger:hover {
+  color: var(--red-risk);
+  border-color: rgba(229, 72, 77, 0.4);
+  background: rgba(229, 72, 77, 0.06);
+}
+
+.holrow__confirm {
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 6px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--ink-08);
+  background: var(--surface);
+  color: var(--text-slate);
+  cursor: pointer;
+}
+
+.holrow__confirm--go {
+  border-color: rgba(229, 72, 77, 0.4);
+  background: var(--red-risk);
+  color: #fff;
+}
+
+.holrow__confirm:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* ---------------------------------------------------------------- the panel */
+
+.holpanel {
+  position: sticky;
+  top: 16px;
+  padding: 16px;
+}
+
+.holpanel__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--ink-06);
+  margin-bottom: 4px;
+}
+
+.holpanel__mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--blue-tint-07);
+  color: var(--blue-primary);
+}
+
+.holpanel__mark svg {
+  width: 16px;
+  height: 16px;
+}
+
+.holpanel__title {
+  flex: 1;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.holpanel__close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.holpanel__close:hover {
+  background: var(--ink-05);
+  color: var(--text-slate);
+}
+
+.holpanel__close svg {
+  width: 13px;
+  height: 13px;
+}
+
+.holfield {
+  display: block;
+  margin-top: 14px;
+}
+
+.holfield__label {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.holnote {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 11px 12px;
+  border-radius: 10px;
+  background: var(--blue-tint-07);
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--text-slate);
+}
+
+.holnote__glyph {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  margin-top: 1px;
+  color: var(--blue-primary);
+}
+
+.holpanel__save {
+  margin-top: 16px;
+  border-radius: 10px;
+  padding: 11px;
+  font-size: 13px;
+}
+
+.holpanel__cancel {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-slate);
+  background: var(--bg-cell);
+  border: 1px solid var(--ink-06);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.holpanel__cancel:hover {
+  background: var(--ink-05);
+}

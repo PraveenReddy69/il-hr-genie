@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Card, Empty, Loading } from '../components/Bits'
+import { Empty, Loading } from '../components/Bits'
 import { isoDate } from '../api/mock'
 import {
   ANY_REGION,
@@ -167,70 +167,96 @@ export function Holidays({ editable = false }: { editable?: boolean }) {
         </p>
       </div>
 
-      <div className="grid grid--3">
-        <Card chip="🌴" chipColour="var(--green-tint-14)" title="Next holiday">
+      {/*
+        Three cards, and the first is a different shape from the other two on purpose.
+
+        "Next holiday" answers a question people actually ask — when is the next day
+        off — so it carries a name and a date. The other two are counts, and a count of
+        fixed days beside a count of optional ones is the shape of the year: how much is
+        given and how much is chosen.
+      */}
+      <div className="holstats">
+        <div className="holstat holstat--next">
+          <span className="holstat__mark">
+            <PalmIcon />
+          </span>
+          <div className="holstat__label">Next holiday</div>
           {next ? (
             <>
-              <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em' }}>
-                {next.name}
-              </div>
-              <div style={{ color: 'var(--text-secondary)', fontSize: 12.5, marginTop: 4 }}>
+              <div className="holstat__name">{next.name}</div>
+              <div className="holstat__when">
                 {longDate(next.isoDate)} · {countdown(next.isoDate, today)}
               </div>
             </>
           ) : (
-            <Empty>Nothing left this year.</Empty>
+            <div className="holstat__none">Nothing left this year.</div>
           )}
-        </Card>
+          <CalendarWatermark />
+        </div>
 
-        <Card chip="📌" chipColour="var(--blue-tint-12)" title="Fixed">
-          <div className="tile__value" style={{ color: 'var(--blue-deep)' }}>
-            {fixed}
-          </div>
-          <div className="tile__sub">Paid, set under the Act</div>
-        </Card>
+        <div className="holstat holstat--fixed">
+          <span className="holstat__mark">
+            <PinIcon />
+          </span>
+          <div className="holstat__label">Fixed</div>
+          <div className="holstat__value">{fixed}</div>
+          <div className="holstat__sub">Paid, set under the Act</div>
+          <DocWatermark />
+        </div>
 
-        <Card chip="🎈" chipColour="var(--purple-tint-12)" title="Optional">
-          <div className="tile__value" style={{ color: 'var(--purple)' }}>
-            {optional}
-          </div>
-          <div className="tile__sub">Employees pick from these</div>
-        </Card>
+        <div className="holstat holstat--optional">
+          <span className="holstat__mark">
+            <BalloonIcon />
+          </span>
+          <div className="holstat__label">Optional</div>
+          <div className="holstat__value">{optional}</div>
+          <div className="holstat__sub">Employees pick from these</div>
+          <PeopleWatermark />
+        </div>
       </div>
 
-      <section className="card" style={{ marginTop: 16 }}>
-        <div className="chips">
-          {years.map((option) => (
-            <button
-              key={option}
-              className={`chip ${option === year ? 'chip--on' : ''}`}
-              onClick={() => {
-                setYear(option)
-                setEditing(null)
-                setProblem(null)
-              }}
-            >
-              {option}
-            </button>
-          ))}
-
-          <select
-            className="search"
-            style={{ marginLeft: 'auto', width: 'auto' }}
-            value={region}
-            onChange={(event) => setRegion(event.target.value)}
-          >
-            <option value={ANY_REGION}>{ANY_REGION}</option>
-            {regionOptions.map((one) => (
-              <option key={one} value={one}>
-                {one}
-              </option>
+      {/* The form stands beside the calendar rather than on top of it: the date you
+          are typing usually depends on what is already there. */}
+      <div className={`hollayout ${editing ? 'hollayout--split' : ''}`}>
+      <section className="card">
+        <div className="holbar">
+          <div className="chips">
+            {years.map((option) => (
+              <button
+                key={option}
+                className={`chip ${option === year ? 'chip--on' : ''}`}
+                onClick={() => {
+                  setYear(option)
+                  setEditing(null)
+                  setProblem(null)
+                }}
+              >
+                {option}
+              </button>
             ))}
-          </select>
+          </div>
+
+          <div className="regionpick">
+            <GlobeIcon />
+            <select
+              className="regionpick__select"
+              value={region}
+              onChange={(event) => setRegion(event.target.value)}
+              aria-label="Filter by region"
+            >
+              <option value={ANY_REGION}>{ANY_REGION}</option>
+              {regionOptions.map((one) => (
+                <option key={one} value={one}>
+                  {one}
+                </option>
+              ))}
+            </select>
+            <ChevronDown />
+          </div>
 
           {editable && !closed && (
             <button
-              className="chip"
+              className="button holbar__add"
               onClick={() => {
                 setProblem(null)
                 setEditing({
@@ -247,7 +273,8 @@ export function Holidays({ editable = false }: { editable?: boolean }) {
                 })
               }}
             >
-              + Add holiday
+              <PlusIcon />
+              Add holiday
             </button>
           )}
         </div>
@@ -264,21 +291,6 @@ export function Holidays({ editable = false }: { editable?: boolean }) {
           </div>
         )}
 
-        {editing && (
-          <Editor
-            draft={editing.draft}
-            isNew={editing.original === null}
-            regions={regionOptions}
-            saving={busy}
-            onChange={(draft) => setEditing({ ...editing, draft })}
-            onSave={save}
-            onCancel={() => {
-              setEditing(null)
-              setProblem(null)
-            }}
-          />
-        )}
-
         {shown.length === 0 ? (
           <Empty style={{ marginTop: 14 }}>
             {region === ANY_REGION
@@ -286,82 +298,91 @@ export function Holidays({ editable = false }: { editable?: boolean }) {
               : `Nothing published for ${region} in ${year}.`}
           </Empty>
         ) : (
-          <div style={{ marginTop: 8 }}>
+          <div className="holyear">
             {byMonth.map(([month, entries]) => (
               <div key={month}>
-                <div
-                  style={{
-                    fontSize: 10.5,
-                    fontWeight: 700,
-                    letterSpacing: '0.06em',
-                    textTransform: 'uppercase',
-                    color: 'var(--text-muted)',
-                    marginTop: 18,
-                    marginBottom: 2,
-                  }}
-                >
-                  {monthLabel(month)}
-                </div>
+                <div className="monthhead">{monthLabel(month)}</div>
                 {entries.map((holiday) => {
                   // Days already gone stay listed but recede — the calendar is a
                   // record of the year, not just what is left of it.
                   const settled = refusalFor(holiday.isoDate, today) !== null
                   const isToday = holiday.isoDate === today
                   const key = `${holiday.isoDate}-${holiday.region}`
+                  const editingThis = editing?.original === holiday
                   return (
-                    <div className="row" key={key} style={{ opacity: settled ? 0.45 : 1 }}>
+                    <div
+                      className={`holrow ${settled ? 'holrow--settled' : ''} ${
+                        editingThis ? 'holrow--editing' : ''
+                      } ${confirmRemove === key ? 'holrow--confirming' : ''}`}
+                      key={key}
+                    >
+                      {/* Which kind, before you read a word. The pill on the right says
+                          it too, but the dot is what makes a month scannable. */}
+                      <span
+                        className={`holrow__dot holrow__dot--${holiday.kind.toLowerCase()}`}
+                        aria-hidden="true"
+                      />
+
                       <span className="datechip">
                         <span className="datechip__day">{holiday.isoDate.slice(8)}</span>
                         <span className="datechip__month">{shortMonth(holiday.isoDate)}</span>
                       </span>
-                      <div className="row__main">
-                        <div className="row__title">
+
+                      <div className="holrow__main">
+                        <div className="holrow__name">
                           {holiday.name}
-                          {isToday && (
-                            <span className="pill pill--resolved" style={{ marginLeft: 8 }}>
-                              Today
-                            </span>
-                          )}
+                          {isToday && <span className="pill pill--resolved">Today</span>}
                         </div>
-                        <div className="row__meta">
+                        <div className="holrow__meta">
                           {weekday(holiday.isoDate)} · {holiday.region}
                         </div>
                       </div>
 
-                      <span
-                        className={`pill ${holiday.kind === 'OPTIONAL' ? 'pill--optional' : 'pill--neutral'}`}
-                      >
+                      <span className={`kindpill kindpill--${holiday.kind.toLowerCase()}`}>
                         {holiday.kind === 'OPTIONAL' ? 'Optional' : 'Fixed'}
                       </span>
 
                       {editable && !settled && (
-                        <span className="qrow__acts" style={{ marginLeft: 8 }}>
-                          <button
-                            className="qrow__act"
-                            onClick={() => {
-                              setProblem(null)
-                              setConfirmRemove(null)
-                              setEditing({ draft: { ...holiday }, original: holiday })
-                            }}
-                          >
-                            Edit
-                          </button>
+                        <span className="holrow__acts">
                           {confirmRemove === key ? (
-                            <span className="qrow__confirm">
+                            <>
+                              {/* Spelled out rather than a second icon. Two icon buttons
+                                  side by side, one of which deletes, is a coin toss. */}
                               <button
-                                className="qrow__act qrow__act--danger"
+                                className="holrow__confirm holrow__confirm--go"
                                 onClick={() => remove(holiday)}
+                                disabled={busy}
                               >
                                 Remove
                               </button>
-                              <button className="qrow__act" onClick={() => setConfirmRemove(null)}>
+                              <button
+                                className="holrow__confirm"
+                                onClick={() => setConfirmRemove(null)}
+                              >
                                 Keep
                               </button>
-                            </span>
+                            </>
                           ) : (
-                            <button className="qrow__act" onClick={() => setConfirmRemove(key)}>
-                              Remove
-                            </button>
+                            <>
+                              <button
+                                className="iconbtn"
+                                aria-label={`Edit ${holiday.name}`}
+                                onClick={() => {
+                                  setProblem(null)
+                                  setConfirmRemove(null)
+                                  setEditing({ draft: { ...holiday }, original: holiday })
+                                }}
+                              >
+                                <PencilIcon />
+                              </button>
+                              <button
+                                className="iconbtn iconbtn--danger"
+                                aria-label={`Remove ${holiday.name}`}
+                                onClick={() => setConfirmRemove(key)}
+                              >
+                                <TrashIcon />
+                              </button>
+                            </>
                           )}
                         </span>
                       )}
@@ -373,6 +394,22 @@ export function Holidays({ editable = false }: { editable?: boolean }) {
           </div>
         )}
       </section>
+
+      {editing && (
+        <Editor
+          draft={editing.draft}
+          isNew={editing.original === null}
+          regions={regionOptions}
+          saving={busy}
+          onChange={(draft) => setEditing({ ...editing, draft })}
+          onSave={save}
+          onCancel={() => {
+            setEditing(null)
+            setProblem(null)
+          }}
+        />
+      )}
+      </div>
 
       <p className="note">
         The published calendar. Employees see the same list in the app; optional days
@@ -403,67 +440,232 @@ function Editor({
   const set = (patch: Partial<HolidayDraft>) => onChange({ ...draft, ...patch })
 
   return (
-    <div
-      style={{
-        marginTop: 14,
-        padding: 14,
-        border: '1px solid var(--line)',
-        borderRadius: 10,
-        background: 'var(--surface-2, transparent)',
-      }}
-    >
-      <div style={{ fontWeight: 600, marginBottom: 10 }}>
-        {isNew ? 'New holiday' : `Editing ${draft.name || 'holiday'}`}
+    <aside className="card holpanel">
+      <header className="holpanel__head">
+        <span className="holpanel__mark">
+          <CalendarIcon />
+        </span>
+        <div className="holpanel__title">{isNew ? 'Add new holiday' : 'Edit holiday'}</div>
+        <button className="holpanel__close" onClick={onCancel} aria-label="Close">
+          <CloseIcon />
+        </button>
+      </header>
+
+      <label className="holfield">
+        <span className="holfield__label">Name</span>
+        <input
+          className="search"
+          value={draft.name}
+          placeholder="Enter holiday name"
+          onChange={(event) => set({ name: event.target.value })}
+        />
+      </label>
+
+      <label className="holfield">
+        <span className="holfield__label">Date</span>
+        <input
+          className="search"
+          type="date"
+          value={draft.isoDate}
+          onChange={(event) => set({ isoDate: event.target.value })}
+        />
+      </label>
+
+      <label className="holfield">
+        <span className="holfield__label">Region</span>
+        <select
+          className="search"
+          value={draft.region}
+          onChange={(event) => set({ region: event.target.value })}
+        >
+          {regions.map((one) => (
+            <option key={one} value={one}>
+              {one}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="holfield">
+        <span className="holfield__label">Kind</span>
+        <select
+          className="search"
+          value={draft.kind}
+          onChange={(event) => set({ kind: event.target.value as HolidayKind })}
+        >
+          <option value="FIXED">Fixed — everyone gets it</option>
+          <option value="OPTIONAL">Optional — employees choose</option>
+        </select>
+      </label>
+
+      {/*
+        What the choice above actually does, said where the choice is made.
+
+        Fixed and Optional are not two labels for the same thing — one is a day off
+        everybody gets and the other is a day somebody has to spend a choice on — and
+        the difference is invisible from the words alone.
+      */}
+      <div className="holnote">
+        <InfoIcon />
+        {draft.kind === 'FIXED'
+          ? 'Fixed holidays are marked for all employees automatically.'
+          : 'Optional holidays are offered to employees, who pick from them.'}
       </div>
 
-      <div className="drawer__label">Name</div>
-      <input
-        className="search"
-        value={draft.name}
-        placeholder="Diwali"
-        onChange={(event) => set({ name: event.target.value })}
-      />
+      <button className="button holpanel__save" disabled={saving} onClick={onSave}>
+        {isNew ? 'Add holiday' : 'Save changes'}
+      </button>
+      <button className="holpanel__cancel" onClick={onCancel}>
+        Cancel
+      </button>
+    </aside>
+  )
+}
 
-      <div className="drawer__label">Date</div>
-      <input
-        className="search"
-        type="date"
-        value={draft.isoDate}
-        onChange={(event) => set({ isoDate: event.target.value })}
-      />
+// ------------------------------------------------------------------ the glyphs
 
-      <div className="drawer__label">Region</div>
-      <select
-        className="search"
-        value={draft.region}
-        onChange={(event) => set({ region: event.target.value })}
-      >
-        {regions.map((one) => (
-          <option key={one} value={one}>
-            {one}
-          </option>
-        ))}
-      </select>
+const S = {
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 1.7,
+  strokeLinecap: 'round' as const,
+  strokeLinejoin: 'round' as const,
+}
 
-      <div className="drawer__label">Kind</div>
-      <select
-        className="search"
-        value={draft.kind}
-        onChange={(event) => set({ kind: event.target.value as HolidayKind })}
-      >
-        <option value="FIXED">Fixed — everyone gets it</option>
-        <option value="OPTIONAL">Optional — employees choose</option>
-      </select>
+function PalmIcon() {
+  return (
+    <svg viewBox="0 0 24 24" {...S}>
+      <path d="M12 21V10.5" />
+      <path d="M12 10.5C9.6 8.3 6.6 8 4.4 9.8M12 10.5c2.4-2.2 5.4-2.5 7.6-.7" />
+      <path d="M12 10.5C11 7.4 8.7 5.4 6 5.2M12 10.5c1-3.1 3.3-5.1 6-5.3" />
+      <circle cx="12" cy="10.2" r="1.1" />
+    </svg>
+  )
+}
 
-      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-        <button className="button" disabled={saving} onClick={onSave}>
-          {isNew ? 'Add holiday' : 'Save changes'}
-        </button>
-        <button className="button button--ghost" onClick={onCancel}>
-          Cancel
-        </button>
-      </div>
-    </div>
+function PinIcon() {
+  return (
+    <svg viewBox="0 0 24 24" {...S}>
+      <path d="M12 13.8V21" />
+      <path d="M8.2 3.6h7.6l-1 5.2 2.4 2.2a1 1 0 01-.7 1.8H7.5a1 1 0 01-.7-1.8l2.4-2.2z" />
+    </svg>
+  )
+}
+
+function BalloonIcon() {
+  return (
+    <svg viewBox="0 0 24 24" {...S}>
+      <path d="M12 15.6c2.9 0 5.2-2.9 5.2-6.3S14.9 3 12 3 6.8 5.9 6.8 9.3s2.3 6.3 5.2 6.3z" />
+      <path d="M10.8 15.4l1.2 1.8 1.2-1.8" />
+      <path d="M12 17.2c0 1.5 1.6 1.5 1.6 3" />
+    </svg>
+  )
+}
+
+function CalendarIcon() {
+  return (
+    <svg viewBox="0 0 24 24" {...S}>
+      <rect x="3.6" y="5.4" width="16.8" height="15" rx="2.4" />
+      <path d="M3.6 10h16.8M8.4 3.4v4M15.6 3.4v4" />
+    </svg>
+  )
+}
+
+function GlobeIcon() {
+  return (
+    <svg className="regionpick__glyph" viewBox="0 0 24 24" {...S} aria-hidden="true">
+      <circle cx="12" cy="12" r="8.4" />
+      <path d="M3.6 12h16.8" />
+      <path d="M12 3.6c2.1 2.3 3.2 5.3 3.2 8.4s-1.1 6.1-3.2 8.4c-2.1-2.3-3.2-5.3-3.2-8.4S9.9 5.9 12 3.6z" />
+    </svg>
+  )
+}
+
+function ChevronDown() {
+  return (
+    <svg className="regionpick__chev" viewBox="0 0 24 24" {...S} aria-hidden="true">
+      <path d="M6.5 9.5l5.5 5.5 5.5-5.5" />
+    </svg>
+  )
+}
+
+function PlusIcon() {
+  return (
+    <svg viewBox="0 0 24 24" {...S}>
+      <path d="M12 5.8v12.4M5.8 12h12.4" />
+    </svg>
+  )
+}
+
+function PencilIcon() {
+  return (
+    <svg viewBox="0 0 24 24" {...S}>
+      <path d="M4.5 19.5l.9-3.6L15.3 6a1.8 1.8 0 012.5 0l.6.6a1.8 1.8 0 010 2.5L8.5 18.9z" />
+    </svg>
+  )
+}
+
+function TrashIcon() {
+  return (
+    <svg viewBox="0 0 24 24" {...S}>
+      <path d="M5.5 7h13M10 7V5.6a1 1 0 011-1h2a1 1 0 011 1V7" />
+      <path d="M7 7l.8 11.4a1.6 1.6 0 001.6 1.5h5.2a1.6 1.6 0 001.6-1.5L17 7" />
+    </svg>
+  )
+}
+
+function CloseIcon() {
+  return (
+    <svg viewBox="0 0 24 24" {...S} aria-hidden="true">
+      <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" />
+    </svg>
+  )
+}
+
+function InfoIcon() {
+  return (
+    <svg className="holnote__glyph" viewBox="0 0 24 24" {...S} aria-hidden="true">
+      <circle cx="12" cy="12" r="8.4" />
+      <path d="M12 11.2v5M12 8.1v.1" />
+    </svg>
+  )
+}
+
+/*
+ * The pale drawings in the corner of each card.
+ *
+ * Decoration, and kept faint enough to read as texture rather than content — they are
+ * behind the number, and a number is the one thing on those cards that must not be
+ * competed with.
+ */
+function CalendarWatermark() {
+  return (
+    <svg className="holstat__art" viewBox="0 0 64 64" {...S} strokeWidth={2} aria-hidden="true">
+      <rect x="8" y="14" width="48" height="42" rx="6" />
+      <path d="M8 26h48M22 8v12M42 8v12" />
+      <path d="M20 38h8M36 38h8M20 48h8" />
+    </svg>
+  )
+}
+
+function DocWatermark() {
+  return (
+    <svg className="holstat__art" viewBox="0 0 64 64" {...S} strokeWidth={2} aria-hidden="true">
+      <path d="M16 6h20l14 14v38a4 4 0 01-4 4H16a4 4 0 01-4-4V10a4 4 0 014-4z" />
+      <path d="M36 6v14h14" />
+      <path d="M20 34h24M20 44h16" />
+    </svg>
+  )
+}
+
+function PeopleWatermark() {
+  return (
+    <svg className="holstat__art" viewBox="0 0 64 64" {...S} strokeWidth={2} aria-hidden="true">
+      <circle cx="24" cy="22" r="9" />
+      <path d="M8 52a16 16 0 0132 0" />
+      <circle cx="44" cy="26" r="7" />
+      <path d="M40 52a13 13 0 0120-11" />
+    </svg>
   )
 }
 
