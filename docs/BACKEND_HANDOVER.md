@@ -48,7 +48,7 @@ Roles, in rank order: `EMPLOYEE` → `HR` (HRBP) → `HR_ADMIN` (Admin) → `HR_
 | **`tickets.assign` for an HRBP** | **Wanted.** One string on the `HR` list. Section 4e. |
 | **No way to list HR accounts** | `/api/employees/hr` is 404, so an HRBP's picker is empty but for themselves. Section 4f. |
 | **Email on ticket creation** | **New request.** To the HRBP and the raiser, from `POST /api/tickets`. Section 4g. |
-| **Pulse question `state`** | **New.** The endpoint rejects the field, so Draft/Published/Retired cannot persist. Section 6d. |
+| **A new pulse question vanishes** | **New.** It is created as a draft, and the list returns only published ones — stored, then unreachable. Section 6d. |
 
 ---
 
@@ -405,7 +405,7 @@ the app still read `/api/pulse/questions` and ask everyone the whole bank. Until
 delivery reads selections, the console will report that departments are not being asked
 anything while employees are in fact being asked, which will look like a console bug.
 
-### 6d. One of ours, listed so nobody chases it
+### 6e. One of ours, listed so nobody chases it
 
 `GET /api/tickets/categories` answers `{"categories":[...]}`. The **bot** reads a bare
 array or `{items:[...]}`, so it silently falls back to a hard-coded list and has never
@@ -414,29 +414,51 @@ your side.
 
 ---
 
-### 6d. A pulse question has no state on the server
+### 6d. A new pulse question is created, and then cannot be seen
 
-`POST /api/pulse/questions` rejects the field outright:
+This section said the question had no `state` on the server. That was wrong, and the
+correction is worth reading, because the real behaviour is stranger and costs more.
+
+`state` exists and works. `POST` refuses it, `PATCH` accepts it, and `GET` hides most
+of what it produces. Three endpoints, three different opinions about the same field.
+
+**1. POST rejects `state`.**
 
 ```
 property state should not exist
 ```
 
-The console has a three-state model for a question — **Draft**, **Published**,
-**Retired** — and it is the thing that stops a half-written question being asked. A
-draft cannot be picked into a selection; a retired one drops out of the next cycle
-without deleting the answers already given against it.
+**2. POST always creates the question as a `DRAFT`,** regardless — there is no way to
+create a published question in one request.
 
-With nowhere to store it, none of that survives a reload. A question written as a draft
-reads back with no state, and the console treats a stateless question as Published —
-which is the safe default for anything already in the bank, and exactly the wrong one
-for something somebody was still writing.
+**3. `GET /api/pulse/questions` returns only `PUBLISHED` questions,** and no parameter
+widens it. `?state=DRAFT`, `?state=ALL` and `?includeDrafts=true` all return the same
+four published rows.
 
-**Please add `state` to the question, one of `DRAFT`, `PUBLISHED`, `RETIRED`,
-defaulting to `DRAFT` on create.**
+Together those three make a question disappear. HR writes one, the console posts it,
+the server stores it as a draft, and the list never shows it again. It is genuinely
+there — a second POST answers `409 A question with id '…' already exists` — but nothing
+in the product can reach it. This is what HR saw: *"Create but it's not visible."*
 
-While it is missing the console does not send the field at all, because sending it
-failed every write to this endpoint including ones that had nothing to do with state.
+Measured 2 September against `19c8-103-161-31-154.ngrok-free.app`. Question
+`csdk-smcdsd-ksdmv` is on your database now, `state: "DRAFT"`, `order: 6`, invisible.
+There is at least one more before it — the list runs 1, 2, 3, 4 and this one is 6, so
+order 5 is another stranded draft.
+
+**What we have done meanwhile.** The console now creates in two requests: `POST`
+without the field, then `PATCH` to set the state HR chose. A published question
+therefore works today. A draft still vanishes, and the editor now warns before saving
+one rather than letting it go quietly.
+
+**What we would like:**
+
+- **`POST` should accept `state`** — same values, same validation as `PATCH`. One
+  request, not two.
+- **`GET /api/pulse/questions` should return every state**, or take `?state=` /
+  `?includeDrafts=true` so the console can ask. Without this a draft is unreachable no
+  matter how it was written, and the Draft state may as well not exist.
+
+Second one first, if they are separable — it is the one that loses work.
 
 ### The same endpoint requires an id the console was not sending
 
@@ -534,8 +556,8 @@ runs after routing, so the two are reliably different.
    department, but they are unsupported until one or the other.
 4. **Section 4g** — email to the HRBP and the raiser when a ticket is created. New, and
    the only item here that does not wait on anything else.
-5. **Sections 6c and 6d** — pulse: delivery reading selections, and a `state` field on
-   a question so Draft, Published and Retired survive a reload.
+5. **Sections 6c and 6d** — pulse: delivery reading selections, and a newly created
+   question being reachable after it is created.
 6. **Section 7** — the three questions, whenever suits.
 
 Sections 3a, 5, 6a and 6b are done. Section 4b is route-present, guard unverified.

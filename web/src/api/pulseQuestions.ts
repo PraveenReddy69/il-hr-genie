@@ -117,25 +117,41 @@ export async function fetchQuestionBank(): Promise<Bank> {
 }
 
 /**
- * One question, created on the server.
+ * One question, created on the server. Two requests, because one cannot do it.
  *
- * The id is sent, and `taken` is the ids already in the bank so a slug is not reused.
+ * POST rejects `state` outright — "property state should not exist" — and creates every
+ * question as a DRAFT. PATCH accepts `state` without complaint. So the state HR picked
+ * has to be applied afterwards, on a question that already exists.
  *
- * This used to send none, on the assumption the server would mint one. It will not:
- * the endpoint validates `id` as a lowercase kebab-case slug of at most 64 characters,
- * and an absent one fails that check — which is why every attempt to add a question
- * came back with a validation error and nothing was ever created.
+ * This matters more than a tidiness point, because the list endpoint returns only
+ * PUBLISHED questions and takes no parameter that widens it. A question created and left
+ * as the server made it is invisible to this console permanently: it is really there — a
+ * second POST answers 409 — but nothing will ever show it. The follow-up PATCH is what
+ * keeps a published question from disappearing the moment it is written.
+ *
+ * A question HR deliberately saves as a draft still vanishes until the list endpoint
+ * learns about drafts. The editor says so rather than pretending otherwise. Both halves
+ * are §6d of docs/BACKEND_HANDOVER.md.
+ *
+ * The id is sent too: the endpoint validates it as a lowercase kebab-case slug of at most
+ * 64 characters and rejects an absent one, so the server will not mint it. `taken` is the
+ * ids already in the bank, so a second question about workload does not collide with the
+ * first.
  */
-export function createQuestion(
+export async function createQuestion(
   question: PulseQuestion,
   taken: string[] = [],
 ): Promise<PulseQuestion> {
   if (!isLive) return Promise.resolve(mockCreateQuestion(question))
-  const body = { ...toWire(question), id: question.id || newQuestionId(question.question, taken) }
-  return request<RawQuestion>('/api/pulse/questions', {
+  const id = question.id || newQuestionId(question.question, taken)
+  const created = await request<RawQuestion>('/api/pulse/questions', {
     method: 'POST',
-    body: JSON.stringify(body),
+    body: JSON.stringify({ ...toWire(question, false), id }),
   }).then(fromWire)
+
+  const wanted = question.state ?? 'PUBLISHED'
+  if (wanted === created.state) return created
+  return updateQuestion(id, { state: wanted })
 }
 
 export function updateQuestion(
@@ -148,7 +164,7 @@ export function updateQuestion(
   if (!isLive) return Promise.resolve(mockUpdateQuestion(id, rest))
   return request<RawQuestion>(`/api/pulse/questions/${encodeURIComponent(id)}`, {
     method: 'PATCH',
-    body: JSON.stringify(toWire(rest as PulseQuestion)),
+    body: JSON.stringify(toWire(rest as PulseQuestion, true)),
   }).then(fromWire)
 }
 
@@ -158,23 +174,23 @@ export function deleteQuestion(id: string): Promise<void> {
 }
 
 /**
- * What the endpoint will accept.
+ * What the endpoint will accept — and the two endpoints do not agree.
  *
- * `state` is deliberately absent. The API rejects it outright — "property state should
- * not exist" — so sending it failed every write, including writes that had nothing to
- * do with state.
- *
- * The cost is real and is not worked around here: Draft, Published and Retired cannot
- * survive a reload, because there is nowhere to put them. Anything read back with no
- * state is treated as Published, so a question written as a draft comes back publishable
- * — see migrateQuestion, and §6d of docs/BACKEND_HANDOVER.md, which asks for the field.
+ * PATCH takes `state`. POST refuses it, with "property state should not exist", and a
+ * POST carrying it fails entirely: the question is not created, and the error names a
+ * field HR never touched. Hence `allowState`, set by the caller that knows which verb
+ * it is about to use. It is not a guess; both were measured against the live API.
  */
-function toWire(question: Partial<PulseQuestion>): Record<string, unknown> {
+function toWire(
+  question: Partial<PulseQuestion>,
+  allowState: boolean,
+): Record<string, unknown> {
   const wire: Record<string, unknown> = {}
   if (question.question !== undefined) wire.question = question.question
   if (question.hint !== undefined) wire.hint = question.hint
   if (question.options !== undefined) wire.options = question.options
   if (question.tags !== undefined) wire.tags = normaliseTags(question.tags)
+  if (allowState && question.state !== undefined) wire.state = question.state
   return wire
 }
 

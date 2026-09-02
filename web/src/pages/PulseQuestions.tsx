@@ -776,6 +776,20 @@ function QuestionEditor({
             ? 'Still being written. Cannot be asked.'
             : 'Kept for the record, no longer asked.'}
       </div>
+      {/*
+        Not a styling flourish — a warning about real data loss.
+
+        The list endpoint returns only published questions, so anything saved as a draft
+        or retired is stored correctly and then cannot be found again from here. Better
+        to say that at the moment of choosing than to let the question quietly disappear
+        and have HR write it a second time. Delete this the day §6d ships.
+      */}
+      {draft.state !== 'PUBLISHED' && (
+        <div className="field-foot field-foot--warn">
+          Heads up: the API only lists published questions, so this one will be saved but
+          will not appear here until it is published.
+        </div>
+      )}
 
       <div className="drawer__label">Tags</div>
       <div className="chips" style={{ marginBottom: 8 }}>

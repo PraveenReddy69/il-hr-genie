@@ -2572,6 +2572,24 @@ textarea:focus {
   margin-top: 4px;
 }
 
+/*
+ * The same footnote, but carrying a consequence rather than a description.
+ *
+ * Left-aligned and given room, because it is two lines of prose and the right-aligned
+ * muted version reads as decoration — which is exactly the wrong weight for "this will
+ * be saved and you will not see it again".
+ */
+.field-foot--warn {
+  text-align: left;
+  line-height: 1.45;
+  color: var(--amber-ink, #8a5a00);
+  background: var(--amber-tint, rgba(240, 165, 0, 0.1));
+  border: 1px solid var(--amber-line, rgba(240, 165, 0, 0.28));
+  border-radius: 8px;
+  padding: 7px 9px;
+  margin-top: 7px;
+}
+
 .opt-edit {
   display: flex;
   align-items: center;
