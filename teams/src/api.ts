@@ -315,18 +315,25 @@ export async function thisCyclesPulse(): Promise<Record<string, string> | null> 
 }
 
 /**
- * The questions to ask, from the server.
+ * The questions to ask this employee, from the server.
  *
- * The unwrapping matters more than it looks. `/api/pulse/questions` answers
- * `{"questions": [...]}`, and this read only ever looked for a bare array or `items` —
- * so `rows` was always empty, `usable` was always empty, and every pulse anybody has
- * ever seen in Teams came from FALLBACK_PULSE below. The bot has never once shown a
- * question written in the HR console, and it failed silently because falling back is
- * exactly what it is meant to do when the server has nothing.
+ * An empty list means "ask this person nothing", and is returned as-is.
  *
- * All three shapes are accepted now rather than just the right one: the endpoint has
- * already been seen to answer differently in different places, and a pulse that
- * quietly reverts to four hard-coded questions is not a failure anyone will notice.
+ * It used to mean the opposite. `/api/pulse/questions` served the whole published bank
+ * to everybody, so nothing coming back meant the bank was empty and four hard-coded
+ * questions were a better answer than a blank card. Since 2 September the endpoint is
+ * scoped to the caller: it returns the questions the selections say *this employee*
+ * gets, and an employee no selection covers correctly gets none. Substituting the
+ * fallback there would ask somebody four questions HR had deliberately excluded them
+ * from — EMP3801, in Technology, is exactly that case.
+ *
+ * So the fallback is gone rather than guarded. There is no longer any state in which
+ * inventing questions is the right answer: if the request fails it throws, and the
+ * caller says so.
+ *
+ * The unwrapping stays generous. This endpoint answers `{"questions": [...]}`, and the
+ * bot previously read only a bare array or `items` — so it silently fell back on
+ * every single call, and no pulse written in the HR console ever reached an employee.
  */
 export async function pulseQuestions(): Promise<PulseQuestion[]> {
   const session = await signIn()
@@ -336,52 +343,18 @@ export async function pulseQuestions(): Promise<PulseQuestion[]> {
     : ((raw as { questions?: unknown[] }).questions ??
       (raw as { items?: unknown[] }).items ??
       [])
-  const mapped = rows.map((row) => {
-    const q = row as Record<string, unknown>
-    return {
-      id: String(q.id ?? q.questionId ?? ''),
-      text: String(q.text ?? q.question ?? ''),
-      hint: String(q.hint ?? ''),
-      options: Array.isArray(q.options) ? q.options.map(String) : [],
-    }
-  })
-  const usable = mapped.filter((q) => q.id && q.text && q.options.length > 0)
-  return usable.length > 0 ? usable : FALLBACK_PULSE
+  return rows
+    .map((row) => {
+      const q = row as Record<string, unknown>
+      return {
+        id: String(q.id ?? q.questionId ?? ''),
+        text: String(q.text ?? q.question ?? ''),
+        hint: String(q.hint ?? ''),
+        options: Array.isArray(q.options) ? q.options.map(String) : [],
+      }
+    })
+    .filter((q) => q.id && q.text && q.options.length > 0)
 }
-
-/**
- * The Android app's questions, for when the server has none.
- *
- * A pulse with no questions is worse than no pulse, and these are the same four the
- * mobile app has been asking — so an answer given here still lands in the same
- * question ids the analytics already group by.
- */
-const FALLBACK_PULSE: PulseQuestion[] = [
-  {
-    id: 'experience',
-    text: 'How has your work experience been this month?',
-    hint: 'Gut feel is fine — no one is scoring you.',
-    options: ['Genuinely good', 'Mostly fine', 'Up and down', 'Rough, honestly'],
-  },
-  {
-    id: 'workload',
-    text: 'Is your workload manageable right now?',
-    hint: '',
-    options: ['Comfortable', 'Busy but okay', 'Stretched', 'Not sustainable'],
-  },
-  {
-    id: 'manager',
-    text: 'Do you feel supported by your manager?',
-    hint: 'Answers roll up to a department average only.',
-    options: ['Always', 'Usually', 'Sometimes', 'Rarely'],
-  },
-  {
-    id: 'attrition',
-    text: 'Have you thought about looking elsewhere recently?',
-    hint: 'Honest answers here are what make this useful.',
-    options: ['Not at all', 'Passing thought', 'Somewhat', 'Actively looking'],
-  },
-]
 
 export async function savePulse(answers: Record<string, string>): Promise<void> {
   const session = await signIn()

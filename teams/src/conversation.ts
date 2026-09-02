@@ -491,7 +491,18 @@ async function startPulse(): Promise<Reply[]> {
       api.gateway.pulseQuestions(),
       api.gateway.thisCyclesPulse().catch(() => null),
     ])
-    if (answers && Object.keys(answers).length >= questions.length && questions.length > 0) {
+    // Nothing to ask. Said plainly rather than drawn as an empty form: this employee
+    // is in no selection this cycle, which is a decision HR made, not a fault.
+    if (questions.length === 0) {
+      return [
+        {
+          text:
+            'There is no pulse for you this month — your team has not been included in ' +
+            'this cycle. Nothing for you to do.',
+        },
+      ]
+    }
+    if (answers && Object.keys(answers).length >= questions.length) {
       return [{ card: pulseDoneCard(questions.length, questions.length) }]
     }
     return [{ card: pulseCard(questions) }]

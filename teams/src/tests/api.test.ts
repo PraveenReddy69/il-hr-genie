@@ -191,11 +191,24 @@ describe('pulseQuestions', () => {
     assert.deepEqual(asked.map((one) => one.id), ['workload', 'manager'])
   })
 
-  it('falls back when the server really has nothing', async () => {
+  /*
+   * The case that inverted.
+   *
+   * Empty used to mean "the bank is empty", and four hard-coded questions were kinder
+   * than a blank card. Since the endpoint became employee-scoped it means "the
+   * selections do not cover this person", and inventing questions would ask somebody
+   * exactly what HR excluded them from.
+   */
+  it('asks nothing when the server returns nothing for this employee', async () => {
     serve({ questions: [] })
     const asked = await asEmployee(SESSION, () => pulseQuestions())
-    assert.equal(asked.length, 4, 'a pulse with no questions is worse than the fallback')
-    assert.equal(asked[0].id, 'experience')
+    assert.deepEqual(asked, [], 'an empty list is a decision now, not a gap to fill')
+  })
+
+  it('does not invent questions when every row is unusable', async () => {
+    serve({ questions: [{ id: 'broken', question: '', options: [] }] })
+    const asked = await asEmployee(SESSION, () => pulseQuestions())
+    assert.deepEqual(asked, [])
   })
 
   it('drops rows that could not be drawn, keeping the rest', async () => {

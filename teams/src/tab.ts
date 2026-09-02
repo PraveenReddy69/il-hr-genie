@@ -419,7 +419,7 @@ export const PULSE_HTML = page(
     if (!r.ok) throw new Error('HTTP ' + r.status); return r.json()
   }).then(function (data) {
     var qs = data.questions || []
-    if (!qs.length) { out.className = 'empty'; out.textContent = 'No questions this cycle.'; return }
+    if (!qs.length) { out.className = 'empty'; out.textContent = 'There is no pulse for you this month \\u2014 your team has not been included in this cycle.'; return }
     picked = Object.assign({}, data.answers || {})
 
     /*
