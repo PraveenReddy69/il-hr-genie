@@ -29,7 +29,7 @@ describe('the route table', () => {
   it('finds the routes at all, so a passing suite means something', () => {
     // Without this, a change to how routes are written turns every check below into a
     // vacuous pass over an empty list.
-    expect(routes().length).toBeGreaterThanOrEqual(9)
+    expect(routes().length).toBeGreaterThanOrEqual(8)
   })
 
   it('guards every page behind a permission', () => {
@@ -61,7 +61,7 @@ describe('the route table', () => {
     const nav = new Map<string, string>()
     for (const match of source.matchAll(navPattern)) nav.set(match[1], match[2])
 
-    expect(nav.size).toBeGreaterThanOrEqual(9)
+    expect(nav.size).toBeGreaterThanOrEqual(8)
 
     for (const [path, element] of routes()) {
       const needed = nav.get(path)
@@ -70,11 +70,23 @@ describe('the route table', () => {
     }
   })
 
-  it('puts Sales Insights out of an HRBP reach', () => {
-    // Named rather than left to the table: it is the one page whose tier was a judgement
-    // call rather than a consequence, so a silent change to it should fail here.
+  it('keeps Sales Insights out of the console entirely', () => {
+    /*
+     * Pulled for this phase, and this is what says so.
+     *
+     * The test used to assert the opposite — that the route existed and was gated
+     * above an HRBP. The page and the permission both still exist, so nothing here
+     * would fail if the route quietly came back; asserting its absence is what makes
+     * that a decision rather than a drift.
+     */
+    // Against the parsed route table, not the raw text: the comment in App.tsx says
+    // where the page went and names the file, so a string search finds itself.
+    expect(routes().map(([path]) => path)).not.toContain('/sales')
+    expect(source).not.toContain('<SalesInsights')
+
+    // The permission itself is untouched: the server still grants it, and an Admin
+    // still holds it. Only the console has stopped surfacing it.
     expect(BUNDLES.HR).not.toContain('sales.view')
     expect(BUNDLES.HR_ADMIN).toContain('sales.view')
-    expect(source).toContain("gate('sales.view'")
   })
 })

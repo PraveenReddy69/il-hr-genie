@@ -8,7 +8,6 @@ import logo from './infinity-learn.png'
 import { People } from './pages/People'
 import { SignIn } from './pages/SignIn'
 import { PulseQuestions } from './pages/PulseQuestions'
-import { SalesInsights } from './pages/SalesInsights'
 import { Tickets } from './pages/Tickets'
 import { Trends } from './pages/Trends'
 import {
@@ -19,7 +18,6 @@ import {
   HolidaysIcon,
   PeopleIcon,
   PulseIcon,
-  SalesIcon,
   TicketsIcon,
 } from './components/Icons'
 import { clearToken, fetchMe, isUnauthorized } from './api/client'
@@ -35,6 +33,13 @@ const SESSION_KEY = 'hr-genie-console'
  * still reachable by typing the path is the classic version of this bug, so the same
  * list drives both the links and the guards below.
  */
+/*
+ * The sidebar.
+ *
+ * Sales Insights is deliberately absent. The page is still in `pages/SalesInsights.tsx`
+ * and `sales.view` is still a permission the server grants — it was pulled from the
+ * console for this phase, not deleted. Putting it back is this entry and its <Route>.
+ */
 const NAV: { to: string; label: string; Icon: typeof DashboardIcon; needs: Permission }[] = [
   { to: '/', label: 'Dashboard', Icon: DashboardIcon, needs: 'dashboard.view' },
   { to: '/tickets', label: 'Tickets', Icon: TicketsIcon, needs: 'tickets.view' },
@@ -45,7 +50,6 @@ const NAV: { to: string; label: string; Icon: typeof DashboardIcon; needs: Permi
     Icon: CelebrationsIcon,
     needs: 'celebrations.view',
   },
-  { to: '/sales', label: 'Sales Insights', Icon: SalesIcon, needs: 'sales.view' },
   { to: '/pulse', label: 'Pulse questions', Icon: PulseIcon, needs: 'pulse.view' },
   { to: '/analytics', label: 'Analytics', Icon: AnalyticsIcon, needs: 'analytics.view' },
   { to: '/trends', label: 'History', Icon: HistoryIcon, needs: 'trends.view' },
@@ -182,7 +186,6 @@ export default function App() {
             path="/celebrations"
             element={gate('celebrations.view', <Celebrations viewer={hr} />)}
           />
-          <Route path="/sales" element={gate('sales.view', <SalesInsights />)} />
           <Route path="/pulse" element={gate('pulse.view', <PulseQuestions editable={can(hr, 'pulse.publish')} />)} />
           <Route path="/analytics" element={gate('analytics.view', <Analytics />)} />
           <Route path="/trends" element={gate('trends.view', <Trends />)} />
