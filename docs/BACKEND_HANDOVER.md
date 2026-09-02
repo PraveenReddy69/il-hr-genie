@@ -30,27 +30,47 @@ Roles, in rank order: `EMPLOYEE` → `HR` (HRBP) → `HR_ADMIN` (Admin) → `HR_
 
 ## 2. Status at a glance
 
+Everything below was measured against `hrgenie-api.devinfinitylearn.in` on the evening
+of 2 September, after the deploy. Nothing here is taken on trust: an earlier version of
+this document called section 4d fixed when it was not, because the probe used an
+invalid ticket id and validation answered before the role guard ever ran.
+
 | Area | State |
 |---|---|
 | Auth, roles, permissions | **Working.** Both auth responses carry `role` and a resolved `permissions` array. |
 | Holidays | **Working.** Seeded, editable from the console, and the bot reads it live. |
 | Celebrations | **Working.** `department` and `officialEmail` are both projected. |
-| Pulse questions and selections | **Working** in the console. Not yet read by the bot or app. |
-| Directory (`/api/employees`) | **Fixed 29 Aug.** Scoped by `hrbpId` — 457 people, every one correctly tagged. |
-| Ticket queue for HRBPs | **Fixed 29 Aug.** 36 tickets, none raised from outside that set. |
+| Directory (`/api/employees`) | **Fixed 29 Aug.** Scoped by `hrbpId`. |
 | Holiday regions route | **Fixed 29 Aug.** Returns `["All India","Telangana"]`. |
 | `celebrations.view` | **Fixed 29 Aug.** Now in the `HR` permission list. |
-| **Auto-assign on ticket creation** | **Still not implemented.** Three tickets raised within the hour on 1 Sep, none assigned. Section 4a. |
-| **177 employees have no HRBP tagged** | **Unchanged.** Same 177 on 1 Sep as on 29 Aug. Section 3b. |
-| `tickets.assign` on `HR_ADMIN` | **Confirmed 29 Aug.** All 16 Admin permissions present. |
-| `PATCH .../assignee` | Route present. Guard **unverified** — see the correction in section 4d. |
-| **`PATCH .../status` for an Admin** | **Still blocked.** Confirmed from the console 1 Sep. Section 4d. |
-| **`tickets.assign` for an HRBP** | **Wanted.** One string on the `HR` list. Section 4e. |
-| **No way to list HR accounts** | `/api/employees/hr` is 404, so an HRBP's picker is empty but for themselves. Section 4f. |
-| **Email on ticket creation** | **New request.** To the HRBP and the raiser, from `POST /api/tickets`. Section 4g. |
-| **No API documentation** | **New.** Everything in section 6d was found by probing. Section 7b. |
-| **Pulse delivery ignores selections** | **Unchanged.** The bot asks everyone the whole bank, so departments picked in the console change nothing. Section 6c. |
-| **A new pulse question vanishes** | **New.** It is created as a draft, and the list returns only published ones — stored, then unreachable. Section 6d. |
+| **Auto-assign on creation** | **Fixed 2 Sep.** HRG-0014, raised by EMP3801, came back assigned to `HYD606840` — their `hrbpId`. Section 4a. |
+| **`PATCH .../status` for an Admin** | **Fixed 2 Sep.** Resolved a ticket as `HR_ADMIN`, 200. Section 4d. |
+| **`tickets.assign` for an HRBP** | **Fixed 2 Sep.** An HR account reassigned a ticket and put it back, 200 both. Section 4e. |
+| **`/api/employees/hr`** | **Fixed 2 Sep.** 200, eight accounts, for HR and Admin alike. Section 4f. |
+| **Pulse delivery reads selections** | **Fixed 2 Sep.** An employee in a department no selection covers is served `[]`. Section 6c. |
+| **Drafts and retired questions list** | **Fixed 2 Sep.** `?state=DRAFT/PUBLISHED/RETIRED/ALL` honoured, `POST` accepts `state`, `GET /{id}` answers 200. Section 6d. |
+| **`/api/pulse/list`** | **Fixed 2 Sep.** Returns rows for an Admin where it returned none. Section 6g. |
+| **A selection can be named** | **Fixed 2 Sep.** `name` set, persisted and cleared. Section 6h. |
+| **API documentation** | **Fixed 2 Sep.** Swagger at `/docs`, spec at `/docs-json`. Section 7b. |
+| **177 employees have no HRBP tagged** | **Open.** Still 177 of 2247 on 2 Sep. Now the only limit on auto-assignment. Section 3b. |
+| **A selection has no cycle** | **Open.** `name` landed, `cycle` did not, so a selection still overwrites its own history. Section 6h. |
+| **Email on ticket creation** | **In progress.** Waiting on the SMTP-versus-Graph decision. Section 4g. |
+| Three questions about intent | **Open**, and no work implied by any of them. Section 7. |
+
+### One new rule worth knowing
+
+`PATCH /api/tickets/{id}/status` refuses to resolve without a comment —
+`422 COMMENT_REQUIRED`. The console already sends one. `POST /api/tickets` requires
+`employeeId` in the body.
+
+### A deploy that caused an hour of confusion
+
+The fixes landed on a tunnel first and on `hrgenie-api.devinfinitylearn.in` some hours
+later. For that window the console was pointed at the tunnel and the Teams bot at
+production, so HR set up a pulse on one database while employees were served from the
+other — and both surfaces were behaving correctly while flatly contradicting each other.
+Nothing to fix, but worth remembering the next time we are asked to build against a
+temporary host.
 
 ---
 
@@ -654,25 +674,24 @@ runs after routing, so the two are reliably different.
 
 ## 10. What is left
 
-1. **Section 4a** — auto-assignment on creation. Tested twice and confirmed missing,
-   most recently with three tickets minutes old. It is the feature everything else in
-   section 4 exists to support. Plus a backfill for the 42 sitting unowned.
-2. **Sections 4d, 4e and 4f** — the rest of assignment, in three small pieces. Two
-   permission lists to correct in opposite directions (an Admin cannot resolve a ticket
-   their list grants; an HRBP cannot assign one and now should), and one endpoint that
-   lists HR accounts, without which an HRBP can only assign to themselves.
-3. **Section 3b** — the 177 employees with no `hrbpId`. Tag them, or cover them by
-   department, but they are unsupported until one or the other.
-4. **Section 4g** — email to the HRBP and the raiser when a ticket is created. New, and
-   the only item here that does not wait on anything else.
-5. **Sections 6c and 6d** — pulse: delivery reading selections, and a newly created
-   question being reachable after it is created. 6d is the one costing work today.
-6. **Sections 6f, 6g and 6h** — three small pulse ones: deleting a published question,
-   what `/api/pulse/list` is scoped to, and a `name` on a selection.
-7. **Section 7** — the three questions, whenever suits.
-8. **Section 7b** — API documentation, or a pointer to it if it already exists.
+Four things, and only the first is holding anything up.
 
-Sections 3a, 5, 6a and 6b are done. Section 4b is route-present, guard unverified.
+1. **Section 3b — the 177 employees with no `hrbpId`.** Auto-assignment works now, so
+   this is the whole of what stops it working for everybody: a ticket raised by any of
+   those 177 has nobody to be assigned to. Tag them, or give us the department fallback
+   and the console will say which HRBP a person would reach.
+2. **Section 4g — email when a ticket is raised.** Waiting on one decision on our side:
+   Microsoft Graph `sendMail` from a shared mailbox, which section 4 of
+   `TICKET_EMAIL_BACKEND.md` recommends, or SMTP. Nothing needed from you until that is
+   settled.
+3. **Section 6h — a `cycle` on a selection.** `name` landed and is in use. Without a
+   cycle a selection still overwrites its own history, so "what did we ask in August"
+   is derived from the answers rather than read. Not urgent; worth settling before the
+   programme has a year behind it.
+4. **Section 7 — the three questions.** Whenever suits. No work implied by any of them.
+
+Everything else in this document is done and verified. Thank you — that was a lot in
+one day.
 
 ---
 
