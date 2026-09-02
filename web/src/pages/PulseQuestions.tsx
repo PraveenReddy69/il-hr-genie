@@ -233,9 +233,26 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
    * its own validation the moment the server saw it.
    */
   function saveSelection(next: PulseSelection) {
-    return attempt(() =>
-      isUnsaved(next) ? createSelection(next) : updateSelection(next.id, next),
-    )
+    /*
+     * A selection that does not exist yet is edited here, not on the server.
+     *
+     * It appears with no questions and no departments, which is exactly the shape the
+     * create endpoint refuses. Sending every keystroke of it meant the first few edits
+     * were POSTed, rejected, and dropped — so ticking a department before choosing a
+     * question did nothing at all, silently, while the page invited you to do just that.
+     *
+     * It is held locally until it is complete enough to be accepted, and created then.
+     * `bank` is captured because narrowing from the early return does not reach inside
+     * this closure.
+     */
+    const bank = questions ?? []
+    if (isUnsaved(next)) {
+      setSelections((current) => current.map((one) => (one.id === next.id ? next : one)))
+      const others = selections.filter((one) => one.id !== next.id)
+      if (validateSelection(next, others, bank)) return Promise.resolve(true)
+      return attempt(() => createSelection(next))
+    }
+    return attempt(() => updateSelection(next.id, next))
   }
 
   function addSelection() {
@@ -693,12 +710,30 @@ function TargetIcon() {
   )
 }
 
-function PeopleIcon() {
+/**
+ * The tick box on a department row.
+ *
+ * Three states, and the third is the one worth drawing properly: a department already
+ * spoken for by another selection cannot be chosen here, and a plain empty box would
+ * invite the click that is about to be refused. It gets a bar rather than a tick.
+ */
+function Tick({ on, blocked = false }: { on: boolean; blocked?: boolean }) {
   return (
-    <svg className="deptrow__glyph" viewBox="0 0 24 24" {...S} aria-hidden="true">
-      <circle cx="12" cy="9" r="3.2" />
-      <path d="M5.8 19.4a6.2 6.2 0 0112.4 0" />
-    </svg>
+    <span
+      className={`deptick ${on ? 'deptick--on' : ''} ${blocked ? 'deptick--blocked' : ''}`}
+      aria-hidden="true"
+    >
+      {on && (
+        <svg viewBox="0 0 24 24" {...S} strokeWidth={2.8}>
+          <path d="M6 12.4l4 4 8-8.6" />
+        </svg>
+      )}
+      {blocked && !on && (
+        <svg viewBox="0 0 24 24" {...S} strokeWidth={2.4}>
+          <path d="M7 12h10" />
+        </svg>
+      )}
+    </span>
   )
 }
 
@@ -837,17 +872,44 @@ function SelectionCard({
       */}
       <div className="selection__grid">
         <div className="selection__col">
-          <div className="selection__label">Departments</div>
+          <div className="selection__label selection__label--split">
+            <span>Departments</span>
+            <span className="selection__hint">
+              {everyone
+                ? 'Everyone'
+                : `${selection.departments.length} of ${departments.length} picked`}
+            </span>
+          </div>
 
+          {/*
+            Every row carries a tick box.
+
+            Without one the list read as a table of headcounts — nothing said the rows
+            could be clicked, and an unchosen department looked exactly like a caption.
+            The box is the whole affordance: it says these are choices, and it says which
+            way each one currently sits without having to compare shades of blue.
+          */}
           <div className="deptlist">
             <div
               {...clickable(() => editable && onChange({ ...selection, departments: [] }))}
-              className={`deptrow ${everyone ? 'deptrow--on' : ''}`}
+              className={`deptrow deptrow--every ${everyone ? 'deptrow--on' : ''}`}
             >
-              <PeopleIcon />
+              <Tick on={everyone} />
               <span className="deptrow__name">Every department</span>
               <span className="deptrow__count">{total}</span>
             </div>
+
+            {/*
+              "Everyone" is an absence of departments, not a department, so ticking a
+              named one silently drops you out of it. Said out loud, because a selection
+              that quietly stopped covering the whole company is not something anybody
+              would notice until the response rate came in.
+            */}
+            {everyone && (
+              <p className="deptnote">
+                Everyone is included. Tick a department to ask only those instead.
+              </p>
+            )}
 
             {listed.map((department) => {
               const on = selection.departments.includes(department.name)
@@ -861,12 +923,12 @@ function SelectionCard({
                   key={department.name}
                   {...clickable(() => editable && !elsewhere && toggleDepartment(department.name))}
                   className={`deptrow ${on ? 'deptrow--on' : ''} ${elsewhere ? 'deptrow--taken' : ''}`}
-                  title={elsewhere ? 'Already in another selection' : undefined}
+                  aria-disabled={elsewhere}
                 >
-                  <PeopleIcon />
+                  <Tick on={on} blocked={elsewhere} />
                   <span className="deptrow__name">{department.name}</span>
                   <span className="deptrow__count">
-                    {elsewhere ? 'taken' : department.headcount}
+                    {elsewhere ? 'in another selection' : department.headcount}
                   </span>
                 </div>
               )

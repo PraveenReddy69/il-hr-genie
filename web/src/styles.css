@@ -4383,19 +4383,67 @@ ul.legend {
 /* Spoken for by another selection. Dimmed and not clickable rather than absent:
    knowing where a department went is why anybody looks at this list twice. */
 .deptrow--taken {
-  opacity: 0.42;
+  opacity: 0.55;
   cursor: default;
 }
 
-.deptrow__glyph {
+.deptrow--taken .deptrow__count {
+  font-size: 10.5px;
+  font-style: italic;
+}
+
+/* ------------------------------------------------------------- the tick box */
+
+.deptick {
   flex: none;
-  width: 15px;
-  height: 15px;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border: 1.6px solid var(--ink-12);
+  border-radius: 5px;
+  background: var(--surface);
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.deptick svg {
+  width: 12px;
+  height: 12px;
+  color: #fff;
+}
+
+.deptrow:hover:not(.deptrow--taken) .deptick {
+  border-color: var(--blue-primary);
+}
+
+.deptick--on {
+  background: var(--blue-primary);
+  border-color: var(--blue-primary);
+}
+
+/* Spoken for elsewhere. A bar, not an empty box: an empty box invites the click that
+   is about to be refused. */
+.deptick--blocked {
+  background: var(--ink-05);
+  border-color: var(--ink-08);
+  border-style: dashed;
+}
+
+.deptick--blocked svg {
   color: var(--text-muted);
 }
 
-.deptrow--on .deptrow__glyph {
-  color: var(--blue-primary);
+/* Everyone is a mode rather than a department, so it sits apart from the named ones. */
+.deptrow--every {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.deptnote {
+  margin: 2px 0 8px 30px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-muted);
 }
 
 .deptrow__name {
