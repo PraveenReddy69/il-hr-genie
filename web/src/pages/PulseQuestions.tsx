@@ -32,6 +32,10 @@ import {
   updateQuestion,
   QUESTION_STATES,
   STATE_LABEL,
+  forgetHidden,
+  pruneHidden,
+  rememberHidden,
+  type HiddenNote,
   nextCycleLabel,
   validateQuestion,
   type PulseQuestion,
@@ -90,6 +94,8 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
   const [state, setState] = useState<string>(ANY_STATE)
   const [busy, setBusy] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  /** Ids this browser has watched drop off the list. See the note in pulseQuestions.ts. */
+  const [hidden, setHidden] = useState<HiddenNote[]>([])
 
   /**
    * Reloads both halves together.
@@ -105,6 +111,8 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
     ])
     setQuestions(bank.questions)
     setSelections(stored)
+    // Anything on the list needs no recovering, whoever published it.
+    setHidden(pruneHidden(bank.questions))
   }, [])
 
   useEffect(() => {
@@ -203,6 +211,15 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
     const question = questions![index]
     const affected = selections.filter((one) => one.questionIds.includes(question.id))
 
+    /*
+     * Written down before the write, not after.
+     *
+     * Once it is retired the list stops returning it, so if the note were made from the
+     * reloaded bank there would be nothing left to make it from. Recording it first
+     * costs an unused note if the save then fails, which prune clears on the next load.
+     */
+    if (next !== 'PUBLISHED') setHidden(rememberHidden(question, next))
+
     const ok = await attempt(async () => {
       await updateQuestion(question.id, { state: next })
       // Leaving published pulls it out of every selection. Done here as well as
@@ -216,6 +233,8 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
         }
       }
     })
+
+    if (ok && next === 'PUBLISHED') setHidden(forgetHidden(question.id))
 
     if (ok && next !== 'PUBLISHED' && affected.length > 0) {
       setSaveError(
@@ -268,6 +287,22 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
       return Promise.resolve(true)
     }
     return attempt(() => deleteSelection(selection.id))
+  }
+
+  /**
+   * Put a question back on the list.
+   *
+   * The only route back for something the list will not return: PATCH works on any id,
+   * published or not, so setting the state is enough to make it reappear. Used both by
+   * the remembered notes and by the id box, which is the only way to reach a question
+   * hidden before this browser was watching.
+   */
+  async function publishById(id: string) {
+    const wanted = id.trim().toLowerCase()
+    if (!wanted) return false
+    const ok = await attempt(() => updateQuestion(wanted, { state: 'PUBLISHED' }))
+    if (ok) setHidden(forgetHidden(wanted))
+    return ok
   }
 
   async function removeQuestion(index: number) {
@@ -333,7 +368,14 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
                 className={`chip ${state === one ? 'chip--on' : ''}`}
                 onClick={() => setState(one)}
               >
-                {STATE_LABEL[one]} · {counts[one]}
+                {/*
+                  Questions this browser knows are hidden count too. The list cannot
+                  return drafts or retired questions, so counting only what it returned
+                  put "Retired · 0" directly above a panel offering to restore one.
+                  It is still a floor rather than a total, which the panel says.
+                */}
+                {STATE_LABEL[one]} ·{' '}
+                {counts[one] + hidden.filter((note) => note.state === one).length}
               </button>
             ))}
           </div>
@@ -374,6 +416,16 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
           </select>
           <ChevronDown />
         </div>
+
+        {editable && (state === 'DRAFT' || state === 'RETIRED') && (
+          <HiddenPanel
+            state={state}
+            notes={hidden.filter((one) => one.state === state)}
+            busy={busy}
+            onPublish={publishById}
+            onForget={(id) => setHidden(forgetHidden(id))}
+          />
+        )}
 
         {shown.length === 0 ? (
           <Empty style={{ marginTop: 14 }}>
@@ -449,6 +501,127 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
         </p>
       )}
     </>
+  )
+}
+
+// ------------------------------------------------- questions the API will not list
+
+/**
+ * The way back to a question that has stopped being listed.
+ *
+ * Shown only under the Draft and Retired filters, which is exactly when somebody is
+ * looking for one and finding nothing. It says why the list is empty rather than
+ * leaving "no questions" to imply there are none — there may well be several, and one
+ * is known to exist already.
+ *
+ * Delete the whole thing when §6d of docs/BACKEND_HANDOVER.md ships. It exists because
+ * the list endpoint returns published questions only.
+ */
+function HiddenPanel({
+  state,
+  notes,
+  busy,
+  onPublish,
+  onForget,
+}: {
+  state: string
+  notes: HiddenNote[]
+  busy: boolean
+  onPublish: (id: string) => Promise<boolean>
+  onForget: (id: string) => void
+}) {
+  const [byId, setById] = useState('')
+  const [open, setOpen] = useState(false)
+  const label = state === 'DRAFT' ? 'drafts' : 'retired questions'
+
+  return (
+    <div className="hidepanel">
+      <div className="hidepanel__head">
+        <WarnIcon />
+        <div>
+          <div className="hidepanel__title">The API does not return {label}</div>
+          <div className="hidepanel__body">
+            They are saved and they are safe — they just cannot be listed yet. Publishing
+            one brings it back here, and it can be edited or retired again from there.
+          </div>
+        </div>
+      </div>
+
+      {notes.length > 0 && (
+        <div className="hidelist">
+          {notes.map((note) => (
+            <div className="hiderow" key={note.id}>
+              <span className="hiderow__text">{note.question || note.id}</span>
+              <code className="hiderow__id">{note.id}</code>
+              <button
+                className="ghostbtn ghostbtn--sm"
+                disabled={busy}
+                onClick={() => void onPublish(note.id)}
+              >
+                <PublishIcon />
+                Publish
+              </button>
+              {/* Wrong note, or somebody deleted the question outright. Dropping it is
+                  local only — it never touches the question itself. */}
+              <button
+                className="hiderow__drop"
+                onClick={() => onForget(note.id)}
+                aria-label={`Forget ${note.id}`}
+                title="Remove from this list"
+              >
+                <CloseIcon />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/*
+        Hidden before this browser started watching — `experience` is the live example.
+        Nothing knows its id but the person who wrote it, so they type it.
+      */}
+      {open ? (
+        <form
+          className="hideform"
+          onSubmit={(event) => {
+            event.preventDefault()
+            void onPublish(byId).then((ok) => ok && setById(''))
+          }}
+        >
+          <input
+            className="search hideform__input"
+            value={byId}
+            onChange={(event) => setById(event.target.value)}
+            placeholder="Question id, e.g. experience"
+            aria-label="Question id to publish"
+          />
+          <button className="ghostbtn ghostbtn--sm" disabled={busy || !byId.trim()}>
+            Publish it
+          </button>
+        </form>
+      ) : (
+        <button className="hidepanel__more" onClick={() => setOpen(true)}>
+          Know the id of one that is not here? Publish it by id
+        </button>
+      )}
+    </div>
+  )
+}
+
+function WarnIcon() {
+  return (
+    <svg className="hidepanel__glyph" viewBox="0 0 24 24" {...S} aria-hidden="true">
+      <circle cx="12" cy="12" r="8.4" />
+      <path d="M12 7.8v4.8M12 15.9v.1" />
+    </svg>
+  )
+}
+
+function CloseIcon() {
+  return (
+    <svg viewBox="0 0 24 24" {...S} aria-hidden="true">
+      <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" />
+    </svg>
   )
 }
 

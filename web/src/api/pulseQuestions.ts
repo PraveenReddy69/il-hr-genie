@@ -168,6 +168,100 @@ export function updateQuestion(
   }).then(fromWire)
 }
 
+/* ==========================================================================
+   Questions the API will not list
+   ==========================================================================
+
+   `GET /api/pulse/questions` returns published questions only. Not by default — only.
+   Measured against the live API on 2 September: `?state=DRAFT`, `?state=RETIRED`,
+   `?status=`, `?states=`, `?filter=all`, `?includeAll=`, `?withDrafts=`, `?scope=all`
+   and `?published=false` all come back with the identical published rows, and there is
+   no `GET /api/pulse/questions/{id}` route to fall back on — it answers 404.
+
+   So a question moved to Draft or Retired stops existing as far as this console is
+   concerned. It is still on the database, still answers 409 to a second create, and
+   `PATCH /api/pulse/questions/{id}` still edits it perfectly well. It simply cannot be
+   found again. That has already cost one: `experience` was retired and is now
+   unreachable from the UI.
+
+   What follows is a way back, not a fix. This browser writes down the id of anything it
+   hides, so it can offer to publish it again — the publish is a real PATCH against the
+   real record, and once it is published the server's copy is what comes back.
+
+   Its limits, which are why §6d still matters:
+
+     • it is per-browser. A question a colleague retired on their machine is not here.
+     • it only knows about questions hidden *after* this shipped. Anything hidden before
+       has to be published by id, which is what the id box is for.
+
+   The note is a pointer, never a source of truth. `question` is kept only so the row
+   reads as something other than a slug, and it is thrown away the moment the real
+   question comes back on the list.
+   ========================================================================== */
+
+const HIDDEN_KEY = 'hr-genie.pulse.hidden'
+
+export interface HiddenNote {
+  id: string
+  /** What it said when this browser last saw it. A label, not the record. */
+  question: string
+  state: QuestionState
+}
+
+export function readHidden(): HiddenNote[] {
+  try {
+    const raw = localStorage.getItem(HIDDEN_KEY)
+    if (!raw) return []
+    const parsed: unknown = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter(
+      (one): one is HiddenNote =>
+        typeof one === 'object' && one !== null && typeof (one as HiddenNote).id === 'string',
+    )
+  } catch {
+    // A corrupted or unavailable store is not worth an error on a page about
+    // something else. No notes simply means no shortcut back.
+    return []
+  }
+}
+
+function writeHidden(notes: HiddenNote[]) {
+  try {
+    localStorage.setItem(HIDDEN_KEY, JSON.stringify(notes))
+  } catch {
+    /* Private browsing, a full quota. The console still works; recovery does not. */
+  }
+}
+
+/** Note a question that is about to stop being listed. */
+export function rememberHidden(question: PulseQuestion, state: QuestionState): HiddenNote[] {
+  const notes = readHidden().filter((one) => one.id !== question.id)
+  const next = [{ id: question.id, question: question.question, state }, ...notes]
+  writeHidden(next)
+  return next
+}
+
+export function forgetHidden(id: string): HiddenNote[] {
+  const next = readHidden().filter((one) => one.id !== id)
+  writeHidden(next)
+  return next
+}
+
+/**
+ * Drop notes for questions the list is showing again.
+ *
+ * Run on every load. Somebody else publishing a question, or this browser doing it,
+ * both end the same way — it is on the list, so the note is stale and would otherwise
+ * sit there offering to recover something that needs no recovering.
+ */
+export function pruneHidden(bank: PulseQuestion[]): HiddenNote[] {
+  const listed = new Set(bank.map((one) => one.id))
+  const notes = readHidden()
+  const next = notes.filter((one) => !listed.has(one.id))
+  if (next.length !== notes.length) writeHidden(next)
+  return next
+}
+
 export function deleteQuestion(id: string): Promise<void> {
   if (!isLive) return Promise.resolve(mockDeleteQuestion(id))
   return remove(`/api/pulse/questions/${encodeURIComponent(id)}`)
