@@ -5557,8 +5557,88 @@ ul.legend {
 
 /* ----------------------------------------------------- the month's questions */
 
-.askpanel {
+/* ------------------------------------------------------- search and filter */
+
+.askfilters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.asksearch {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 200px;
+}
+
+.asksearch__glyph {
+  position: absolute;
+  left: 12px;
+  width: 15px;
+  height: 15px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.asksearch__input {
+  width: 100%;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--ink-08);
+  border-radius: 999px;
+  padding: 9px 34px 9px 34px;
+}
+
+.asksearch__input::placeholder {
+  color: var(--text-muted);
+}
+
+.asksearch__input:hover {
+  border-color: var(--ink-12);
+}
+
+.asksearch__input:focus {
+  outline: none;
+  border-color: var(--blue-primary);
+  box-shadow: 0 0 0 3px var(--blue-tint-07);
+}
+
+.asksearch__clear {
+  position: absolute;
+  right: 9px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.asksearch__clear:hover {
+  background: var(--ink-05);
+  color: var(--text-slate);
+}
+
+.asksearch__clear svg {
+  width: 12px;
+  height: 12px;
+}
+
+.askfilters .tagpick {
+  margin-top: 0;
+}
+
+.askpanel {
+  margin-top: 12px;
   padding: 15px 16px 16px;
   border: 1px solid var(--ink-06);
   border-radius: var(--radius-card);

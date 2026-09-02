@@ -20,6 +20,7 @@ import {
   mockMoodDetail,
   mockMoodHistory,
   mockPulseBreakdown,
+  mockPulseRows,
   mockPulseDetail,
   mockPulseHistory,
   mockStats,
@@ -938,6 +939,20 @@ export async function fetchPulseHistory(cycles = 6): Promise<CycleSummary[]> {
  * answers themselves are just strings, and a bar chart whose categories reshuffle
  * between cycles is unreadable.
  */
+/** A question, and how many people in scope answered it. */
+export interface AskedQuestion {
+  id: string
+  answers: number
+}
+
+/** One department's slice of a month. */
+export interface AskedDepartment {
+  name: string
+  /** People from this department who answered anything. */
+  people: number
+  questions: AskedQuestion[]
+}
+
 /** One month, and what was actually put in front of people that month. */
 export interface AskedCycle {
   /** `YYYY-MM`. */
@@ -945,7 +960,27 @@ export interface AskedCycle {
   /** How many people answered anything at all. */
   people: number
   /** Question ids that appear in at least one answer, with how many answered each. */
-  questions: { id: string; answers: number }[]
+  questions: AskedQuestion[]
+  /**
+   * The same month split by the respondent's department, busiest first.
+   *
+   * Joined here rather than served: a pulse row carries an employee id and no
+   * department, so the split only exists by looking each respondent up in the
+   * directory. Anybody not found lands under "Not in the directory" rather than being
+   * dropped — a leaver who answered before going still answered.
+   */
+  departments: AskedDepartment[]
+}
+
+/** Turns `{questionId: answer}` rows into counts, busiest question first. */
+function tally(rows: RawPulse[]): AskedQuestion[] {
+  const counts = new Map<string, number>()
+  rows.forEach((row) => {
+    Object.keys(row.answers ?? {}).forEach((id) => counts.set(id, (counts.get(id) ?? 0) + 1))
+  })
+  return [...counts.entries()]
+    .map(([id, answers]) => ({ id, answers }))
+    .sort((a, b) => b.answers - a.answers)
 }
 
 /**
@@ -973,46 +1008,62 @@ export async function fetchAskedHistory(months = 12): Promise<AskedCycle[]> {
   const cycles = Array.from({ length: months }, (_, index) => currentCycle(index))
 
   if (!isLive) {
-    return mocked(
-      cycles
-        .map((cycle) => {
-          const rows = mockPulseBreakdown(cycle)
-          const questions = rows
-            .map((row) => ({
-              id: row.questionId,
-              answers: row.answers.reduce((total, one) => total + one.count, 0),
-            }))
-            .filter((one) => one.answers > 0)
-          const people = questions.reduce((most, one) => Math.max(most, one.answers), 0)
-          return { cycle, people, questions }
+    const workforce = await mocked(mockEmployees())
+    const where = new Map(workforce.map((one) => [one.employeeId, one.department]))
+    return cycles
+      .map((cycle) => {
+        const rows = mockPulseRows(cycle) as RawPulse[]
+        const grouped = new Map<string, RawPulse[]>()
+        rows.forEach((row) => {
+          const name = where.get(row.employeeId) ?? 'Not in the directory'
+          grouped.set(name, [...(grouped.get(name) ?? []), row])
         })
-        .filter((one) => one.questions.length > 0),
-    )
+        return {
+          cycle,
+          people: rows.length,
+          questions: tally(rows),
+          departments: [...grouped.entries()]
+            .map(([name, theirs]) => ({ name, people: theirs.length, questions: tally(theirs) }))
+            .sort((a, b) => b.people - a.people || a.name.localeCompare(b.name)),
+        }
+      })
+      .filter((one) => one.people > 0)
   }
 
-  const answered = await Promise.all(
-    cycles.map((cycle) =>
-      get<RawPulse[]>(`/api/hr/pulse?cycle=${cycle}`)
-        .then((rows) => ({ cycle, rows }))
-        // One bad month should not empty the whole history.
-        .catch(() => ({ cycle, rows: [] as RawPulse[] })),
+  const [answered, workforce] = await Promise.all([
+    Promise.all(
+      cycles.map((cycle) =>
+        get<RawPulse[]>(`/api/hr/pulse?cycle=${cycle}`)
+          .then((rows) => ({ cycle, rows }))
+          // One bad month should not empty the whole history.
+          .catch(() => ({ cycle, rows: [] as RawPulse[] })),
+      ),
     ),
-  )
+    // Memoised, so this is the directory the rest of the page already loaded.
+    fetchEmployees().catch(() => [] as Employee[]),
+  ])
+
+  const departmentOf = new Map(workforce.map((one) => [one.employeeId, one.department]))
 
   return answered
     .map(({ cycle, rows }) => {
-      const counts = new Map<string, number>()
+      const grouped = new Map<string, RawPulse[]>()
       rows.forEach((row) => {
-        Object.keys(row.answers ?? {}).forEach((id) =>
-          counts.set(id, (counts.get(id) ?? 0) + 1),
-        )
+        const name = departmentOf.get(row.employeeId) ?? 'Not in the directory'
+        grouped.set(name, [...(grouped.get(name) ?? []), row])
       })
+
       return {
         cycle,
         people: rows.length,
-        questions: [...counts.entries()]
-          .map(([id, answers]) => ({ id, answers }))
-          .sort((a, b) => b.answers - a.answers),
+        questions: tally(rows),
+        departments: [...grouped.entries()]
+          .map(([name, theirs]) => ({
+            name,
+            people: theirs.length,
+            questions: tally(theirs),
+          }))
+          .sort((a, b) => b.people - a.people || a.name.localeCompare(b.name)),
       }
     })
     .filter((one) => one.people > 0)

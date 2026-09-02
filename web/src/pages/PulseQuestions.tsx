@@ -79,6 +79,9 @@ interface Department {
   headcount: number
 }
 
+/** The department filter's "no filter" option, and the label it shows. */
+const ANY_DEPARTMENT = 'All departments'
+
 /*
  * How many departments a selection lists before it needs asking.
  *
@@ -556,6 +559,8 @@ function AskedByMonth({
 }) {
   const [year, setYear] = useState<string>('')
   const [picked, setPicked] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
+  const [department, setDepartment] = useState<string>(ANY_DEPARTMENT)
 
   const years = useMemo(() => {
     const found = new Set((history ?? []).map((one) => one.cycle.slice(0, 4)))
@@ -601,7 +606,8 @@ function AskedByMonth({
     return now?.key ?? months[0].key
   }, [months])
 
-  const open = months.find((one) => one.key === picked) ?? months.find((one) => one.key === fallback)!
+  const open =
+    months.find((one) => one.key === picked) ?? months.find((one) => one.key === fallback)!
   const openAnswered = open.answered
   const planned = open.isNow && !openAnswered
 
@@ -609,7 +615,7 @@ function AskedByMonth({
     return bank.find((one) => one.id === id)?.question ?? null
   }
 
-  /** How many people a selection actually reaches, for the planned view. */
+  /** How many people a selection reaches, for the planned view. */
   function reachOf(selection: PulseSelection): number {
     return isEveryone(selection)
       ? departments.reduce((total, one) => total + one.headcount, 0)
@@ -617,6 +623,57 @@ function AskedByMonth({
           .filter((one) => selection.departments.includes(one.name))
           .reduce((total, one) => total + one.headcount, 0)
   }
+
+  /** Matches the search box against the question's text and its id. */
+  function matches(id: string): boolean {
+    const needle = query.trim().toLowerCase()
+    if (!needle) return true
+    return `${nameOf(id) ?? ''} ${id}`.toLowerCase().includes(needle)
+  }
+
+  /*
+   * The groups on show, whichever half of the page they come from.
+   *
+   * A past month groups by the respondent's department; the current month groups by
+   * selection, because nobody has answered yet and the selection is the only statement
+   * of who gets what. Both end up as {name, meta, ids} so the filters below apply to
+   * one shape rather than two.
+   */
+  const groups = useMemo(() => {
+    const rows = openAnswered
+      ? openAnswered.departments.map((one) => ({
+          key: one.name,
+          name: one.name,
+          meta: `${one.people} ${one.people === 1 ? 'person' : 'people'} answered`,
+          questions: one.questions,
+        }))
+      : planned
+        ? selections.map((selection) => {
+            const reach = reachOf(selection)
+            return {
+              key: selection.id,
+              name: selectionLabel(selection),
+              meta: `${reach.toLocaleString()} ${reach === 1 ? 'person' : 'people'}`,
+              questions: selection.questionIds.map((id) => ({ id, answers: 0 })),
+            }
+          })
+        : []
+
+    return rows
+      .filter((group) => department === ANY_DEPARTMENT || group.name === department)
+      .map((group) => ({ ...group, questions: group.questions.filter((q) => matches(q.id)) }))
+      .filter((group) => group.questions.length > 0)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openAnswered, planned, selections, departments, department, query, bank])
+
+  /** Every group name available in the month on show, for the filter. */
+  const groupNames = useMemo(() => {
+    if (openAnswered) return openAnswered.departments.map((one) => one.name)
+    if (planned) return selections.map((one) => selectionLabel(one))
+    return []
+  }, [openAnswered, planned, selections])
+
+  const filtering = query.trim() !== '' || department !== ANY_DEPARTMENT
 
   return (
     <section className="card askedcard">
@@ -680,13 +737,53 @@ function AskedByMonth({
             ))}
           </div>
 
+          <div className="askfilters">
+            <div className="asksearch">
+              <SearchIcon />
+              <input
+                className="asksearch__input"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search questions"
+                aria-label="Search questions"
+              />
+              {query && (
+                <button
+                  className="asksearch__clear"
+                  onClick={() => setQuery('')}
+                  aria-label="Clear search"
+                >
+                  <CloseIcon />
+                </button>
+              )}
+            </div>
+
+            <div className="tagpick">
+              <select
+                className="tagpick__select"
+                value={department}
+                onChange={(event) => setDepartment(event.target.value)}
+                aria-label="Filter by department"
+              >
+                <option value={ANY_DEPARTMENT}>{ANY_DEPARTMENT}</option>
+                {groupNames.map((one) => (
+                  <option key={one} value={one}>
+                    {one}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown />
+            </div>
+          </div>
+
           <div className="askpanel">
             <div className="askpanel__head">
               <span className="askpanel__month">{monthName(open.key)}</span>
               {openAnswered ? (
                 <span className="askpanel__count">
                   {openAnswered.people} {openAnswered.people === 1 ? 'person' : 'people'}{' '}
-                  answered
+                  answered across {openAnswered.departments.length}{' '}
+                  {openAnswered.departments.length === 1 ? 'department' : 'departments'}
                 </span>
               ) : planned ? (
                 <>
@@ -698,86 +795,77 @@ function AskedByMonth({
               )}
             </div>
 
-            {openAnswered ? (
-              openAnswered.questions.map((question) => {
-                const share = openAnswered.people
-                  ? Math.round((question.answers / openAnswered.people) * 100)
-                  : 0
-                return (
-                  <div className="askq" key={question.id}>
-                    <span className="askq__text">
-                      {nameOf(question.id) ?? (
-                        <code className="askq__id">{question.id}</code>
-                      )}
-                      {!nameOf(question.id) && (
-                        <span className="askq__missing">not on the list</span>
-                      )}
-                    </span>
-                    {/* How much of the month's cohort answered this one. A question
-                        answered by half the people who answered anything was skipped
-                        by the other half, and that is worth seeing. The share is
-                        written out as well as drawn — a bar alone is a shape people
-                        estimate, and these numbers are small enough to state. */}
-                    <span
-                      className="askq__meter"
-                      title={`${question.answers} of ${openAnswered.people} answered this`}
-                    >
-                      <span className="askq__bar" aria-hidden="true">
-                        <span style={{ width: `${share}%` }} />
-                      </span>
-                      <span className={`askq__pct ${share < 100 ? 'askq__pct--part' : ''}`}>
-                        {share}%
-                      </span>
-                    </span>
-                    <span className="askq__n">{question.answers}</span>
-                  </div>
-                )
-              })
-            ) : planned ? (
-              selections.length === 0 ? (
-                <div className="askpanel__none">
-                  No selection, so nobody is being asked anything this month.
-                </div>
-              ) : (
-                selections.map((selection) => {
-                  const reach = reachOf(selection)
-                  return (
-                    <div className="askgroup" key={selection.id}>
-                      <div className="askgroup__who">
-                        <GroupIcon />
-                        <span className="askgroup__name">{selectionLabel(selection)}</span>
-                        <span className="askgroup__reach">
-                          {reach.toLocaleString()} {reach === 1 ? 'person' : 'people'}
-                        </span>
-                      </div>
-                      {selection.questionIds.length === 0 ? (
-                        <div className="askpanel__none">No questions picked.</div>
-                      ) : (
-                        selection.questionIds.map((id, at) => (
-                          <div className="askq askq--planned" key={id}>
-                            {/* The order they are asked, which is a decision somebody
-                                made on the selection above and is invisible without a
-                                number against each row. */}
-                            <span className="askq__order">
-                              {String(at + 1).padStart(2, '0')}
-                            </span>
-                            <span className="askq__text">
-                              {nameOf(id) ?? <code className="askq__id">{id}</code>}
-                              {!nameOf(id) && (
-                                <span className="askq__missing">not on the list</span>
-                              )}
-                            </span>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  )
-                })
-              )
-            ) : (
+            {groups.length === 0 ? (
               <div className="askpanel__none">
-                Nothing was answered in {monthName(open.key)}.
+                {filtering
+                  ? 'Nothing here matches that search.'
+                  : planned
+                    ? 'No selection, so nobody is being asked anything this month.'
+                    : `Nothing was answered in ${monthName(open.key)}.`}
               </div>
+            ) : (
+              groups.map((group) => (
+                <div className="askgroup" key={group.key}>
+                  <div className="askgroup__who">
+                    <GroupIcon />
+                    <span className="askgroup__name">{group.name}</span>
+                    <span className="askgroup__reach">{group.meta}</span>
+                  </div>
+
+                  {group.questions.map((question, at) => {
+                    const share =
+                      openAnswered && group.questions.length > 0
+                        ? Math.round(
+                            (question.answers /
+                              Math.max(
+                                1,
+                                openAnswered.departments.find((d) => d.name === group.name)
+                                  ?.people ?? 1,
+                              )) *
+                              100,
+                          )
+                        : 0
+                    return (
+                      <div
+                        className={`askq ${planned ? 'askq--planned' : ''}`}
+                        key={question.id}
+                      >
+                        {planned && (
+                          <span className="askq__order">
+                            {String(at + 1).padStart(2, '0')}
+                          </span>
+                        )}
+                        <span className="askq__text">
+                          {nameOf(question.id) ?? (
+                            <code className="askq__id">{question.id}</code>
+                          )}
+                          {!nameOf(question.id) && (
+                            <span className="askq__missing">not on the list</span>
+                          )}
+                        </span>
+                        {openAnswered && (
+                          <>
+                            <span
+                              className="askq__meter"
+                              title={`${question.answers} of ${group.meta}`}
+                            >
+                              <span className="askq__bar" aria-hidden="true">
+                                <span style={{ width: `${share}%` }} />
+                              </span>
+                              <span
+                                className={`askq__pct ${share < 100 ? 'askq__pct--part' : ''}`}
+                              >
+                                {share}%
+                              </span>
+                            </span>
+                            <span className="askq__n">{question.answers}</span>
+                          </>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              ))
             )}
           </div>
         </>
@@ -795,6 +883,15 @@ function AskedByMonth({
         still a draft. The answers are kept either way.
       </p>
     </section>
+  )
+}
+
+function SearchIcon() {
+  return (
+    <svg className="asksearch__glyph" viewBox="0 0 24 24" {...S} aria-hidden="true">
+      <circle cx="10.8" cy="10.8" r="6.2" />
+      <path d="M15.4 15.4l4 4" />
+    </svg>
   )
 }
 

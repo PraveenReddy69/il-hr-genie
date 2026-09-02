@@ -521,6 +521,20 @@ export function mockPulseHistory(): CycleSummary[] {
   })
 }
 
+/**
+ * One row per person who answered in a cycle, the shape `/api/hr/pulse` returns.
+ *
+ * Exported so the asked-by-month history runs the same grouping in mock as it does
+ * live — joining respondents to departments. Summarising it here instead would test a
+ * different code path from the one that ships.
+ */
+export function mockPulseRows(cycle: string): { employeeId: string; answers: Record<string, string> }[] {
+  return Object.entries(pulseLog[cycle] ?? {}).map(([employeeId, answers]) => ({
+    employeeId,
+    answers,
+  }))
+}
+
 export function mockPulseBreakdown(cycle: string): QuestionBreakdown[] {
   const entries = Object.values(pulseLog[cycle] ?? {})
   return PULSE_QUESTIONS.map((question) => ({
