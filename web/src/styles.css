@@ -5346,31 +5346,91 @@ ul.legend {
   color: var(--text-muted);
 }
 
-.askgroup {
-  margin-top: 8px;
+.askgroup + .askgroup {
+  margin-top: 16px;
 }
 
+/* Who is being asked, said as a row rather than a caption — with the headcount,
+   because "Experience" and "Experience, 3 people" are different facts and only the
+   second one tells you whether this month reaches anybody. */
 .askgroup__who {
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 11px;
+  margin-bottom: 8px;
+  background: var(--surface);
+  border: 1px solid var(--ink-06);
+  border-radius: 9px;
 }
 
+.askgroup__glyph {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  color: var(--blue-primary);
+}
+
+.askgroup__name {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.askgroup__reach {
+  flex: none;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+/*
+ * A row per question, as its own card.
+ *
+ * Hairlines on a tinted panel read as a table, and a table is what you use when the
+ * rows are values. These are the questions people were actually asked, which is the
+ * content of the page rather than a readout, so they get the weight of objects.
+ */
 .askq {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 5px 0;
+  gap: 11px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
   font-size: 12.5px;
   color: var(--text-slate);
-  border-top: 1px solid var(--ink-05);
+  background: var(--surface);
+  border: 1px solid var(--ink-06);
+  border-radius: 10px;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
 
-.askq:first-of-type {
-  border-top: 0;
+.askq:last-child {
+  margin-bottom: 0;
+}
+
+.askq:hover {
+  border-color: var(--ink-12);
+  box-shadow: 0 1px 2px rgba(10, 20, 48, 0.04), 0 4px 12px rgba(10, 20, 48, 0.04);
+}
+
+/* The order it is asked in. Same numbering as the picker on the selection, so the
+   two views of one decision look like one decision. */
+.askq__order {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--blue-deep);
+  background: var(--blue-tint-07);
+  border: 1px solid rgba(43, 140, 255, 0.2);
+  border-radius: 7px;
 }
 
 .askq__text {
@@ -5499,10 +5559,10 @@ ul.legend {
 
 .askpanel {
   margin-top: 14px;
-  padding: 14px 16px 6px;
+  padding: 15px 16px 16px;
   border: 1px solid var(--ink-06);
-  border-radius: var(--radius-tile);
-  background: var(--bg-cell);
+  border-radius: var(--radius-card);
+  background: linear-gradient(180deg, var(--bg-cell), var(--surface) 120px);
 }
 
 .askpanel__head {
@@ -5510,8 +5570,13 @@ ul.legend {
   align-items: baseline;
   gap: 9px;
   flex-wrap: wrap;
-  padding-bottom: 10px;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
   border-bottom: 1px solid var(--ink-06);
+}
+
+.askpanel__month {
+  letter-spacing: -0.01em;
 }
 
 .askpanel__month {
@@ -5543,9 +5608,30 @@ ul.legend {
   color: var(--text-muted);
 }
 
+.askq__meter {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.askq__pct {
+  min-width: 30px;
+  text-align: right;
+  font-size: 10.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+/* Anything short of everyone is the interesting case, so it is the one with colour. */
+.askq__pct--part {
+  color: var(--orange-warn);
+}
+
 .askq__bar {
   flex: none;
-  width: 84px;
+  width: 74px;
   height: 5px;
   border-radius: 999px;
   background: var(--ink-05);
@@ -5563,4 +5649,9 @@ ul.legend {
   .askq__bar {
     display: none;
   }
+}
+
+.askq__n {
+  border-left: 1px solid var(--ink-05);
+  padding-left: 11px;
 }

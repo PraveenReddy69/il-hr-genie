@@ -477,6 +477,7 @@ export function PulseQuestions({ editable = true }: { editable?: boolean }) {
         history={asked}
         bank={questions}
         selections={selections}
+        departments={departments}
         cycle={currentCycle()}
       />
 
@@ -544,11 +545,13 @@ function AskedByMonth({
   history,
   bank,
   selections,
+  departments,
   cycle,
 }: {
   history: AskedCycle[] | null
   bank: PulseQuestion[]
   selections: PulseSelection[]
+  departments: Department[]
   cycle: string
 }) {
   const [year, setYear] = useState<string>('')
@@ -604,6 +607,15 @@ function AskedByMonth({
 
   function nameOf(id: string): string | null {
     return bank.find((one) => one.id === id)?.question ?? null
+  }
+
+  /** How many people a selection actually reaches, for the planned view. */
+  function reachOf(selection: PulseSelection): number {
+    return isEveryone(selection)
+      ? departments.reduce((total, one) => total + one.headcount, 0)
+      : departments
+          .filter((one) => selection.departments.includes(one.name))
+          .reduce((total, one) => total + one.headcount, 0)
   }
 
   return (
@@ -703,9 +715,19 @@ function AskedByMonth({
                     </span>
                     {/* How much of the month's cohort answered this one. A question
                         answered by half the people who answered anything was skipped
-                        by the other half, and that is worth seeing. */}
-                    <span className="askq__bar" aria-hidden="true">
-                      <span style={{ width: `${share}%` }} />
+                        by the other half, and that is worth seeing. The share is
+                        written out as well as drawn — a bar alone is a shape people
+                        estimate, and these numbers are small enough to state. */}
+                    <span
+                      className="askq__meter"
+                      title={`${question.answers} of ${openAnswered.people} answered this`}
+                    >
+                      <span className="askq__bar" aria-hidden="true">
+                        <span style={{ width: `${share}%` }} />
+                      </span>
+                      <span className={`askq__pct ${share < 100 ? 'askq__pct--part' : ''}`}>
+                        {share}%
+                      </span>
                     </span>
                     <span className="askq__n">{question.answers}</span>
                   </div>
@@ -717,25 +739,40 @@ function AskedByMonth({
                   No selection, so nobody is being asked anything this month.
                 </div>
               ) : (
-                selections.map((selection) => (
-                  <div className="askgroup" key={selection.id}>
-                    <div className="askgroup__who">{selectionLabel(selection)}</div>
-                    {selection.questionIds.length === 0 ? (
-                      <div className="askpanel__none">No questions picked.</div>
-                    ) : (
-                      selection.questionIds.map((id) => (
-                        <div className="askq" key={id}>
-                          <span className="askq__text">
-                            {nameOf(id) ?? <code className="askq__id">{id}</code>}
-                            {!nameOf(id) && (
-                              <span className="askq__missing">not on the list</span>
-                            )}
-                          </span>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                ))
+                selections.map((selection) => {
+                  const reach = reachOf(selection)
+                  return (
+                    <div className="askgroup" key={selection.id}>
+                      <div className="askgroup__who">
+                        <GroupIcon />
+                        <span className="askgroup__name">{selectionLabel(selection)}</span>
+                        <span className="askgroup__reach">
+                          {reach.toLocaleString()} {reach === 1 ? 'person' : 'people'}
+                        </span>
+                      </div>
+                      {selection.questionIds.length === 0 ? (
+                        <div className="askpanel__none">No questions picked.</div>
+                      ) : (
+                        selection.questionIds.map((id, at) => (
+                          <div className="askq askq--planned" key={id}>
+                            {/* The order they are asked, which is a decision somebody
+                                made on the selection above and is invisible without a
+                                number against each row. */}
+                            <span className="askq__order">
+                              {String(at + 1).padStart(2, '0')}
+                            </span>
+                            <span className="askq__text">
+                              {nameOf(id) ?? <code className="askq__id">{id}</code>}
+                              {!nameOf(id) && (
+                                <span className="askq__missing">not on the list</span>
+                              )}
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )
+                })
               )
             ) : (
               <div className="askpanel__none">
@@ -1134,6 +1171,16 @@ function ChevronDown() {
   return (
     <svg className="tagpick__chev" viewBox="0 0 24 24" {...S} aria-hidden="true">
       <path d="M6.5 9.5l5.5 5.5 5.5-5.5" />
+    </svg>
+  )
+}
+
+function GroupIcon() {
+  return (
+    <svg className="askgroup__glyph" viewBox="0 0 24 24" {...S} aria-hidden="true">
+      <circle cx="9.6" cy="9.4" r="3.1" />
+      <path d="M3.8 19a5.8 5.8 0 0111.6 0" />
+      <path d="M16.4 7.6a2.9 2.9 0 010 5.6M17.6 19a5.6 5.6 0 00-1.6-3.9" />
     </svg>
   )
 }
