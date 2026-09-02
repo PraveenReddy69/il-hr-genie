@@ -237,10 +237,15 @@ describe('who gets missed', () => {
 })
 
 describe('labels and blanks', () => {
-  it('says what a selection covers', () => {
+  it('names the departments a selection covers rather than counting them', () => {
     expect(selectionLabel(selection({ departments: [] }))).toBe('Every department')
     expect(selectionLabel(selection({ departments: ['Growth'] }))).toBe('Growth')
-    expect(selectionLabel(selection({ departments: ['a', 'b', 'c'] }))).toBe('3 departments')
+    expect(selectionLabel(selection({ departments: ['Growth', 'FOS'] }))).toBe('Growth and FOS')
+    // Two named, the rest counted: a header that wraps is not a header.
+    expect(selectionLabel(selection({ departments: ['a', 'b', 'c'] }))).toBe('a, b and 1 more')
+    expect(
+      selectionLabel(selection({ departments: ['Academic Delivery', 'Lead Generation', 'FOS', 'Product Growth'] })),
+    ).toBe('Academic Delivery, Lead Generation and 2 more')
   })
 
   it('starts a new selection covering everyone', () => {

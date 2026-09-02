@@ -195,10 +195,23 @@ export function isEveryone(selection: PulseSelection): boolean {
   return selection.departments.length === 0
 }
 
+/**
+ * What a selection is called.
+ *
+ * Names the departments rather than counting them. "4 departments" is a fact nobody
+ * needed — the card says how many just below it — and it made two selections covering
+ * entirely different halves of the company read identically. Which departments is the
+ * only thing that distinguishes one selection from another.
+ *
+ * Three names is the cut. Past that the header wraps and stops being a heading, so the
+ * rest become "and N more", with the full list on the departments column beside it.
+ */
 export function selectionLabel(selection: PulseSelection): string {
+  const named = selection.departments
   if (isEveryone(selection)) return 'Every department'
-  if (selection.departments.length === 1) return selection.departments[0]
-  return `${selection.departments.length} departments`
+  if (named.length === 1) return named[0]
+  if (named.length === 2) return `${named[0]} and ${named[1]}`
+  return `${named.slice(0, 2).join(', ')} and ${named.length - 2} more`
 }
 
 /**
