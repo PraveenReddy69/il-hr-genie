@@ -552,6 +552,7 @@ function AskedByMonth({
   cycle: string
 }) {
   const [year, setYear] = useState<string>('')
+  const [picked, setPicked] = useState<string | null>(null)
 
   const years = useMemo(() => {
     const found = new Set((history ?? []).map((one) => one.cycle.slice(0, 4)))
@@ -560,9 +561,46 @@ function AskedByMonth({
   }, [history, cycle])
 
   const showing = year || years[0] || cycle.slice(0, 4)
-  const months = (history ?? []).filter((one) => one.cycle.slice(0, 4) === showing)
-  const answeredThisCycle = (history ?? []).some((one) => one.cycle === cycle)
-  const planned = showing === cycle.slice(0, 4) && !answeredThisCycle
+  const byCycle = useMemo(
+    () => new Map((history ?? []).map((one) => [one.cycle, one])),
+    [history],
+  )
+
+  /*
+   * All twelve months, not only the ones with answers.
+   *
+   * A strip that shows August and September alone reads as "those are the months that
+   * exist". Twelve slots with most of them empty reads as "we ran it twice", which is
+   * the true and more useful statement — the gaps are the point.
+   */
+  const months = useMemo(
+    () =>
+      Array.from({ length: 12 }, (_, index) => {
+        const key = `${showing}-${`${index + 1}`.padStart(2, '0')}`
+        return {
+          key,
+          short: new Date(`${key}-01T00:00:00`).toLocaleDateString(undefined, {
+            month: 'short',
+          }),
+          answered: byCycle.get(key) ?? null,
+          isNow: key === cycle,
+          ahead: key > cycle,
+        }
+      }),
+    [showing, byCycle, cycle],
+  )
+
+  /** Latest month worth opening: the newest with answers, else this month. */
+  const fallback = useMemo(() => {
+    const withAnswers = months.filter((one) => one.answered)
+    if (withAnswers.length > 0) return withAnswers[withAnswers.length - 1].key
+    const now = months.find((one) => one.isNow)
+    return now?.key ?? months[0].key
+  }, [months])
+
+  const open = months.find((one) => one.key === picked) ?? months.find((one) => one.key === fallback)!
+  const openAnswered = open.answered
+  const planned = open.isNow && !openAnswered
 
   function nameOf(id: string): string | null {
     return bank.find((one) => one.id === id)?.question ?? null
@@ -583,7 +621,10 @@ function AskedByMonth({
             <select
               className="tagpick__select"
               value={showing}
-              onChange={(event) => setYear(event.target.value)}
+              onChange={(event) => {
+                setYear(event.target.value)
+                setPicked(null)
+              }}
               aria-label="Year"
             >
               {years.map((one) => (
@@ -598,19 +639,81 @@ function AskedByMonth({
       </div>
 
       {history === null ? (
-        <div className="asked__loading">Reading the last twelve months\u2026</div>
+        <div className="asked__loading">Reading the last twelve months…</div>
       ) : (
-        <div className="asked__list">
-          {planned && (
-            <div className="askmonth askmonth--planned">
-              <div className="askmonth__head">
-                <span className="askmonth__name">{monthName(cycle)}</span>
-                <span className="askmonth__tag askmonth__tag--planned">Planned</span>
-                <span className="askmonth__count">nobody has answered yet</span>
-              </div>
+        <>
+          <div className="monthstrip" role="tablist" aria-label="Month">
+            {months.map((month) => (
+              <button
+                key={month.key}
+                role="tab"
+                aria-selected={month.key === open.key}
+                disabled={month.ahead}
+                className={`mtab ${month.key === open.key ? 'mtab--on' : ''} ${
+                  month.answered ? 'mtab--has' : ''
+                } ${month.isNow ? 'mtab--now' : ''}`}
+                onClick={() => setPicked(month.key)}
+              >
+                <span className="mtab__name">{month.short}</span>
+                <span className="mtab__foot">
+                  {month.answered
+                    ? month.answered.people
+                    : month.isNow
+                      ? 'now'
+                      : month.ahead
+                        ? '·'
+                        : '—'}
+                </span>
+              </button>
+            ))}
+          </div>
 
-              {selections.length === 0 ? (
-                <div className="askmonth__none">
+          <div className="askpanel">
+            <div className="askpanel__head">
+              <span className="askpanel__month">{monthName(open.key)}</span>
+              {openAnswered ? (
+                <span className="askpanel__count">
+                  {openAnswered.people} {openAnswered.people === 1 ? 'person' : 'people'}{' '}
+                  answered
+                </span>
+              ) : planned ? (
+                <>
+                  <span className="askpanel__tag">Planned</span>
+                  <span className="askpanel__count">nobody has answered yet</span>
+                </>
+              ) : (
+                <span className="askpanel__count">nothing recorded</span>
+              )}
+            </div>
+
+            {openAnswered ? (
+              openAnswered.questions.map((question) => {
+                const share = openAnswered.people
+                  ? Math.round((question.answers / openAnswered.people) * 100)
+                  : 0
+                return (
+                  <div className="askq" key={question.id}>
+                    <span className="askq__text">
+                      {nameOf(question.id) ?? (
+                        <code className="askq__id">{question.id}</code>
+                      )}
+                      {!nameOf(question.id) && (
+                        <span className="askq__missing">not on the list</span>
+                      )}
+                    </span>
+                    {/* How much of the month's cohort answered this one. A question
+                        answered by half the people who answered anything was skipped
+                        by the other half, and that is worth seeing. */}
+                    <span className="askq__bar" aria-hidden="true">
+                      <span style={{ width: `${share}%` }} />
+                    </span>
+                    <span className="askq__n">{question.answers}</span>
+                  </div>
+                )
+              })
+            ) : planned ? (
+              selections.length === 0 ? (
+                <div className="askpanel__none">
                   No selection, so nobody is being asked anything this month.
                 </div>
               ) : (
@@ -618,51 +721,29 @@ function AskedByMonth({
                   <div className="askgroup" key={selection.id}>
                     <div className="askgroup__who">{selectionLabel(selection)}</div>
                     {selection.questionIds.length === 0 ? (
-                      <div className="askmonth__none">No questions picked.</div>
+                      <div className="askpanel__none">No questions picked.</div>
                     ) : (
                       selection.questionIds.map((id) => (
                         <div className="askq" key={id}>
                           <span className="askq__text">
                             {nameOf(id) ?? <code className="askq__id">{id}</code>}
+                            {!nameOf(id) && (
+                              <span className="askq__missing">not on the list</span>
+                            )}
                           </span>
-                          {!nameOf(id) && (
-                            <span className="askq__missing">not on the list</span>
-                          )}
                         </div>
                       ))
                     )}
                   </div>
                 ))
-              )}
-            </div>
-          )}
-
-          {months.length === 0 && !planned ? (
-            <Empty>No answers recorded in {showing}.</Empty>
-          ) : (
-            months.map((month) => (
-              <div className="askmonth" key={month.cycle}>
-                <div className="askmonth__head">
-                  <span className="askmonth__name">{monthName(month.cycle)}</span>
-                  <span className="askmonth__count">
-                    {month.people} {month.people === 1 ? 'person' : 'people'} answered
-                  </span>
-                </div>
-                {month.questions.map((question) => (
-                  <div className="askq" key={question.id}>
-                    <span className="askq__text">
-                      {nameOf(question.id) ?? <code className="askq__id">{question.id}</code>}
-                    </span>
-                    {!nameOf(question.id) && (
-                      <span className="askq__missing">not on the list</span>
-                    )}
-                    <span className="askq__n">{question.answers}</span>
-                  </div>
-                ))}
+              )
+            ) : (
+              <div className="askpanel__none">
+                Nothing was answered in {monthName(open.key)}.
               </div>
-            ))
-          )}
-        </div>
+            )}
+          </div>
+        </>
       )}
 
       {/*
@@ -670,7 +751,7 @@ function AskedByMonth({
 
         A retired question is not returned by the list endpoint, so a month that asked
         one shows its id and nothing else — August asked `experience` and this console
-        cannot name it. That is section 6d, not a gap in the record.
+        cannot always name it. That is section 6d, not a gap in the record.
       */}
       <p className="note">
         A question shown as an id was asked but is no longer on the list — retired or

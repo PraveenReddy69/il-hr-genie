@@ -5346,62 +5346,6 @@ ul.legend {
   color: var(--text-muted);
 }
 
-.asked__list {
-  margin-top: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.askmonth {
-  padding: 12px 14px;
-  border: 1px solid var(--ink-06);
-  border-radius: var(--radius-tile);
-  background: var(--bg-cell);
-}
-
-/* This month is a plan, not a record, and is coloured as the different claim it is. */
-.askmonth--planned {
-  background: var(--blue-tint-07);
-  border-color: rgba(43, 140, 255, 0.22);
-}
-
-.askmonth__head {
-  display: flex;
-  align-items: baseline;
-  gap: 9px;
-  flex-wrap: wrap;
-  margin-bottom: 8px;
-}
-
-.askmonth__name {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--ink);
-}
-
-.askmonth__tag--planned {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--blue-deep);
-  background: var(--blue-tint-12);
-  padding: 2px 8px;
-  border-radius: 999px;
-}
-
-.askmonth__count {
-  font-size: 11.5px;
-  color: var(--text-muted);
-}
-
-.askmonth__none {
-  font-size: 12px;
-  color: var(--text-muted);
-  padding: 4px 0;
-}
-
 .askgroup {
   margin-top: 8px;
 }
@@ -5458,4 +5402,165 @@ ul.legend {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--text-secondary);
+}
+
+
+/* ------------------------------------------------------------ month strip */
+
+.monthstrip {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 16px;
+  padding: 6px;
+  background: var(--bg-canvas);
+  border-radius: 14px;
+}
+
+/* Below this the twelve columns are 40px wide and the labels collide, so the
+   strip scrolls sideways at a readable size instead of shrinking. */
+@media (max-width: 780px) {
+  .monthstrip {
+    grid-template-columns: repeat(12, 62px);
+    overflow-x: auto;
+  }
+}
+
+.mtab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 9px 4px 8px;
+  font: inherit;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.mtab__name {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
+}
+
+.mtab__foot {
+  font-size: 10.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-12);
+}
+
+/* A month with answers. Darker label and a real number, so the months that ran
+   stand out from the months that did not without reading anything. */
+.mtab--has .mtab__name {
+  color: var(--text-slate);
+}
+
+.mtab--has .mtab__foot {
+  color: var(--blue-primary);
+}
+
+.mtab:hover:not(:disabled):not(.mtab--on) {
+  background: var(--surface);
+  border-color: var(--ink-08);
+}
+
+.mtab--now:not(.mtab--on) .mtab__foot {
+  color: var(--purple);
+  font-weight: 700;
+}
+
+.mtab--on {
+  background: var(--surface);
+  border-color: rgba(43, 140, 255, 0.3);
+  box-shadow: 0 1px 2px rgba(10, 20, 48, 0.05), 0 6px 16px rgba(10, 20, 48, 0.07);
+}
+
+.mtab--on .mtab__name {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.mtab:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.mtab:focus-visible {
+  outline: 2px solid var(--blue-primary);
+  outline-offset: 1px;
+}
+
+/* ----------------------------------------------------- the month's questions */
+
+.askpanel {
+  margin-top: 14px;
+  padding: 14px 16px 6px;
+  border: 1px solid var(--ink-06);
+  border-radius: var(--radius-tile);
+  background: var(--bg-cell);
+}
+
+.askpanel__head {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  flex-wrap: wrap;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--ink-06);
+}
+
+.askpanel__month {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.askpanel__count {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+/* This month is a plan, not a record, and is labelled as the different claim it is. */
+.askpanel__tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--blue-deep);
+  background: var(--blue-tint-12);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.askpanel__none {
+  padding: 12px 0;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.askq__bar {
+  flex: none;
+  width: 84px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--ink-05);
+  overflow: hidden;
+}
+
+.askq__bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--blue-primary), var(--blue-deep));
+}
+
+@media (max-width: 620px) {
+  .askq__bar {
+    display: none;
+  }
 }
