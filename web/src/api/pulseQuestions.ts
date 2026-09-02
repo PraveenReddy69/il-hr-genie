@@ -117,41 +117,28 @@ export async function fetchQuestionBank(): Promise<Bank> {
 }
 
 /**
- * One question, created on the server. Two requests, because one cannot do it.
+ * One question, created on the server. One request.
  *
- * POST rejects `state` outright — "property state should not exist" — and creates every
- * question as a DRAFT. PATCH accepts `state` without complaint. So the state HR picked
- * has to be applied afterwards, on a question that already exists.
+ * It was two for a while: POST refused `state` outright and created everything as a
+ * draft, so the state HR picked had to be applied by a follow-up PATCH. That is fixed
+ * — verified 2 September, `POST` with `state: "DRAFT"` answers 201 and the question
+ * comes back a draft.
  *
- * This matters more than a tidiness point, because the list endpoint returns only
- * PUBLISHED questions and takes no parameter that widens it. A question created and left
- * as the server made it is invisible to this console permanently: it is really there — a
- * second POST answers 409 — but nothing will ever show it. The follow-up PATCH is what
- * keeps a published question from disappearing the moment it is written.
- *
- * A question HR deliberately saves as a draft still vanishes until the list endpoint
- * learns about drafts. The editor says so rather than pretending otherwise. Both halves
- * are §6d of docs/BACKEND_HANDOVER.md.
- *
- * The id is sent too: the endpoint validates it as a lowercase kebab-case slug of at most
- * 64 characters and rejects an absent one, so the server will not mint it. `taken` is the
- * ids already in the bank, so a second question about workload does not collide with the
- * first.
+ * The id is still sent. The endpoint validates it as a lowercase kebab-case slug of at
+ * most 64 characters and rejects an absent one, so the server will not mint it. `taken`
+ * is the ids already in the bank, so a second question about workload does not collide
+ * with the first.
  */
-export async function createQuestion(
+export function createQuestion(
   question: PulseQuestion,
   taken: string[] = [],
 ): Promise<PulseQuestion> {
   if (!isLive) return Promise.resolve(mockCreateQuestion(question))
   const id = question.id || newQuestionId(question.question, taken)
-  const created = await request<RawQuestion>('/api/pulse/questions', {
+  return request<RawQuestion>('/api/pulse/questions', {
     method: 'POST',
-    body: JSON.stringify({ ...toWire(question, false), id }),
+    body: JSON.stringify({ ...toWire(question, true), id }),
   }).then(fromWire)
-
-  const wanted = question.state ?? 'PUBLISHED'
-  if (wanted === created.state) return created
-  return updateQuestion(id, { state: wanted })
 }
 
 export function updateQuestion(
@@ -168,126 +155,29 @@ export function updateQuestion(
   }).then(fromWire)
 }
 
-/* ==========================================================================
-   Questions the API will not list
-   ==========================================================================
-
-   `GET /api/pulse/questions` returns published questions only. Not by default — only.
-   Measured against the live API on 2 September: `?state=DRAFT`, `?state=RETIRED`,
-   `?status=`, `?states=`, `?filter=all`, `?includeAll=`, `?withDrafts=`, `?scope=all`
-   and `?published=false` all come back with the identical published rows, and there is
-   no `GET /api/pulse/questions/{id}` route to fall back on — it answers 404.
-
-   So a question moved to Draft or Retired stops existing as far as this console is
-   concerned. It is still on the database, still answers 409 to a second create, and
-   `PATCH /api/pulse/questions/{id}` still edits it perfectly well. It simply cannot be
-   found again. That has already cost one: `experience` was retired and is now
-   unreachable from the UI.
-
-   What follows is a way back, not a fix. This browser writes down the id of anything it
-   hides, so it can offer to publish it again — the publish is a real PATCH against the
-   real record, and once it is published the server's copy is what comes back.
-
-   Its limits, which are why §6d still matters:
-
-     • it is per-browser. A question a colleague retired on their machine is not here.
-     • it only knows about questions hidden *after* this shipped. Anything hidden before
-       has to be published by id, which is what the id box is for.
-
-   The note is a pointer, never a source of truth. `question` is kept only so the row
-   reads as something other than a slug, and it is thrown away the moment the real
-   question comes back on the list.
-   ========================================================================== */
-
-const HIDDEN_KEY = 'hr-genie.pulse.hidden'
-
-export interface HiddenNote {
-  id: string
-  /** What it said when this browser last saw it. A label, not the record. */
-  question: string
-  state: QuestionState
-}
-
-export function readHidden(): HiddenNote[] {
-  try {
-    const raw = localStorage.getItem(HIDDEN_KEY)
-    if (!raw) return []
-    const parsed: unknown = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return []
-    return parsed.filter(
-      (one): one is HiddenNote =>
-        typeof one === 'object' && one !== null && typeof (one as HiddenNote).id === 'string',
-    )
-  } catch {
-    // A corrupted or unavailable store is not worth an error on a page about
-    // something else. No notes simply means no shortcut back.
-    return []
-  }
-}
-
-function writeHidden(notes: HiddenNote[]) {
-  try {
-    localStorage.setItem(HIDDEN_KEY, JSON.stringify(notes))
-  } catch {
-    /* Private browsing, a full quota. The console still works; recovery does not. */
-  }
-}
-
-/** Note a question that is about to stop being listed. */
-export function rememberHidden(question: PulseQuestion, state: QuestionState): HiddenNote[] {
-  const notes = readHidden().filter((one) => one.id !== question.id)
-  const next = [{ id: question.id, question: question.question, state }, ...notes]
-  writeHidden(next)
-  return next
-}
-
-export function forgetHidden(id: string): HiddenNote[] {
-  const next = readHidden().filter((one) => one.id !== id)
-  writeHidden(next)
-  return next
-}
-
 /**
- * Drop notes for questions the list is showing again.
+ * Delete a question outright. Only ever a draft.
  *
- * Run on every load. Somebody else publishing a question, or this browser doing it,
- * both end the same way — it is on the list, so the note is stale and would otherwise
- * sit there offering to recover something that needs no recovering.
+ * The endpoint refuses anything else: *"Only DRAFT questions can be deleted. Retire
+ * PUBLISHED or RETIRED questions to preserve answer history."* That is a deliberate
+ * guard, not an obstacle — answers are keyed by question id, and deleting a question
+ * people have answered orphans every one of those answers.
+ *
+ * This used to drop a question to DRAFT and then delete it, which walked straight
+ * through the guard and destroyed exactly what it exists to protect. It does not any
+ * more: the page offers Retire for anything published, and only a draft reaches here.
  */
-export function pruneHidden(bank: PulseQuestion[]): HiddenNote[] {
-  const listed = new Set(bank.map((one) => one.id))
-  const notes = readHidden()
-  const next = notes.filter((one) => !listed.has(one.id))
-  if (next.length !== notes.length) writeHidden(next)
-  return next
-}
-
-/**
- * Remove a question for good. Two requests, because the endpoint insists.
- *
- * `DELETE` refuses anything that is not a draft — "Only DRAFT questions can be deleted.
- * 'x' is PUBLISHED." — so Remove failed on every published question, which is to say on
- * every question anybody could see. Measured on 2 September while clearing three test
- * questions out of the live bank by hand.
- *
- * Dropping it to DRAFT first is the whole fix. If that write fails the delete is not
- * attempted, because a question left as a draft nobody meant to draft is worse than a
- * question that is still there — the list endpoint does not return drafts, so it would
- * vanish rather than fail.
- */
-export async function deleteQuestion(id: string): Promise<void> {
-  if (!isLive) return mockDeleteQuestion(id)
-  await updateQuestion(id, { state: 'DRAFT' })
+export function deleteQuestion(id: string): Promise<void> {
+  if (!isLive) return Promise.resolve(mockDeleteQuestion(id))
   return remove(`/api/pulse/questions/${encodeURIComponent(id)}`)
 }
 
 /**
- * What the endpoint will accept — and the two endpoints do not agree.
+ * What the endpoints will accept.
  *
- * PATCH takes `state`. POST refuses it, with "property state should not exist", and a
- * POST carrying it fails entirely: the question is not created, and the error names a
- * field HR never touched. Hence `allowState`, set by the caller that knows which verb
- * it is about to use. It is not a guess; both were measured against the live API.
+ * POST and PATCH agree on `state` now. `allowState` is kept because the two still
+ * differ in one way — PATCH must never carry the id — and because a caller stating
+ * what it intends to send is cheaper to read than one that has to be trusted.
  */
 function toWire(
   question: Partial<PulseQuestion>,
@@ -312,7 +202,10 @@ async function fetchLiveBank(): Promise<PulseQuestion[]> {
   if (!isLive) return mockBank()
   try {
     // Both envelopes: `{ questions: [...] }` as documented, and a bare array.
-    const body = await get<unknown>('/api/pulse/questions')
+    // ?state=ALL, explicitly. The console is the place drafts and retired questions
+    // are meant to be visible, and asking for them by name survives the default
+    // changing under us again — which it already has once.
+    const body = await get<unknown>('/api/pulse/questions?state=ALL')
     const raw = (Array.isArray(body) ? { questions: body } : body) as { questions?: RawQuestion[] }
     // Not truncated any more. The server returns what is currently being asked, which
     // is a selection of at most MAX_SELECTED — but this is the bank, and slicing it
@@ -409,18 +302,12 @@ export function validateBank(questions: PulseQuestion[]): string | null {
 
 export function blankQuestion(): PulseQuestion {
   /*
-   * Published, reluctantly, and only until the list endpoint learns about drafts.
+   * Draft, as it should be. A question is written, read back, and then let out.
    *
-   * Draft is the better default and used to be this one: a question is written, read
-   * back, and then let out. But the API lists published questions only, so a draft is
-   * saved and then unreachable — defaulting to it means the ordinary act of writing a
-   * question loses it, which is a worse failure than the one the draft guarded against.
-   *
-   * Published is not as loud as it sounds. It makes a question *eligible* for a
-   * selection; a selection is what actually asks anybody anything. A typo sitting in
-   * the bank reaches nobody until somebody picks it.
-   *
-   * Put this back to DRAFT when §6d of docs/BACKEND_HANDOVER.md ships.
+   * It was Published for a day, because the list endpoint returned published questions
+   * only and a draft was saved and then unreachable — so defaulting to Draft meant the
+   * ordinary act of writing a question lost it. That is fixed: the console asks for
+   * ?state=ALL and drafts come back like anything else.
    */
   return {
     id: '',
@@ -428,7 +315,7 @@ export function blankQuestion(): PulseQuestion {
     hint: '',
     options: [...SCALES[0].options],
     tags: [],
-    state: 'PUBLISHED',
+    state: 'DRAFT',
   }
 }
 

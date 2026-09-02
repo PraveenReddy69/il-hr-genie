@@ -167,6 +167,14 @@ export function byTag(bank: PulseQuestion[], tag: string): PulseQuestion[] {
  */
 export interface PulseSelection {
   id: string
+  /**
+   * What HR calls it. Optional, and usually absent.
+   *
+   * Without one the card is titled by the departments it covers, which works for two
+   * and stops working for eight. A name is the only thing that tells two selections
+   * apart at a glance once both cover several departments.
+   */
+  name?: string
   departments: string[]
   questionIds: string[]
 }
@@ -207,6 +215,8 @@ export function isEveryone(selection: PulseSelection): boolean {
  * rest become "and N more", with the full list on the departments column beside it.
  */
 export function selectionLabel(selection: PulseSelection): string {
+  const given = selection.name?.trim()
+  if (given) return given
   const named = selection.departments
   if (isEveryone(selection)) return 'Every department'
   if (named.length === 1) return named[0]
@@ -349,7 +359,13 @@ export async function fetchSelections(): Promise<PulseSelection[]> {
 }
 
 function wire(selection: PulseSelection): Record<string, unknown> {
-  return { departments: selection.departments, questionIds: selection.questionIds }
+  return {
+    // An absent name is sent as "" rather than omitted, so clearing one actually
+    // clears it — PATCH merges, and a missing key would leave the old name in place.
+    name: selection.name ?? '',
+    departments: selection.departments,
+    questionIds: selection.questionIds,
+  }
 }
 
 export function createSelection(selection: PulseSelection): Promise<PulseSelection> {
