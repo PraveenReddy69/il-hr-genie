@@ -50,15 +50,56 @@ export interface AccessPatch {
   isActive?: boolean
 }
 
+/**
+ * One change, as `/api/audit` records it.
+ *
+ * Ids, not names — the log stores who did what to whom and leaves the looking-up to
+ * whoever reads it, which is right: a name copied into a log is a name that goes stale
+ * the day somebody marries. The page resolves them against the account list it already
+ * has.
+ *
+ * `before` and `after` are whole fragments of the account, not a rendered sentence, so
+ * the reader decides what is worth saying. Shape confirmed against the live log on
+ * 3 September.
+ */
 export interface AuditEntry {
   id?: string
   atMillis?: number
   actorId?: string
-  actorName?: string
   targetId?: string
-  targetName?: string
+  /** `GRANTS_CHANGED`, `ROLE_CHANGED`, and whatever else the server decides to record. */
   action?: string
-  detail?: string
+  before?: Record<string, unknown>
+  after?: Record<string, unknown>
+}
+
+/** What actually moved, as a short phrase, or null when nothing readable did. */
+export function describeChange(entry: AuditEntry): string | null {
+  const before = (entry.before ?? {}) as Record<string, unknown>
+  const after = (entry.after ?? {}) as Record<string, unknown>
+
+  const wasGrants = (before.grants ?? {}) as { add?: string[]; remove?: string[] }
+  const nowGrants = (after.grants ?? {}) as { add?: string[]; remove?: string[] }
+  const gained = (nowGrants.add ?? []).filter((one) => !(wasGrants.add ?? []).includes(one))
+  const lost = (wasGrants.add ?? []).filter((one) => !(nowGrants.add ?? []).includes(one))
+  const blocked = (nowGrants.remove ?? []).filter(
+    (one) => !(wasGrants.remove ?? []).includes(one),
+  )
+
+  const said: string[] = []
+  if (gained.length > 0) said.push(`gained ${gained.join(', ')}`)
+  if (lost.length > 0) said.push(`lost ${lost.join(', ')}`)
+  if (blocked.length > 0) said.push(`blocked from ${blocked.join(', ')}`)
+  if (before.role !== undefined && before.role !== after.role) {
+    said.push(`role ${String(before.role)} to ${String(after.role)}`)
+  }
+  if (before.isActive !== undefined && before.isActive !== after.isActive) {
+    said.push(after.isActive ? 'switched on' : 'switched off')
+  }
+  if (Array.isArray(after.departments) && !Array.isArray(before.departments)) {
+    said.push(`${after.departments.length} departments`)
+  }
+  return said.length > 0 ? said.join(' · ') : null
 }
 
 /**

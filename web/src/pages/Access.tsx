@@ -31,16 +31,24 @@ import {
   type Permission,
 } from '../api/access'
 import {
+  describeChange,
   effectivePermissions,
   fetchAccessUsers,
   fetchAudit,
   fetchRoleBundles,
   updateAccess,
+  type AccessPatch,
   type AccessUser,
   type AuditEntry,
 } from '../api/accessAdmin'
 import { fetchEmployees } from '../api/client'
 import type { Employee, Role } from '../api/types'
+
+/** `GRANTS_CHANGED` reads as shouting in a list of sentences. */
+function ACTION_LABEL(action?: string): string {
+  if (!action) return 'changed their access'
+  return action.toLowerCase().replace(/_/g, ' ')
+}
 
 const CONSOLE_ONLY = 'Console accounts'
 const EVERYONE = 'Everyone'
@@ -243,30 +251,34 @@ export function Access({ viewer }: { viewer: Employee }) {
         {log.length === 0 ? (
           <Empty>No access has been changed yet.</Empty>
         ) : (
-          log.map((entry, at) => (
-            <div className="row" key={entry.id ?? at}>
-              <div className="row__main">
-                <div className="row__title">
-                  {entry.actorName ?? entry.actorId ?? 'Someone'} →{' '}
-                  {entry.targetName ?? entry.targetId ?? 'an account'}
+          log.map((entry, at) => {
+            // The log stores ids; the names come from the account list already loaded.
+            // An id with no match is shown as itself rather than as "Unknown" — a
+            // leaver still did the thing.
+            const named = (id?: string) =>
+              rows.find((one) => one.employeeId === id)?.name ?? id ?? 'someone'
+            const what = describeChange(entry)
+            return (
+              <div className="row" key={entry.id ?? at}>
+                <div className="row__main">
+                  <div className="row__title">
+                    {named(entry.actorId)} changed {named(entry.targetId)}
+                  </div>
+                  <div className="row__meta">{what ?? ACTION_LABEL(entry.action)}</div>
                 </div>
-                <div className="row__meta">
-                  {entry.action ?? 'changed access'}
-                  {entry.detail ? ` · ${entry.detail}` : ''}
-                </div>
+                {entry.atMillis && (
+                  <span className="row__meta" style={{ flex: 'none' }}>
+                    {new Date(entry.atMillis).toLocaleString(undefined, {
+                      day: 'numeric',
+                      month: 'short',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </span>
+                )}
               </div>
-              {entry.atMillis && (
-                <span className="row__meta">
-                  {new Date(entry.atMillis).toLocaleString(undefined, {
-                    day: 'numeric',
-                    month: 'short',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </span>
-              )}
-            </div>
-          ))
+            )
+          })
         )}
       </section>
     </>
@@ -297,10 +309,7 @@ function AccessEditor({
   departments: string[]
   busy: boolean
   onClose: () => void
-  onSave: (
-    employeeId: string,
-    change: { role?: Role; departments?: string[]; grants?: AccessUser['grants']; isActive?: boolean },
-  ) => Promise<boolean>
+  onSave: (employeeId: string, change: AccessPatch) => Promise<boolean>
 }) {
   const [role, setRole] = useState<Role>(row.role)
   const [depts, setDepts] = useState<string[]>(row.departments)
@@ -310,16 +319,32 @@ function AccessEditor({
 
   const staff = useMemo(() => everyone.map(asEmployee), [everyone])
   const target = asEmployee(row)
-  const roleRefusal = refusalFor(viewer, target, staff, { role })
+  // Only asked about the role when the role is moving: refusalFor treats an intent to
+  // set the same role as no intent at all, but being explicit keeps the two in step.
+  const roleRefusal = refusalFor(viewer, target, staff, role === row.role ? {} : { role })
   const bundle = bundles[role] ?? []
   const effective = new Set(effectivePermissions(role, grants, bundles))
 
-  const dirty =
-    role !== row.role ||
-    active !== row.isActive ||
-    depts.join('|') !== row.departments.join('|') ||
+  /*
+   * Only what actually changed goes to the server.
+   *
+   * Every field is optional and anything omitted is left alone — and sending a field
+   * is not free. `PATCH` enforces the rule attached to each key it receives, so an
+   * Admin saving a permission change while also echoing the unchanged `role` was
+   * refused with "Changing roles requires the 'roles.assign' permission", about a role
+   * they had not touched. Sending the whole object made every save a role change.
+   */
+  const change: AccessPatch = {}
+  if (role !== row.role) change.role = role
+  if (active !== row.isActive) change.isActive = active
+  if (depts.join('|') !== row.departments.join('|')) change.departments = depts
+  if (
     grants.add.join('|') !== row.grants.add.join('|') ||
     grants.remove.join('|') !== row.grants.remove.join('|')
+  ) {
+    change.grants = grants
+  }
+  const dirty = Object.keys(change).length > 0
 
   /**
    * Turn one permission on or off for this person.
@@ -463,12 +488,7 @@ function AccessEditor({
         className="button holpanel__save"
         disabled={busy || !dirty || Boolean(roleRefusal)}
         onClick={() =>
-          void onSave(row.employeeId, {
-            role,
-            departments: depts,
-            grants,
-            isActive: active,
-          }).then((ok) => ok && onClose())
+          void onSave(row.employeeId, change).then((ok) => ok && onClose())
         }
       >
         {busy ? 'Saving…' : 'Save changes'}
