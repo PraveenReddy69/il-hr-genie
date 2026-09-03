@@ -180,6 +180,42 @@ export function upcoming(
 }
 
 /**
+ * Today's anniversaries and joiners, worked out from the directory.
+ *
+ * `/api/employees/celebrations` is supposed to answer this, and for anniversaries it
+ * has been answering with nothing — so an anniversary today appeared in neither
+ * section: not in Today, because the endpoint did not report it, and not in Coming up,
+ * because that list drops `inDays === 0` on the grounds that today has its own place.
+ * Somebody's tenth year passed with nobody told.
+ *
+ * The directory carries `dateOfJoining` for everybody, so both kinds are derivable
+ * here. Birthdays are not, and that is the one gap this cannot close — the directory
+ * holds no date of birth, which is why the page says so out loud.
+ */
+export function celebratingToday(
+  employees: Employee[],
+  todayIso: string,
+): { anniversaries: Celebrant[]; joiners: Celebrant[] } {
+  const rows = upcoming(employees, todayIso).filter((one) => one.inDays === 0)
+  return {
+    anniversaries: rows.filter((one) => one.kind === 'ANNIVERSARY').map((one) => one.person),
+    joiners: rows.filter((one) => one.kind === 'JOINER').map((one) => one.person),
+  }
+}
+
+/**
+ * Two lists of the same kind of thing, without anybody appearing twice.
+ *
+ * The endpoint's own answer wins where both have somebody: it is the source of record,
+ * and it may know things the directory cannot work out.
+ */
+export function mergeCelebrants(served: Celebrant[], derived: Celebrant[]): Celebrant[] {
+  const byId = new Map(served.map((one) => [one.employeeId, one]))
+  for (const one of derived) if (!byId.has(one.employeeId)) byId.set(one.employeeId, one)
+  return [...byId.values()]
+}
+
+/**
  * Only this account's own people. Admin and above see everyone.
  *
  * Unlike the ticket queue, `/api/employees/celebrations` is **not** scoped server-side —

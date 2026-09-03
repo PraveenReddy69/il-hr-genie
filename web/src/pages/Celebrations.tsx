@@ -5,7 +5,9 @@ import { isoDate } from '../api/mock'
 import {
   EMPTY_CELEBRATIONS,
   KIND_LABEL,
+  celebratingToday,
   LOOKAHEAD_DAYS,
+  mergeCelebrants,
   NEW_JOINER_DAYS,
   totalToday,
   upcoming,
@@ -62,12 +64,26 @@ export function Celebrations({ viewer }: { viewer: Employee }) {
   const scoped = useMemo(() => {
     if (!todays || !people) return null
     const fill = (rows: Celebrant[]) => withDepartments(rows, people)
+
+    /*
+     * The endpoint's answer, plus what the directory can work out for itself.
+     *
+     * Anniversaries were reaching neither section: the endpoint reports none, and the
+     * month-ahead list drops today deliberately because today has its own card. So a
+     * work anniversary was invisible on the one day it matters, which is the whole
+     * point of the page.
+     *
+     * Birthdays get no such help. The directory has no date of birth, so the endpoint
+     * is the only thing that can ever know one — the note at the foot of the page
+     * says so.
+     */
+    const derived = celebratingToday(people, today)
     return {
       birthdays: fill(todays.birthdays),
-      anniversaries: fill(todays.anniversaries),
-      newJoiners: fill(todays.newJoiners),
+      anniversaries: mergeCelebrants(fill(todays.anniversaries), derived.anniversaries),
+      newJoiners: mergeCelebrants(fill(todays.newJoiners), derived.joiners),
     }
-  }, [todays, people, viewer])
+  }, [todays, people, today])
 
   /*
    * Two lists, because they point in opposite directions.

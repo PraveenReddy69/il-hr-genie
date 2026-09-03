@@ -10,7 +10,9 @@ import { describe, expect, it } from 'vitest'
 import {
   LOOKAHEAD_DAYS,
   daysBetween,
+  celebratingToday,
   inViewerScope,
+  mergeCelebrants,
   isNewJoiner,
   nextAnniversary,
   totalToday,
@@ -114,6 +116,66 @@ describe('who counts as a new joiner', () => {
     // A signed offer is not a joiner yet, and welcoming somebody who has not turned
     // up is worse than being a day late.
     expect(isNewJoiner('2026-09-01', TODAY)).toBe(false)
+  })
+})
+
+describe('who is celebrating today', () => {
+  /*
+   * The case that was falling through every crack.
+   *
+   * `/api/employees/celebrations` reports no anniversaries, and the month-ahead list
+   * drops `inDays === 0` because today has its own card. So somebody's anniversary
+   * today appeared in neither, and passed with nobody told.
+   */
+  const staff = [
+    person('EMP1', { name: 'Five years today', dateOfJoining: '2021-08-18' }),
+    person('EMP2', { name: 'Started today', dateOfJoining: '2026-08-18' }),
+    person('EMP3', { name: 'Anniversary next week', dateOfJoining: '2022-08-25' }),
+    person('HR001', { name: 'An admin', dateOfJoining: '2019-08-18' }, 'HR_ADMIN'),
+  ]
+
+  it('finds an anniversary falling today, which no other list reports', () => {
+    const { anniversaries } = celebratingToday(staff, TODAY)
+    expect(anniversaries.map((one) => one.name)).toEqual(['Five years today'])
+    expect(anniversaries[0].years).toBe(5)
+  })
+
+  it('finds somebody who started today', () => {
+    expect(celebratingToday(staff, TODAY).joiners.map((one) => one.name)).toEqual([
+      'Started today',
+    ])
+  })
+
+  it('leaves tomorrow alone', () => {
+    const { anniversaries } = celebratingToday(staff, TODAY)
+    expect(anniversaries.some((one) => one.name === 'Anniversary next week')).toBe(false)
+  })
+
+  it('leaves out HR accounts, as every other figure in this console does', () => {
+    const both = celebratingToday(staff, TODAY)
+    expect([...both.anniversaries, ...both.joiners].some((one) => one.name === 'An admin')).toBe(
+      false,
+    )
+  })
+})
+
+describe('merging what the endpoint sent with what we worked out', () => {
+  const served = [{ name: 'From the API', employeeId: 'EMP1', designation: 'x', email: 'a@b.c' }]
+  const derived = [
+    { name: 'Also from the API', employeeId: 'EMP1', designation: 'x', email: 'a@b.c' },
+    { name: 'Only ours', employeeId: 'EMP2', designation: 'x', email: 'd@e.f' },
+  ]
+
+  it('never lists the same person twice', () => {
+    expect(mergeCelebrants(served, derived).map((one) => one.employeeId)).toEqual([
+      'EMP1',
+      'EMP2',
+    ])
+  })
+
+  it('lets the endpoint win where both know somebody', () => {
+    // It is the source of record, and it may know things the directory cannot work out.
+    expect(mergeCelebrants(served, derived)[0].name).toBe('From the API')
   })
 })
 
