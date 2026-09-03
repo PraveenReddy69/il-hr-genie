@@ -7,7 +7,6 @@ import {
   KIND_LABEL,
   LOOKAHEAD_DAYS,
   NEW_JOINER_DAYS,
-  inViewerScope,
   totalToday,
   upcoming,
   wishHref,
@@ -43,9 +42,26 @@ export function Celebrations({ viewer }: { viewer: Employee }) {
       .catch(() => setPeople([]))
   }, [])
 
+  /*
+   * Everybody's celebrations, whoever is looking.
+   *
+   * This used to narrow an HRBP to their own tagged people, on the reasoning that an
+   * HRBP's other pages are narrowed and consistency was safer than guessing. That was
+   * the wrong call for this page: a birthday list is meant to be broad. HR asked to see
+   * the whole organisation here, which is also how the endpoint behaves —
+   * `/api/employees/celebrations` returns everybody to anybody who asks, so the
+   * narrowing was ours alone and hid colleagues from the people whose job is to
+   * congratulate them.
+   *
+   * Only this page changed. Tickets and the directory stay scoped, because who raised
+   * what is a different kind of fact from whose birthday it is. `inViewerScope` is kept
+   * for the day §7 of the handover doc gets an answer — we asked the backend whether
+   * celebrations is meant to be organisation-wide, and if the answer is no this is the
+   * function that goes back on.
+   */
   const scoped = useMemo(() => {
     if (!todays || !people) return null
-    const fill = (rows: Celebrant[]) => inViewerScope(withDepartments(rows, people), viewer)
+    const fill = (rows: Celebrant[]) => withDepartments(rows, people)
     return {
       birthdays: fill(todays.birthdays),
       anniversaries: fill(todays.anniversaries),
@@ -68,12 +84,11 @@ export function Celebrations({ viewer }: { viewer: Employee }) {
    */
   const { ahead, arrived } = useMemo(() => {
     if (!people) return { ahead: [], arrived: [] }
-    // Scoped on the person's department, then dropped for today — today has its own
-    // section above, and a name in both reads as two separate events.
-    const rows = inViewerScope(
-      upcoming(people, today).map((entry) => ({ ...entry, department: entry.person.department })),
-      viewer,
-    ).filter((entry) => entry.inDays !== 0)
+    // Dropped for today only — today has its own section above, and a name in both
+    // reads as two separate events. Not scoped: see the note on `scoped`.
+    const rows = upcoming(people, today)
+      .map((entry) => ({ ...entry, department: entry.person.department }))
+      .filter((entry) => entry.inDays !== 0)
     return {
       ahead: rows.filter((entry) => entry.inDays > 0),
       // Most recent arrival first: "who joined lately" is read from the top down.
