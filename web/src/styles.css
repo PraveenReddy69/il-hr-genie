@@ -5911,3 +5911,287 @@ ul.legend {
     width: 70px;
   }
 }
+
+
+/* =====================================================================
+   Access
+   =====================================================================
+
+   Two halves: the accounts, and the one being edited. The editor borrows
+   the Holidays panel wholesale -- same shape, same job, and a second set
+   of nearly identical rules is how the two drift apart.
+   ===================================================================== */
+
+.accesslayout {
+  margin-top: 16px;
+}
+
+.accesslayout--split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 1060px) {
+  .accesslayout--split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.acclist {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.accrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--ink-06);
+  border-radius: var(--radius-tile);
+  background: var(--surface);
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.accrow:hover:not(.accrow--locked) {
+  border-color: var(--ink-12);
+  box-shadow: 0 1px 2px rgba(10, 20, 48, 0.04), 0 6px 16px rgba(10, 20, 48, 0.05);
+}
+
+.accrow--on {
+  border-color: rgba(43, 140, 255, 0.4);
+  background: var(--blue-tint-07);
+}
+
+/* Somebody this account may not administer. Shown, because knowing the Head
+   exists matters, and not clickable, because the rule is not ours to bend. */
+.accrow--locked {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.accrow--off .accrow__name {
+  text-decoration: line-through;
+  text-decoration-color: var(--ink-12);
+}
+
+.accrow__who {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.accrow__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.accrow__id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.accrow__scope {
+  flex: none;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+/* An exception to the role bundle, counted. The detail is in the editor;
+   here it only needs to say "this one is not standard". */
+.accrow__exc {
+  flex: none;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--purple);
+  background: var(--purple-tint-12);
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+
+.accrow__off {
+  flex: none;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--red-risk);
+  background: rgba(229, 72, 77, 0.09);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+/* ------------------------------------------------------------- role pills */
+
+.rolepill {
+  flex: none;
+  min-width: 84px;
+  text-align: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 4px 9px;
+  border-radius: 999px;
+}
+
+.rolepill--employee {
+  background: var(--ink-05);
+  color: var(--text-muted);
+}
+
+.rolepill--hr {
+  background: var(--blue-tint-07);
+  color: var(--blue-deep);
+}
+
+.rolepill--hr_admin {
+  background: var(--purple-tint-12);
+  color: var(--purple);
+}
+
+/* The one tier that can hand out access itself, so it is the one that looks
+   different rather than merely darker. */
+.rolepill--hr_head {
+  background: var(--ink);
+  color: #fff;
+}
+
+/* ------------------------------------------------------------- the editor */
+
+.accesspanel {
+  position: sticky;
+  top: 16px;
+}
+
+.accpanel__id {
+  display: block;
+  margin-top: 2px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.permlist {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.permrow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.permrow:hover:not(.permrow--locked) {
+  background: var(--bg-cell);
+}
+
+.permrow--locked {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.permrow__name {
+  flex: 1;
+  min-width: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  background: none;
+  padding: 0;
+  color: var(--text-slate);
+}
+
+.permrow--on .permrow__name {
+  color: var(--ink);
+}
+
+/* Given to this person beyond their role, or taken away despite it. Both are
+   worth seeing at a glance: they are the reason this account is not standard. */
+.permrow__tag {
+  flex: none;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+
+.permrow__tag--add {
+  color: #2f8f57;
+  background: var(--green-tint-14);
+}
+
+.permrow__tag--gone {
+  color: var(--red-risk);
+  background: rgba(229, 72, 77, 0.1);
+}
+
+/* -------------------------------------------------------- role reference */
+
+.refhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  color: inherit;
+}
+
+.refgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.refcol {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px;
+  background: var(--bg-cell);
+  border: 1px solid var(--ink-06);
+  border-radius: var(--radius-tile);
+}
+
+.refcol .rolepill {
+  margin-bottom: 6px;
+}
+
+.refcol__perm {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  color: var(--text-slate);
+  background: none;
+  padding: 0;
+}
+
+.refcol__none {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}

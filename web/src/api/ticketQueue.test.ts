@@ -57,16 +57,27 @@ describe('who may assign', () => {
     expect(canAssign(head)).toBe(true)
   })
 
-  it('is not an HRBP', () => {
-    // An HRBP works their own queue. Handing tickets around is a workload decision
-    // across the team, which is what makes it administrative.
-    expect(canAssign(priya)).toBe(false)
+  it('is an HRBP too, since 2 September', () => {
+    /*
+     * It was not, and the reasoning was that handing tickets around is a workload
+     * decision across the team. In practice a ticket that reached the wrong HRBP then
+     * stayed there — cover, leave and specialism all need a hand-off — and routing
+     * every one through an Admin made the Admin a bottleneck for other people's work.
+     *
+     * The permission now sits in the HR bundle on the server, and this mirrors it.
+     */
+    expect(canAssign(priya)).toBe(true)
+  })
+
+  it('is nobody without an account', () => {
     expect(canAssign(null)).toBe(false)
   })
 
   it('says why rather than just refusing', () => {
-    expect(refusalFor(priya, raj)).toMatch(/only an admin/i)
+    const employee = person('EMP8', 'EMPLOYEE', { name: 'Nobody' })
+    expect(refusalFor(employee, raj)).toMatch(/cannot assign/i)
     expect(refusalFor(admin, raj)).toBeNull()
+    expect(refusalFor(priya, raj)).toBeNull()
   })
 
   it('refuses somebody who is not HR at all', () => {

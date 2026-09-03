@@ -3,6 +3,7 @@ import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
 import { Analytics } from './pages/Analytics'
 import { Celebrations } from './pages/Celebrations'
 import { Dashboard } from './pages/Dashboard'
+import { Access } from './pages/Access'
 import { Holidays } from './pages/Holidays'
 import logo from './infinity-learn.png'
 import { People } from './pages/People'
@@ -15,6 +16,7 @@ import {
   CelebrationsIcon,
   DashboardIcon,
   HistoryIcon,
+  AccessIcon,
   HolidaysIcon,
   PeopleIcon,
   PulseIcon,
@@ -54,6 +56,7 @@ const NAV: { to: string; label: string; Icon: typeof DashboardIcon; needs: Permi
   { to: '/analytics', label: 'Analytics', Icon: AnalyticsIcon, needs: 'analytics.view' },
   { to: '/trends', label: 'History', Icon: HistoryIcon, needs: 'trends.view' },
   { to: '/holidays', label: 'Holidays', Icon: HolidaysIcon, needs: 'holidays.view' },
+  { to: '/access', label: 'Access', Icon: AccessIcon, needs: 'access.manage' },
 ]
 
 /**
@@ -190,6 +193,7 @@ export default function App() {
           <Route path="/analytics" element={gate('analytics.view', <Analytics />)} />
           <Route path="/trends" element={gate('trends.view', <Trends />)} />
           <Route path="/holidays" element={gate('holidays.view', <Holidays editable={can(hr, 'holidays.edit')} />)} />
+          <Route path="/access" element={gate('access.manage', <Access viewer={hr} />)} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

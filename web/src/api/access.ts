@@ -60,13 +60,18 @@ const HR_BUNDLE: Permission[] = [
   'analytics.view',
   'holidays.view',
   'pulse.view',
+  // Moved here from the Admin bundle on 2 September, matching the server.
+  //
+  // The reasoning was that deciding who deals with a ticket is a workload decision
+  // across the team, so an HRBP works their own queue rather than handing things
+  // around. In practice a ticket reaching the wrong HRBP then stayed there: cover,
+  // leave and specialism all need a hand-off, and routing every one of them through an
+  // Admin made the Admin a bottleneck for other people's work.
+  'tickets.assign',
 ]
 
 const ADMIN_BUNDLE: Permission[] = [
   ...HR_BUNDLE,
-  // Deciding who deals with a ticket is a workload decision across the HR team, which
-  // is Admin's job. An HRBP works their own queue rather than handing things around.
-  'tickets.assign',
   'holidays.edit',
   'pulse.publish',
   'sales.view',

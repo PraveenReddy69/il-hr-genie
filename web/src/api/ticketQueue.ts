@@ -121,7 +121,10 @@ export function assignmentSuggestion(
 
 /** Why an assignment is refused, as a sentence, or null. */
 export function refusalFor(actor: Employee, assignee: Employee | null): string | null {
-  if (!canAssign(actor)) return 'Only an Admin assigns tickets.'
+  // Said as the permission, not the tier. It was "Only an Admin assigns tickets"
+  // until HRBPs were given `tickets.assign` on 2 September, at which point the sentence
+  // was both wrong and unfixable by anyone reading it.
+  if (!canAssign(actor)) return 'You cannot assign tickets.'
   if (!assignee) return null
   if (RANK[assignee.role] < RANK.HR) {
     return `${assignee.name} is not an HR account.`

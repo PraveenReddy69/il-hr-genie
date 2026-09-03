@@ -277,10 +277,9 @@ describe('rank buys breadth, never depth', () => {
         'pulse.publish',
         'roles.assign',
         'sales.view',
-        // Deciding who works a ticket, not seeing more of one. Every entry in this
-        // list has to be administrative; the day one of them is a deeper look at an
-        // individual's answers, this test is the thing that should stop it.
-        'tickets.assign',
+        // `tickets.assign` was here until 2 September, when it moved into the HR
+        // bundle. Every entry left has to be administrative; the day one of them is a
+        // deeper look at an individual's answers, this test is what should stop it.
       ],
     )
   })
