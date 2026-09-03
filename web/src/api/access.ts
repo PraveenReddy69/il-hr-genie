@@ -77,6 +77,8 @@ const ADMIN_BUNDLE: Permission[] = [
   'sales.view',
   'access.manage',
   'audit.view',
+  // Added 3 September, matching the server. See the note on BUNDLES.
+  'roles.assign',
 ]
 
 /**
@@ -92,17 +94,39 @@ export const BUNDLES: Record<Role, Permission[]> = {
   EMPLOYEE: [],
   HR: HR_BUNDLE,
   HR_ADMIN: ADMIN_BUNDLE,
-  HR_HEAD: [...ADMIN_BUNDLE, 'roles.assign'],
+  /*
+   * Identical to Admin since 3 September, and that is the organisation's decision
+   * rather than an oversight.
+   *
+   * `roles.assign` was the single thing separating them, which made the Head tier a
+   * gate nobody stood behind: there is no HR_HEAD account, so nobody could change a
+   * role at all. Rather than appoint one, the two tiers were levelled — confirmed
+   * against `/api/access/roles`, where both now list the same seventeen.
+   *
+   * Rank still separates them. An Admin cannot edit a Head, because `outranks` reads
+   * RANK and not the bundle, so "equal powers" has not become "equal standing".
+   */
+  HR_HEAD: ADMIN_BUNDLE,
 }
 
 /**
- * Only HR_HEAD may hand these out.
+ * Permissions only the Head may hand out. Empty since 3 September.
  *
- * Rule 3, and without it rule 1 is satisfied trivially: an Admin holding `access.manage`
- * passes it to another Admin, who passes it on, and the tier that was meant to sit above
- * them means nothing.
+ * It held `access.manage` and `roles.assign`, and the reasoning was rule 3: without it
+ * an Admin passes `access.manage` to another Admin, who passes it on, and the tier
+ * meant to sit above them means nothing.
+ *
+ * That tier turned out to be nobody. With no HR_HEAD account in existence, the rule did
+ * not restrain an Admin — it stopped roles being changed at all, by anyone. The
+ * organisation levelled the two tiers instead, and the server was changed first: an
+ * Admin's token now carries `roles.assign`, and a role change returns 200 where it
+ * returned 403 an hour ago.
+ *
+ * Kept as a list rather than deleted because the shape is the useful part. Reserving a
+ * permission again is putting it back here — and the server would have to agree, since
+ * it is the side that enforces this.
  */
-export const HEAD_GRANTABLE_ONLY: Permission[] = ['access.manage', 'roles.assign']
+export const HEAD_GRANTABLE_ONLY: Permission[] = []
 
 /**
  * What an account can actually do. Server-resolved when present, bundle otherwise.

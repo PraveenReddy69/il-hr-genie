@@ -80,10 +80,17 @@ describe('what each tier holds', () => {
     expect(can(hrbp, 'access.manage')).toBe(false)
   })
 
-  it('keeps role changes to the Main Head', () => {
+  it('gives an Admin the same keys as the Head', () => {
+    // `roles.assign` was the one thing separating them until 3 September. The server
+    // levelled the two, and the mirror follows.
     expect(can(admin, 'access.manage')).toBe(true)
-    expect(can(admin, 'roles.assign')).toBe(false)
+    expect(can(admin, 'roles.assign')).toBe(true)
     expect(can(head, 'roles.assign')).toBe(true)
+  })
+
+  it('still keeps every key away from an HRBP', () => {
+    expect(can(hrbp, 'access.manage')).toBe(false)
+    expect(can(hrbp, 'roles.assign')).toBe(false)
   })
 
   it('takes the server list over the bundle when there is one', () => {
@@ -113,8 +120,11 @@ describe('rule 1 — you cannot grant what you do not hold', () => {
     expect(mayGrant(hrbp, 'access.manage')).toBe(false)
   })
 
-  it('stops an Admin promoting anyone to Main Head', () => {
-    expect(mayAssign(admin, 'HR_HEAD')).toBe(false)
+  it('lets an Admin promote to Main Head, since the two are level', () => {
+    // It could not until 3 September, when the bundles were equalised. The rule itself
+    // has not moved: mayAssign still asks whether the actor holds everything in the
+    // target bundle, and an Admin now does.
+    expect(mayAssign(admin, 'HR_HEAD')).toBe(true)
   })
 
   it('lets the Head promote to any console role', () => {
@@ -154,10 +164,25 @@ describe('rule 2 — nobody edits their own rank, or their peers', () => {
   })
 })
 
-describe('rule 3 — only the Head hands out the keys', () => {
-  it('lets an Admin use access.manage without passing it on', () => {
+describe('rule 3 — the keys were the Head\'s alone, until they were not', () => {
+  /*
+   * This suite asserted the opposite until 3 September: an Admin could use
+   * `access.manage` but not pass it on, so only a Head could mint another Admin.
+   *
+   * The tier it protected was empty. No HR_HEAD account exists, so the rule stopped
+   * roles being changed by anybody rather than restraining Admins, and the
+   * organisation levelled the two instead. The server went first, and this mirrors it.
+   */
+  it('lets an Admin pass on the keys now', () => {
     expect(can(admin, 'access.manage')).toBe(true)
-    expect(mayGrant(admin, 'access.manage')).toBe(false)
+    expect(mayGrant(admin, 'access.manage')).toBe(true)
+    expect(mayGrant(admin, 'roles.assign')).toBe(true)
+  })
+
+  it('still stops an HRBP passing on what they do not hold', () => {
+    // Rule 1 is untouched, and it is the one doing the work now.
+    expect(mayGrant(hrbp, 'access.manage')).toBe(false)
+    expect(mayGrant(hrbp, 'roles.assign')).toBe(false)
   })
 
   it('lets the Head hand it on', () => {
@@ -206,8 +231,16 @@ describe('refusals explain themselves', () => {
     expect(refusalFor(admin, head, everyone)).toMatch(/senior/i)
   })
 
-  it('names who changes roles when an Admin tries', () => {
-    expect(refusalFor(admin, hrbp, everyone, { role: 'HR_ADMIN' })).toMatch(/Main Head/i)
+  it('no longer refuses an Admin a role change', () => {
+    // It answered "Only the Main Head changes roles" until the two tiers were levelled.
+    expect(refusalFor(admin, hrbp, everyone, { role: 'HR_ADMIN' })).toBeNull()
+  })
+
+  it('still refuses an HRBP, who manages nobody', () => {
+    const other = person('HR009', 'HR')
+    expect(refusalFor(hrbp, other, [...everyone, other], { role: 'HR_ADMIN' })).toMatch(
+      /do not manage/i,
+    )
   })
 
   it('says nothing about a role that is not changing', () => {
