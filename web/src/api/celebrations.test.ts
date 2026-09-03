@@ -139,6 +139,24 @@ describe('the month ahead', () => {
     expect(joiner?.inDays).toBe(-8)
   })
 
+  /*
+   * The Celebrations page splits this list on the sign of `inDays`, so the sign is a
+   * contract rather than a detail.
+   *
+   * It shipped drawing both under one heading reading "in the next 30 days", which on
+   * real data was mostly people who had already arrived, each labelled "30d ago"
+   * directly beneath a promise about the future. If joiners ever came back positive the
+   * page would silently do that again.
+   */
+  it('keeps joiners behind today and anniversaries ahead of it', () => {
+    const rows = upcoming(staff, TODAY)
+    expect(rows.length).toBeGreaterThan(0)
+    for (const row of rows) {
+      if (row.kind === 'JOINER') expect(row.inDays).toBeLessThan(0)
+      else expect(row.inDays).toBeGreaterThanOrEqual(0)
+    }
+  })
+
   it('leaves out anniversaries beyond the window', () => {
     expect(upcoming(staff, TODAY).some((one) => one.person.name === 'Far off')).toBe(false)
   })

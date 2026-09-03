@@ -6,6 +6,7 @@ import {
   EMPTY_CELEBRATIONS,
   KIND_LABEL,
   LOOKAHEAD_DAYS,
+  NEW_JOINER_DAYS,
   inViewerScope,
   totalToday,
   upcoming,
@@ -52,14 +53,34 @@ export function Celebrations({ viewer }: { viewer: Employee }) {
     }
   }, [todays, people, viewer])
 
-  const ahead = useMemo(() => {
-    if (!people) return []
+  /*
+   * Two lists, because they point in opposite directions.
+   *
+   * `upcoming` returns both, and a joiner's `inDays` is negative on purpose: somebody
+   * who started three weeks ago started three weeks ago. Both were being drawn under
+   * one heading reading "in the next 30 days", so the card was mostly people who had
+   * already arrived, each labelled "30d ago" directly underneath a promise about the
+   * future.
+   *
+   * Splitting them is the whole fix. A new joiner is still worth showing — it is the
+   * list you check before saying hello to somebody in the lift — it just is not
+   * something coming up.
+   */
+  const { ahead, arrived } = useMemo(() => {
+    if (!people) return { ahead: [], arrived: [] }
     // Scoped on the person's department, then dropped for today — today has its own
     // section above, and a name in both reads as two separate events.
-    return inViewerScope(
+    const rows = inViewerScope(
       upcoming(people, today).map((entry) => ({ ...entry, department: entry.person.department })),
       viewer,
     ).filter((entry) => entry.inDays !== 0)
+    return {
+      ahead: rows.filter((entry) => entry.inDays > 0),
+      // Most recent arrival first: "who joined lately" is read from the top down.
+      arrived: rows
+        .filter((entry) => entry.inDays < 0)
+        .sort((a, b) => b.inDays - a.inDays),
+    }
   }, [people, today, viewer])
 
   if (!scoped || !people) return <Loading />
@@ -86,6 +107,7 @@ export function Celebrations({ viewer }: { viewer: Employee }) {
                 </strong>
               </>
             )}
+            {arrived.length > 0 && ` · ${arrived.length} just joined`}
           </p>
         </div>
         {/* Drawn, not an image: a handful of positioned shapes costs nothing and scales
@@ -116,7 +138,9 @@ export function Celebrations({ viewer }: { viewer: Employee }) {
         {count === 0 ? (
           <Empty>
             Nobody is celebrating today. The next one is
-            {ahead.length > 0 ? ` ${ahead[0].person.name}, in ${ahead[0].inDays} days.` : ' further out than a month.'}
+            {ahead.length > 0
+              ? ` ${ahead[0].person.name}, in ${ahead[0].inDays} ${ahead[0].inDays === 1 ? 'day' : 'days'}.`
+              : ' further out than a month.'}
           </Empty>
         ) : (
           <>
@@ -137,13 +161,13 @@ export function Celebrations({ viewer }: { viewer: Employee }) {
           <div>
             <div className="card__title">Coming up</div>
             <div className="card__subtitle">
-              Anniversaries and joiners in the next {LOOKAHEAD_DAYS} days
+              Work anniversaries in the next {LOOKAHEAD_DAYS} days
             </div>
           </div>
         </div>
 
         {ahead.length === 0 ? (
-          <Empty>Nothing in the next {LOOKAHEAD_DAYS} days.</Empty>
+          <Empty>No anniversaries in the next {LOOKAHEAD_DAYS} days.</Empty>
         ) : (
           ahead.map((entry) => <AheadRow key={`${entry.kind}-${entry.person.employeeId}`} entry={entry} />)
         )}
@@ -160,6 +184,26 @@ export function Celebrations({ viewer }: { viewer: Employee }) {
           can only be known on the day — see <code>docs/CELEBRATIONS_BACKEND.md</code>.
         </p>
       </section>
+
+      {/* --------------------------------------------------- recently arrived */}
+
+      {arrived.length > 0 && (
+        <section className="card" style={{ marginTop: 16 }}>
+          <div className="card__head">
+            <span className="card__chip" style={{ background: 'var(--green-tint-14)' }}>
+              <SproutIcon />
+            </span>
+            <div>
+              <div className="card__title">Recently joined</div>
+              <div className="card__subtitle">Started in the last {NEW_JOINER_DAYS} days</div>
+            </div>
+          </div>
+
+          {arrived.map((entry) => (
+            <AheadRow key={`${entry.kind}-${entry.person.employeeId}`} entry={entry} />
+          ))}
+        </section>
+      )}
     </>
   )
 }
